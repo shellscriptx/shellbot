@@ -6,7 +6,7 @@ O **ShellBot.sh** é um script desenvolvido em **Shell Script** que simula uma A
 
 ## Créditos
 
-Desenvolvido por **Juliano Santos (SHAMAN) **
+Desenvolvido por **Juliano Santos (SHAMAN)**
 Linguagem: **Shell Script**
 
 ## Contato
@@ -191,7 +191,7 @@ ShellBot.forwardMessage --chat_id identificador --from_chat_id identificador --m
 #### Parâmetros:
 
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|--------|-------|
+--------------|--------|-------|------
 -c, --chat_id <_identificador_>|integer ou string|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
 -f, --from_chat_id <_identificador_>|integer ou string|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
 -n, --disable_notification <_status_>|boolean|Não|Envia a mensagem silenciosamente. Os usuários do iOS não receberão uma notificação, os usuários do Android receberão uma notificação sem som.
@@ -211,7 +211,7 @@ ShellBot.sendMessage --chat_id identificador --text texto ...
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|-----|----------|
+--------------|-----|----------|--------
 -c, --chat_id <_identificador_>|integer ou string|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
 -t, --text <_texto_>|string|Sim|Mensagem de texto a ser enviada
 -p, --parse_mode <_modo_>|string|Não|Modo de formatação aplicada ao texto enviado (*markdown* ou *html*).
@@ -235,7 +235,7 @@ ShellBot.sendPhoto --chat_id identificador --photo arquivo ...
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|--------|-------|
+--------------|--------|-------|-------
 -c, --chat_id <_identificador_>|integer ou string|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
 -p, --photo <_foto_>|string|Sim|Foto pode ser um _file_id_ caso o arquivo já exista nos servidores do Telegram. Para envio de arquivos locais, utilize o caractere `@` seguido do diretório do arquivo. Exemplo: `@/dir/foto.jpeg`.
 -t, --caption <_texto_>|string|Não|Insere texto abaixo da imagem enviada (Máx: 200 caracteres).
@@ -259,7 +259,7 @@ ShellBot.sendAudio --chat_id identificador --audio arquivo ...
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|--------|-------|
+--------------|--------|-------|--------
 -c, --chat_id <_identificador_>|Integer ou String|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
 -a, --audio <_audio_>|String|Sim|Audio pode ser um _file_id_ caso o arquivo já exista nos servidores do Telegram. Para envio de arquivos locais, utilize o caractere `@` seguido do diretório do arquivo. Exemplo: `@/dir/audio.mp3`. 
 -t, --caption <_texto_>|String|Não|Insere texto abaixo do audio enviado (Máx: 200 caracteres).
@@ -288,7 +288,7 @@ ShellBot.sendDocument --chat_id identificador --document arquivo ...
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|--------|-------|
+--------------|--------|-------|---------
 -c, --chat_id <_identificador_>|Integer ou String|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
 -d, --document <_arquivo_>|String|Sim|Arquivo pode ser um _file_id_ caso o arquivo já exista nos servidores do Telegram. Para envio de arquivos locais, utilize o caractere `@` seguido do diretório do arquivo. Exemplo: `@/dir/arquivo`. 
 -t, --caption <_texto_>|String|Não|Insere texto abaixo do documento enviado (Máx: 200 caracteres).
@@ -311,7 +311,7 @@ ShellBot.sendSticker --chat_id identificador --sticker arquivo ...
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|--------|-------|
+--------------|--------|-------|---------
 -c, --chat_id <_identificador_>|Integer ou String|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
 -s, --sticker <_sticker_>|String|Sim|Sticker pode ser um _file_id_ caso o arquivo já exista nos servidores do Telegram. Para envio de arquivos locais, utilize o caractere `@` seguido do diretório do arquivo. Exemplo: `@/dir/arquivo.webp`. 
 -n, --disable_notification <_status_>|Boolean|Não|Envia a mensagem silenciosamente. Os usuários do iOS não receberão uma notificação, os usuários do Android receberão uma notificação sem som (_true_ ou _false_).
@@ -335,7 +335,7 @@ ShellBot.sendVideo --chat_id identificador --video arquivo ...
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|--------|-------|
+--------------|--------|-------|---------
 -c, --chat_id <_identificador_>|Integer ou String|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
 -v, --video <_video_>|String|Sim|Video pode ser um _file_id_ caso o arquivo já exista nos servidores do Telegram. Para envio de arquivos locais, utilize o caractere `@` seguido do diretório do arquivo. Exemplo: `@/dir/video.mp4`. 
 -d, --duration|Integer|Não|Duração do vídeo em segundos.
@@ -362,7 +362,7 @@ ShellBot.sendVoice --chat_id identificador --voice arquivo ...
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|--------|-------|
+--------------|--------|-------|---------
 -c, --chat_id <_identificador_>|Integer ou String|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
 -v, --voice <_voz_>|String|Sim|Voz pode ser um _file_id_ caso o arquivo já exista nos servidores do Telegram. Para envio de arquivos locais, utilize o caractere `@` seguido do diretório do arquivo. Exemplo: `@/dir/voz.ogg`. 
 -t, --caption <_texto_>|String|Não|Insere texto abaixo do arquivo de voz enviado (Máx: 200 caracteres).
@@ -386,7 +386,7 @@ ShellBot.sendLocation --chat_id identificador --latitude coordenada --longitude 
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|--------|-------|
+--------------|--------|-------|---------
 -c, --chat_id <_identificador_>|Integer ou String|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
 -l, --latitude <_latitude_>|Float|Sim|Latitude da localização (_float_).
 -g, --longitude <_longitude_>|Float|Sim|Longitude da localização (_float_).
@@ -408,7 +408,7 @@ ShellBot.sendVenue --chat_id identificador --latitude coordenada --longitude coo
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|--------|-------|
+--------------|--------|-------|---------
 -c, --chat_id <_identificador_>|Integer ou String|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
 -l, --latitude <_latitude_>|Float|Sim|Latitude da localização.
 -g, --longitude <_longitude_>|Float|Sim|Longitude da localização.
@@ -433,7 +433,7 @@ ShellBot.sendContact --chat_id identificador --phone_number telefone --first_nam
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|--------|-------|
+--------------|--------|-------|---------
 -c, --chat_id <_identificador_>|Integer ou String|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
 -p, --phone_number <_numero_>|String|Sim|Número de telefone do contato.
 -f, --first_name <_nome_>|String|Sim|Nome do contato.
@@ -455,7 +455,7 @@ ShellBot.sendChatAction --chat_id identificador --action acao
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|--------|-------|
+--------------|--------|-------|---------
 -c, --chat_id <_identificador_>|Integer ou String|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
 -a, --action <_acao_>|String|Sim|Tipo da ação para retorno. Escolha uma, dependendo sobre qual tipo de ação será enviada ao usuário. **Mensagens**: _typing_, **Fotos**: _upload_photos_, **Videos**: _record_video_ ou _upload_video_, **Audio**: _record_audio_ ou _upload_audio_, **Documentos**: _upload_document_, **Localização**: _find_location_
 
@@ -473,7 +473,7 @@ ShellBot.getUserProfilePhotos --user_id identificador ...
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|--------|-------|
+--------------|--------|-------|---------
 -u, --user_id <_identificador_>|Integer|Sim|Identificador exclusivo do usuário.
 -o, --offset <_numero_>|Integer|Não|Número sequencial da primeira foto a ser retornada (Padrão: retorna todas).
 -l, --limit <_limite_>|Integer|Nâo|Limite de fotos a serem retornadas. Valor entre 1 e 100 (Padrão: 100).
@@ -504,7 +504,7 @@ ShellBot.getFile --file_id identificador
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|--------|-------|
+--------------|--------|-------|---------
 -f, --file_id <_identificador_>|Integer|Sim|Identificador do arquivo.
 
 > * As informações retornadas tem seus campos separados pelo delimitador `|` PIPE com o padrão a seguir:
@@ -521,7 +521,7 @@ ShellBot.getChat --chat_id identificador
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|--------|-------|
+--------------|--------|-------|---------
 -c, --chat_id <_identificador_>|Integer ou String|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
 
 > * As informações retornadas tem seus campos separados pelo delimitador `|` PIPE com o padrão: `id|tipo|usuario|nome|sobrenome|Titulo|TodosAdministradores`
@@ -538,7 +538,7 @@ ShellBot.getChatAdministrators --chat_id identificador
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|--------|-------|
+--------------|--------|-------|---------
 -c, --chat_id <_identificador_>|Integer ou String|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
 
 > * As informações retornadas tem seus campos separados pelo delimitador `|` PIPE com o padrão: `id|usuario|nome|sobrenome|status`
@@ -556,7 +556,7 @@ ShellBot.getChatMembersCount --chat_id identificador
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|--------|-------|
+--------------|--------|-------|---------
 -c, --chat_id <_identificador_>|Integer ou String|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
 
 > * Indentificador precisa ser  _id_,  _@usuario_, _@grupo_ ou _@canal_ válido.
@@ -572,7 +572,7 @@ ShellBot.getChatMembersCount --chat_id identificador --user_id identificador
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|--------|-------|
+--------------|--------|-------|---------
 -c, --chat_id <_identificador_>|Integer ou String|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
 -u, --user_id <_identificador_>|Integer|Sim|Identificador exclusivo do usuário.
 
@@ -591,7 +591,7 @@ ShellBot.getUpdates ...
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|--------|-------|
+--------------|--------|-------|---------
 -o, --offset|Integer|Nâo|Obtem atualizações do servidor, contendo o Identificador da primeira atualização a ser retornada. Deve ser maior em um que o maior entre os identificadores de atualizações recebidas anteriormente. Por padrão, as atualizações começando com a primeira atualização não confirmada são retornadas. Uma atualização é considerada confirmada assim que getUpdates é chamado com um deslocamento superior ao seu update_id. O deslocamento negativo pode ser especificado para recuperar atualizações a partir de -offset update a partir do final da fila de atualizações. Todas as atualizações anteriores serão esquecidas.
 -l, --limit|integer|Nâo|Limita o número de atualizações a serem recuperadas. Valores entre 1-100 são aceitos. O padrão é 100.
 -t, --timeout|Integer|Não|Tempo limite em segundos para pesquisa. O padrão é 0, ou seja, a sondagem curta não é usual. Deve ser positivo, a sondagem curta deve ser usada apenas para fins de teste.
@@ -608,7 +608,7 @@ ShellBot.kickChatMember --chat_id identificador --user_id identificador
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|--------|-------|
+--------------|--------|-------|---------
 -c, --chat_id <_identificador_>|Integer ou String|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
 -u, --user_id <_identificador_>|Integer|Sim|Identificador exclusivo do usuário.
 
@@ -625,7 +625,7 @@ ShellBot.unbanChatMember --chat_id identificador --user_id identificador
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|--------|-------|
+--------------|--------|-------|---------
 -c, --chat_id <_identificador_>|Integer ou String|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
 -u, --user_id <_identificador_>|Integer|Sim|Identificador exclusivo do usuário.
 
@@ -640,7 +640,7 @@ ShellBot.leaveChat --chat_id identificador
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|--------|-------|
+--------------|--------|-------|---------
 -c, --chat_id <_identificador_>|Integer ou String|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
 
 ## <a name="ReplyKeyboardMarkup">ShellBot.ReplyKeyboardMarkup</a>
@@ -655,7 +655,7 @@ ShellBot.ReplyKeyboardMarkup --keyboard ...
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|--------|-------|
+--------------|--------|-------|---------
 -k, --keyboard|Array|Sim|Array de linhas de botão, cada uma representada por uma matriz de objetos Keyboard.
 -r, --resize_keyboard|Boolean|Nâo|Solicita aos clientes que redimensionem o teclado verticalmente para um ajuste ideal (por exemplo, faça o teclado menor se houver apenas duas linhas de botões). O padrão é false, caso em que o teclado personalizado é sempre da mesma altura que o teclado padrão do aplicativo.
 -t, --one_time_keyboard|Boolean|Nâo|Solicita que os clientes ocultem o teclado assim que ele for usado. O teclado ainda estará disponível, mas os clientes exibirão automaticamente o teclado de letras usual no chat - o usuário pode pressionar um botão especial no campo de entrada para ver o teclado personalizado novamente. O padrão é false.
