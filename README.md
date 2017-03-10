@@ -7,6 +7,7 @@ O **ShellBot.sh** é um script desenvolvido em **Shell Script** que simula uma A
 ## Créditos
 
 Desenvolvido por **Juliano Santos (SHAMAN)**
+
 Linguagem: **Shell Script**
 
 ## Contato
@@ -16,6 +17,7 @@ Para informações, sugestões ou reporte de falhas, envie e-mail para <shellscr
 **Páginas: **
 
 Blog: http://www.shellscriptx.blogspot.com.br
+
 Fanpage: https://www.facebook.com/shellscriptx
 
 ## Agradecimentos
