@@ -702,6 +702,7 @@ O **ShellBot** possui variáveis com nomes reservados, onde cada nome contém o 
 * <a href="#channel_post">channel\_post</a>
 * <a href="#edited_channel">edited\_channel</a> 
 
+
  As variáveis são dinâmicas e seus valores são atualizados sempre que a função **getUpdates** é chamada. Se o valor de _limit_ em **getUpdates** for maior que 1, as variáveis são instanciadas como _array_. Se uma lista longa é retornada, os itens são armazenados em cada elemento do array, podendo ser acessados por indexação. 
 
 **Exemplo:**
