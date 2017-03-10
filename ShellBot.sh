@@ -1,20 +1,20 @@
 #!/bin/bash
 
-#--------------------------------------------------------------------------------------------------
-#	Data:				7 de março de 2017
-#	Script:				ShellBot.sh
-#	Versão:				1.0
+#-----------------------------------------------------------------------------------------------------------
+#	Data:			7 de março de 2017
+#	Script:			ShellBot.sh
+#	Versão:			1.0
 #	Desenvolvido por:	Juliano Santos [SHAMAN]
-#	Página:				http://www.shellscriptx.blogspot.com.br
-#	Fanpage:			https://www.facebook.com/shellscriptx
-# 	Contato:			shellscriptx@gmail.com
-#	Descrição:			O script é uma API genérica desenvolvida para facilitar	a criação de 
-#						bots na plataforma TELEGRAM. A API contém funções relevantes
-#						para o desenvolvimento; Mantendo a nomenclatura dos métodos registrados da
-#						API original (Telegram), assim como seus campos e valores.
-#						As funções instanciadas requerem parâmetros e argumentos para a chamada
-#						do respectivo método.
-#--------------------------------------------------------------------------------------------------
+#	Página:			http://www.shellscriptx.blogspot.com.br
+#	Fanpage:		https://www.facebook.com/shellscriptx
+# 	Contato:		shellscriptx@gmail.com
+#	Descrição:		O script é uma API genérica desenvolvida para facilitar	a criação de 
+#				bots na plataforma TELEGRAM. A API contém funções relevantes
+#				para o desenvolvimento; Mantendo a nomenclatura dos métodos registrados da
+#				API original (Telegram), assim como seus campos e valores.
+#				As funções instanciadas requerem parâmetros e argumentos para a chamada
+#				do respectivo método.
+#-----------------------------------------------------------------------------------------------------------
 
 # Verifica se os pacotes necessários estão instalados.
 for __PKG__ in curl jq getopt; do
