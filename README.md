@@ -23,7 +23,7 @@ Fanpage: https://www.facebook.com/shellscriptx
 
 A **Najane Osaki (Jane)** por escolher o nome da **API** e batizá-la de **ShellBot**. Um nome que indica de onde veio e o que faz. 
 
-#### Requerimentos:
+## Requerimentos:
 
 |Pacote| Descrição|
 |---------|--------------|
@@ -31,6 +31,8 @@ A **Najane Osaki (Jane)** por escolher o nome da **API** e batizá-la de **Shell
 |jq| Processador de comandos JSON|
 |curl|Ferramenta para transferir dados de url|
 |getopt|Analisador de opcoes de comandos|
+
+> Certifique-se que todos os pacotes estão instalados.
 
 ## Download
 
