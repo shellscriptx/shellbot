@@ -173,7 +173,7 @@ ShellBot.init --token token
 #### Parâmetros:
 
 Parâmetro|Tipo|Obrigatório|Descrição
---------------|------|---------|
+--------------|------|---------|--------
 -t, --token <_token_>|String|Sim|Especificar a  chave única de autenticação (TOKEN)
 
 > Cada bot criado recebe sua chave única de autenticação (TOKEN) para obter privilégios no momento de invocar seus métodos.
