@@ -23,6 +23,15 @@ Fanpage: https://www.facebook.com/shellscriptx
 
 A **Najane Osaki (Jane)** por escolher o nome da **API** e batizá-la de **ShellBot**. Um nome que indica de onde veio e o que faz. 
 
+#### Requerimentos:
+
+|Pacote| Descrição|
+|---------|--------------|
+|bash | Interpretador de comandos Bourne-Again Shell|
+|jq| Processador de comandos JSON|
+|curl|Ferramenta para transferir dados de url|
+|getopt|Analisador de opcoes de comandos|
+
 ## Download
 
 Realizando o download do projeto.
@@ -70,15 +79,6 @@ ou
 > Não é necessário permissão para execução.
 > É recomendado que o arquivo **ShellBot.sh** esteja no mesmo diretório do projeto do seu bot. Caso contrário é necessário informar o caminho completo. Exemplo: `source /home/usuario/ShellBot.sh`
 > Feito isso todas as funções e variáveis estarão disponíveis em seu projeto.
-
-#### Requerimentos:
-
-|Pacote| Descrição|
-|---------|--------------|
-|bash | Interpretador de comandos Bourne-Again Shell|
-|jq| Processador de comandos JSON|
-|curl|Ferramenta para transferir dados de url|
-|getopt|Analisador de opcoes de comandos|
 
 ## Funções
 
