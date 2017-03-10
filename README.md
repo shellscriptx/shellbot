@@ -16,7 +16,7 @@ Para informações, sugestões ou reporte de falhas, envie e-mail para <shellscr
 
 **Páginas:**
 
-Blog: http://www.shellscriptx.blogspot.com.br 
+Blog: http://www.shellscriptx.blogspot.com.br
 Fanpage: https://www.facebook.com/shellscriptx
 
 ## Agradecimentos
