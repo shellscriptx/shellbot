@@ -226,6 +226,44 @@ Parâmetro|Tipo|Obrigatório|Descrição
 
 > * Indentificador precisa ser  _id_, _@usuario_, _@grupo_ ou _@canal_ válido.
 
+**Opções de formatação:**
+
+A API de Bot suporta a formatação básica para mensagens. Você pode usar texto negrito e itálico, bem como links inline e código pré-formatado nas mensagens de seus bots. Os clientes do Telegram irão processá-los adequadamente. Você pode usar formatação de estilo markdown ou HTML.
+
+Observe que os clientes do Telegram exibirão um alerta para o usuário antes de abrir um link inline ('Abrir este link?' Juntamente com o URL completo).
+
+**Markdown**
+
+Para usar esse modo, passe o `markdown` no parâmetro `-p` ou `--parse_mode` ao usar `ShellBot.sendMessage`. Use a seguinte sintaxe na sua mensagem:
+
+```
+*bold text*
+_italic text_
+[text](http://www.example.com/)
+`inline fixed-width code`
+```text pre-formatted fixed-width code block```
+```
+
+**HTML**
+
+Para usar este modo, passe o `html` no parâmetro `-p` ou `--parse_mode` ao usar ShellBot.sendMessage. As tags a seguir são atualmente suportadas:
+
+```
+<b>bold</b>, <strong>bold</strong>
+<i>italic</i>, <em>italic</em>
+<a href="http://www.example.com/">inline URL</a>
+<code>inline fixed-width code</code>
+<pre>pre-formatted fixed-width code block</pre>
+```
+
+**Observe:**
+
+* somente as tags mencionadas acima são atualmente suportadas.
+* As tags não devem ser aninhadas.
+* Todos os símbolos <,> e & que não fazem parte de uma tag ou de uma entidade HTML devem ser substituídos pelas entidades HTML correspondentes (<com & lt ;,> com & gt; e com & amp;).
+* Todas as entidades numéricas HTML são suportadas.
+* A API atualmente suporta somente as seguintes entidades HTML nomeadas: &lt ;, &gt;, &amp; e &quot;".
+
 ## <a name="sendPhoto">ShellBot.sendPhoto</a>
 
 Envia arquivo de imagem para um usuário, grupo ou canal especificado.
