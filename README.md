@@ -39,7 +39,7 @@ A **Najane Osaki (Jane)** por escolher o nome da **API** e batizá-la de **Shell
 Realizando o download do projeto.
 
 ```
-$ git clone git@github.com:shellscriptx/ShellBot.git && cd ShellBot
+$ git clone https://github.com/shellscriptx/ShellBot.git && cd ShellBot
 ```
 
 Copie o arquivo **ShellBot.sh** para a pasta de projeto do seu bot.
