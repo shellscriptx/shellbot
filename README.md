@@ -31,7 +31,6 @@ A **Najane Osaki (Jane)** por escolher o nome da **API** e batizá-la de **Shell
 |bash | Interpretador de comandos Bourne-Again Shell|
 |jq| Processador de comandos JSON|
 |curl|Ferramenta para transferir dados de url|
-|getopt|Analisador de opcoes de comandos|
 
 > Certifique-se que todos os pacotes estão instalados.
 
