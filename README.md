@@ -22,7 +22,7 @@ Fanpage: https://www.facebook.com/shellscriptx
 
 ## Agradecimentos
 
-A **Najane Osaki (Jane)** por escolher o nome da **API** e batizá-la de **ShellBot**. Um nome que indica de onde veio e o que faz. 
+A **Najane Lopes (Jane)** por escolher o nome da **API** e batizá-la de **ShellBot**. Um nome que indica de onde veio e o que faz. 
 
 ## Requerimentos:
 
