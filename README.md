@@ -503,6 +503,71 @@ Parâmetro|Tipo|Obrigatório|Descrição
 
 > * Indentificador precisa ser  _id_,  _@usuario_, _@grupo_ ou _@canal_ válido.
 
+## <a name="editMessageText">ShellBot.editMessageText</a>
+
+Edita mensagens enviadas ou no histórico de mensagens.
+> * Só é possível enditar mensagens enviadas pelo bot.
+
+#### Uso:
+```
+ShellBot.editMessageText --chat_id identificador --message_id identificador --text texto...
+```
+
+#### Parâmetros:
+Parâmetro|Tipo|Obrigatório|Descrição
+--------------|--------|-------|---------
+-c, --chat_id <_identificador_>|Integer ou String|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
+-m, --message_id <_identificador_>|Integer|Sim|Identificador único da mensagem.
+-t, --text <_texto_>|String|Não|Nova mensagem texto.
+-i, --inline_message_id <_identificador_>|String|Não|Identificador da mensagem inline. (Função não suportada).
+-p, --parse_mode <_modo_>|Boolean|Não|Modo de formatação aplicada ao texto enviado (markdown ou html).
+-w, --disable_web_page_preview <_status_>|Boolean|Não|Desabilita a pré-visualizaço de links na mensagem.
+-k, --reply_markup <_teclado_>|ReplyKeyboardMarkup|Não|Interface do teclado personalizada (Veja: <a href="#ReplyKeyboardMarkup">ShellBot.ReplyKeyboardMarkup</a>)
+
+> * Indentificador precisa ser  _id_,  _@usuario_, _@grupo_ ou _@canal_ válido.
+
+## <a name="editMessageCaption">ShellBot.editMessageCaption</a>
+
+Edita o título da mensagem enviada ou no histórico de mensagens.
+> * Só é possivel endiar mensagens enviadas pelo bot.
+
+#### Uso:
+```
+ShellBot.editMessageCaption --chat_id identificador --message_id identificador --caption texto ...
+```
+
+#### Parâmetros:
+Parâmetro|Tipo|Obrigatório|Descrição
+--------------|--------|-------|---------
+-c, --chat_id <_identificador_>|Integer ou String|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
+-m, --message_id <_identificador_>|Integer|Sim|Identificador único da mensagem.
+-t, --caption <_texto_>|String|Não|Novo título da mensagem.
+-i, --inline_message_id <_identificador_>|String|Não|Identificador da mensagem inline. (Função não suportada).
+-k, --reply_markup <_teclado_>|ReplyKeyboardMarkup|Não|Interface do teclado personalizada (Veja: <a href="#ReplyKeyboardMarkup">ShellBot.ReplyKeyboardMarkup</a>)
+
+> * Indentificador precisa ser  _id_,  _@usuario_, _@grupo_ ou _@canal_ válido.
+
+## <a name="editMessageReplyMarkup">ShellBot.editMessageReplyMarkup</a>
+
+Edita somente mensagem enviada do tipo teclado (ReplyKeyboardMarkup).
+> * Só é possivel endiar mensagens enviadas pelo bot.
+
+#### Uso:
+```
+ShellBot.editMessageKeyboardMarkup --chat_id identificador --message_id identificador --reply_markup teclado ...
+```
+
+#### Parâmetros:
+Parâmetro|Tipo|Obrigatório|Descrição
+--------------|--------|-------|---------
+-c, --chat_id <_identificador_>|Integer ou String|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
+-m, --message_id <_identificador_>|Integer|Sim|Identificador único da mensagem.
+-i, --inline_message_id <_identificador_>|String|Não|Identificador da mensagem inline. (Função não suportada).
+-k, --reply_markup <_teclado_>|ReplyKeyboardMarkup|Não|Interface do teclado personalizada (Veja: <a href="#ReplyKeyboardMarkup">ShellBot.ReplyKeyboardMarkup</a>)
+
+> * Indentificador precisa ser  _id_,  _@usuario_, _@grupo_ ou _@canal_ válido.
+
+
 ## <a name="getUserProfilePhotos">ShellBot.getUserProfilePhotos</a>
 
 Retorna uma lista contendo as fotos de perfil dáo usuário.
