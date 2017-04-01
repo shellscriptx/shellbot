@@ -37,11 +37,11 @@ declare -i __ERR__=0
 # Arquivo JSON (JavaScript Object Notation) onde são gravados os objetos sempre que função getUpdates é chamada.
 # O arquivo armazena os dados da atualização que serão acessados durante a execução de outros métodos; Onde o mesmo
 # é sobrescrito sempre que um valor é retornado.
-__JSON__=/tmp/update.json
+declare -r __JSON__=/tmp/update.json
 
 # Define a linha de comando para as chamadas GET e PUT do métodos da API via curl.
-__GET__='curl --silent --request GET --url'
-__POST__='curl --silent --request POST --url'
+declare -r __GET__='curl --silent --request GET --url'
+declare -r __POST__='curl --silent --request POST --url'
  
 # Funções para extração dos objetos armazenados no arquivo "update.json"
 # 
