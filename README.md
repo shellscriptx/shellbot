@@ -115,6 +115,11 @@ ShellBot.funcao -p arg1 -p arg2 ...
 **Segue as funções disponíveis.**
 
 * <a href="#init">ShellBot.init</a>
+* <a href="#token">ShellBot.token</a>
+* <a href="#id">ShellBot.id</a>
+* <a href="#username">ShellBot.username</a>
+* <a href="#first_name">ShellBot.first_name</a>
+* <a href="#last_name">ShellBot.last_name</a>
 * <a href="#forwardMessage">ShellBot.forwardMessage</a>
 * <a href="#sendMessage">ShellBot.sendMessage</a>
 * <a href="#sendPhoto">ShellBot.sendPhoto</a>
@@ -139,7 +144,9 @@ ShellBot.funcao -p arg1 -p arg2 ...
 * <a href="#unbanChatMember">ShellBot.unbanChatMember</a>
 * <a href="#leaveChat">ShellBot.leaveChat</a>
 * <a href="#ReplyKeyboardMarkup">ShellBot.ReplyKeyboardMarkup</a>
-
+* <a href="#editMessageText">ShellBot.editMessageText</a>
+* <a href="#editMessageCaption">ShellBot.editMessageCaption</a>
+* <a href="#editMessageReplyMarkup">ShellBot.editMessageReplyMarkup</a>
 
 > Os métodos `inline bots` não são suportados
 
@@ -181,6 +188,55 @@ Parâmetro|Tipo|Obrigatório|Descrição
 -t, --token <_token_>|String|Sim|Especificar a  chave única de autenticação (TOKEN)
 
 > Cada bot criado recebe sua chave única de autenticação (TOKEN) para obter privilégios no momento de invocar seus métodos.
+
+## <a name="token">ShellBot.token</a>
+
+Retorna o token do bot.
+
+#### Uso:
+```
+ShellBot.token
+```
+> * Função nao requer parametros.
+
+## <a name="id">ShellBot.id</a>
+
+Retorna o identificador exclusivo do bot.
+
+#### Uso:
+```
+ShellBot.id
+```
+> * Função nao requer parametros.
+
+## <a name="username">ShellBot.username</a>
+
+Retorna o nome de usuario do bot.
+#### Uso:
+```
+ShellBot.username
+```
+> * Função nao requer parametros.
+
+## <a name="first_name">ShellBot.first_name</a>
+
+Retorna o primeiro nome do bot.
+
+#### Uso:
+```
+ShellBot.first_name
+```
+> * Função nao requer parametros.
+
+## <a name="first_name">ShellBot.last_name</a>
+
+Retorna o sobrenome do bot.
+
+#### Uso:
+```
+ShellBot.last_name
+```
+> * Função nao requer parametros.
 
 ## <a name="forwardMessage">ShellBot.forwardMessage</a>
 
@@ -506,7 +562,7 @@ Parâmetro|Tipo|Obrigatório|Descrição
 ## <a name="editMessageText">ShellBot.editMessageText</a>
 
 Edita mensagens enviadas ou no histórico de mensagens.
-> * Só é possível enditar mensagens enviadas pelo bot.
+> * So e possivel editar mensagens enviadas pelo bot.
 
 #### Uso:
 ```
@@ -528,8 +584,8 @@ Parâmetro|Tipo|Obrigatório|Descrição
 
 ## <a name="editMessageCaption">ShellBot.editMessageCaption</a>
 
-Edita o título da mensagem enviada ou no histórico de mensagens.
-> * Só é possivel endiar mensagens enviadas pelo bot.
+Edita o titulo da mensagem enviada ou no historico de mensagens.
+> * So é possivel editar mensagens enviadas pelo bot.
 
 #### Uso:
 ```
@@ -550,7 +606,7 @@ Parâmetro|Tipo|Obrigatório|Descrição
 ## <a name="editMessageReplyMarkup">ShellBot.editMessageReplyMarkup</a>
 
 Edita somente mensagem enviada do tipo teclado (ReplyKeyboardMarkup).
-> * Só é possivel endiar mensagens enviadas pelo bot.
+> * Só é possivel editar mensagens enviadas pelo bot.
 
 #### Uso:
 ```
