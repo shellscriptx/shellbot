@@ -3,7 +3,7 @@
 #-----------------------------------------------------------------------------------------------------------
 #	Data:				7 de março de 2017
 #	Script:				ShellBot.sh
-#	Versão:				2.0
+#	Versão:				2.1
 #	Desenvolvido por:	Juliano Santos [SHAMAN]
 #	Página:				http://www.shellscriptx.blogspot.com.br
 #	Fanpage:			https://www.facebook.com/shellscriptx
@@ -28,16 +28,14 @@ done
 # Verifica se a API já foi instanciada.
 [ "$__INIT__" ] && return 1
 
-# Inicializada
-declare -r __INIT__=1
-
-# Inicia o script sem erros.
-declare -i __ERR__=0
+declare -r __INIT__=1	# API inicializada.
+declare -i __ERR__=0	# Inicia sem erros.
 
 # Arquivo JSON (JavaScript Object Notation) onde são gravados os objetos sempre que função getUpdates é chamada.
 # O arquivo armazena os dados da atualização que serão acessados durante a execução de outros métodos; Onde o mesmo
 # é sobrescrito sempre que um valor é retornado.
-declare -r __JSON__=/tmp/update.json
+__JSON__=$(mktemp -q --tmpdir=/tmp --suffix=.json update-XXXXX) && \
+declare -r __JSON__ || { echo "Falha ao tentar criar o arquivo JSON updates em '/tmp'." 1>&2; exit 1; } 
 
 # Define a linha de comando para as chamadas GET e PUT do métodos da API via curl.
 declare -r __GET__='curl --silent --request GET --url'
@@ -48,9 +46,11 @@ declare -r __POST__='curl --silent --request POST --url'
 # Verifica o retorno após a chamada de um método, se for igual a true (sucesso) retorna 0, caso contrário, retorna 1
 json() { jq -r "$*" $__JSON__ 2>/dev/null; }
 json_status(){ [ "$(json '.ok')" = true ] && return 0 || return 1; }
-
 # Extrai o comprimento da string removendo o caractere nova-linha (\n)
 str_len(){ echo $(($(wc -c <<< "$*")-1)); return 0; }
+
+# Remove arquivo JSON se o script for interrompido.
+trap "rm -f $__JSON__ &>/dev/null; exit 1" SIGQUIT SIGINT SIGKILL SIGTERM SIGSTOP SIGPWR
 
 # Erros registrados da API (Parâmetros/Argumentos)
 declare -r __ERR_TYPE_BOOL__='Tipo incompatível. Somente "true" ou "false".'
