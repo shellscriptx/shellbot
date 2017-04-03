@@ -1,4 +1,5 @@
-# **ShellBot.sh (Telegram)**
+# **ShellBot**
+![ShellBot](https://github.com/shellscriptx/ShellBot/blob/master/ShellBot.png)
 
 ## Sobre
 
@@ -21,7 +22,7 @@ Fanpage: https://www.facebook.com/shellscriptx
 
 ## Agradecimentos
 
-A **Najane Osaki (Jane)** por escolher o nome da **API** e batizá-la de **ShellBot**. Um nome que indica de onde veio e o que faz. 
+A **Najane Lopes (Jane)** por escolher o nome da **API** e batizá-la de **ShellBot**. Um nome que indica de onde veio e o que faz. 
 
 ## Requerimentos:
 
@@ -30,7 +31,6 @@ A **Najane Osaki (Jane)** por escolher o nome da **API** e batizá-la de **Shell
 |bash | Interpretador de comandos Bourne-Again Shell|
 |jq| Processador de comandos JSON|
 |curl|Ferramenta para transferir dados de url|
-|getopt|Analisador de opcoes de comandos|
 
 > Certifique-se que todos os pacotes estão instalados.
 
@@ -115,6 +115,11 @@ ShellBot.funcao -p arg1 -p arg2 ...
 **Segue as funções disponíveis.**
 
 * <a href="#init">ShellBot.init</a>
+* <a href="#token">ShellBot.token</a>
+* <a href="#id">ShellBot.id</a>
+* <a href="#username">ShellBot.username</a>
+* <a href="#first_name">ShellBot.first_name</a>
+* <a href="#last_name">ShellBot.last_name</a>
 * <a href="#forwardMessage">ShellBot.forwardMessage</a>
 * <a href="#sendMessage">ShellBot.sendMessage</a>
 * <a href="#sendPhoto">ShellBot.sendPhoto</a>
@@ -139,7 +144,9 @@ ShellBot.funcao -p arg1 -p arg2 ...
 * <a href="#unbanChatMember">ShellBot.unbanChatMember</a>
 * <a href="#leaveChat">ShellBot.leaveChat</a>
 * <a href="#ReplyKeyboardMarkup">ShellBot.ReplyKeyboardMarkup</a>
-
+* <a href="#editMessageText">ShellBot.editMessageText</a>
+* <a href="#editMessageCaption">ShellBot.editMessageCaption</a>
+* <a href="#editMessageReplyMarkup">ShellBot.editMessageReplyMarkup</a>
 
 > Os métodos `inline bots` não são suportados
 
@@ -181,6 +188,55 @@ Parâmetro|Tipo|Obrigatório|Descrição
 -t, --token <_token_>|String|Sim|Especificar a  chave única de autenticação (TOKEN)
 
 > Cada bot criado recebe sua chave única de autenticação (TOKEN) para obter privilégios no momento de invocar seus métodos.
+
+## <a name="token">ShellBot.token</a>
+
+Retorna o token do bot.
+
+#### Uso:
+```
+ShellBot.token
+```
+> * Função nao requer parametros.
+
+## <a name="id">ShellBot.id</a>
+
+Retorna o identificador exclusivo do bot.
+
+#### Uso:
+```
+ShellBot.id
+```
+> * Função nao requer parametros.
+
+## <a name="username">ShellBot.username</a>
+
+Retorna o nome de usuario do bot.
+#### Uso:
+```
+ShellBot.username
+```
+> * Função nao requer parametros.
+
+## <a name="first_name">ShellBot.first_name</a>
+
+Retorna o primeiro nome do bot.
+
+#### Uso:
+```
+ShellBot.first_name
+```
+> * Função nao requer parametros.
+
+## <a name="first_name">ShellBot.last_name</a>
+
+Retorna o sobrenome do bot.
+
+#### Uso:
+```
+ShellBot.last_name
+```
+> * Função nao requer parametros.
 
 ## <a name="forwardMessage">ShellBot.forwardMessage</a>
 
@@ -502,6 +558,71 @@ Parâmetro|Tipo|Obrigatório|Descrição
 -a, --action <_acao_>|String|Sim|Tipo da ação para retorno. Escolha uma, dependendo sobre qual tipo de ação será enviada ao usuário. **Mensagens**: _typing_, **Fotos**: _upload_photos_, **Videos**: _record_video_ ou _upload_video_, **Audio**: _record_audio_ ou _upload_audio_, **Documentos**: _upload_document_, **Localização**: _find_location_
 
 > * Indentificador precisa ser  _id_,  _@usuario_, _@grupo_ ou _@canal_ válido.
+
+## <a name="editMessageText">ShellBot.editMessageText</a>
+
+Edita mensagens enviadas ou no histórico de mensagens.
+> * So e possivel editar mensagens enviadas pelo bot.
+
+#### Uso:
+```
+ShellBot.editMessageText --chat_id identificador --message_id identificador --text texto...
+```
+
+#### Parâmetros:
+Parâmetro|Tipo|Obrigatório|Descrição
+--------------|--------|-------|---------
+-c, --chat_id <_identificador_>|Integer ou String|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
+-m, --message_id <_identificador_>|Integer|Sim|Identificador único da mensagem.
+-t, --text <_texto_>|String|Não|Nova mensagem texto.
+-i, --inline_message_id <_identificador_>|String|Não|Identificador da mensagem inline. (Função não suportada).
+-p, --parse_mode <_modo_>|Boolean|Não|Modo de formatação aplicada ao texto enviado (markdown ou html).
+-w, --disable_web_page_preview <_status_>|Boolean|Não|Desabilita a pré-visualizaço de links na mensagem.
+-k, --reply_markup <_teclado_>|ReplyKeyboardMarkup|Não|Interface do teclado personalizada (Veja: <a href="#ReplyKeyboardMarkup">ShellBot.ReplyKeyboardMarkup</a>)
+
+> * Indentificador precisa ser  _id_,  _@usuario_, _@grupo_ ou _@canal_ válido.
+
+## <a name="editMessageCaption">ShellBot.editMessageCaption</a>
+
+Edita o titulo da mensagem enviada ou no historico de mensagens.
+> * So é possivel editar mensagens enviadas pelo bot.
+
+#### Uso:
+```
+ShellBot.editMessageCaption --chat_id identificador --message_id identificador --caption texto ...
+```
+
+#### Parâmetros:
+Parâmetro|Tipo|Obrigatório|Descrição
+--------------|--------|-------|---------
+-c, --chat_id <_identificador_>|Integer ou String|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
+-m, --message_id <_identificador_>|Integer|Sim|Identificador único da mensagem.
+-t, --caption <_texto_>|String|Não|Novo título da mensagem.
+-i, --inline_message_id <_identificador_>|String|Não|Identificador da mensagem inline. (Função não suportada).
+-k, --reply_markup <_teclado_>|ReplyKeyboardMarkup|Não|Interface do teclado personalizada (Veja: <a href="#ReplyKeyboardMarkup">ShellBot.ReplyKeyboardMarkup</a>)
+
+> * Indentificador precisa ser  _id_,  _@usuario_, _@grupo_ ou _@canal_ válido.
+
+## <a name="editMessageReplyMarkup">ShellBot.editMessageReplyMarkup</a>
+
+Edita somente mensagem enviada do tipo teclado (ReplyKeyboardMarkup).
+> * Só é possivel editar mensagens enviadas pelo bot.
+
+#### Uso:
+```
+ShellBot.editMessageKeyboardMarkup --chat_id identificador --message_id identificador --reply_markup teclado ...
+```
+
+#### Parâmetros:
+Parâmetro|Tipo|Obrigatório|Descrição
+--------------|--------|-------|---------
+-c, --chat_id <_identificador_>|Integer ou String|Sim|Identificador exclusivo para o chat de destino ou nome de usuário do canal de destino (no formato @channelusername)
+-m, --message_id <_identificador_>|Integer|Sim|Identificador único da mensagem.
+-i, --inline_message_id <_identificador_>|String|Não|Identificador da mensagem inline. (Função não suportada).
+-k, --reply_markup <_teclado_>|ReplyKeyboardMarkup|Não|Interface do teclado personalizada (Veja: <a href="#ReplyKeyboardMarkup">ShellBot.ReplyKeyboardMarkup</a>)
+
+> * Indentificador precisa ser  _id_,  _@usuario_, _@grupo_ ou _@canal_ válido.
+
 
 ## <a name="getUserProfilePhotos">ShellBot.getUserProfilePhotos</a>
 
