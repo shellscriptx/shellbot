@@ -141,10 +141,7 @@ ShellBot.init()
 	# Parâmetro obrigatório.	
 	[ "$__TOKEN__" ] || message_error API "$__ERR_PARAM_REQUIRED__" "[-t, --token]"
 
-	__BOT_INFO__=$(ShellBot.getMe 2>/dev/null)
-	
-	# Se o token for inválido, imprime mensagem de erro e finaliza o script.
-	[ $? -eq 0 ] || message_error API "$__ERR_TOKEN__"
+	__BOT_INFO__=$(ShellBot.getMe 2>/dev/null) || message_error API "$__ERR_TOKEN__"
 	
 	# Define o delimitador entre os campos.
 	IFSbkp=$IFS; IFS='|'
