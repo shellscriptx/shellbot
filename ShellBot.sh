@@ -1633,7 +1633,7 @@ ShellBot.getChatAdministrators()
 	json_status || message_error TG
 
 	# Total de administratores
-	__TOTAL__=$(json '.result|length')
+	declare -i __TOTAL__=$(json '.result|length')
 
 	# Lê os administradores do grupo se houver.
 	if [ $__TOTAL__ -gt 0 ]; then
