@@ -942,23 +942,23 @@ ${message_text[2]} = Última mensagem
 
 #### <a name="callback_query">callback_query</a>
 
-* callback_query.id
-* callback_query.from.id
-* callback_query.from.first_name
-* callback_query.from.username
-* callback_query.from.language_code
-* callback_query.message.message_id
-* callback_query.message.from.id
-* callback_query.message.from.first_name
-* callback_query.message.from.username
-* callback_query.message.chat.id
-* callback_query.message.chat.title
-* callback_query.message.chat.type
-* callback_query.message.date
-* callback_query.message.text
-* callback_query.message.edit_date
-* callback_query.chat_instance
-* callback_query.data
+* callback_query_id
+* callback_query_from_id
+* callback_query_from_first_name
+* callback_query_from_username
+* callback_query_from_language_code
+* callback_query_message_message_id
+* callback_query_message_from_id
+* callback_query_message_from_first_name
+* callback_query_message_from_username
+* callback_query_message_chat_id
+* callback_query_message_chat_title
+* callback_query_message_chat_type
+* callback_query_message_date
+* callback_query_message_text
+* callback_query_message_edit_date
+* callback_query_chat_instance
+* callback_query_data
 
 #### <a name="message">Message</a> 
 
