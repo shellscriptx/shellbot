@@ -853,6 +853,59 @@ array=‘[[“botao1”],[”botao2”,“botao3”]]’
 [ botao2 ] [ botao3 ]
 ```
 
+## <a name="InlineKeyboardButton">ShellBot.InlineKeyboardButton</a>
+
+Cria um objeto do tipo botão para ser anexado em uma estrutura inline_keyboard.
+
+#### Uso:
+```
+ShellBot.InlineKeyboardButton --button <identificador> --callback_data <valor> --line <numero>...
+```
+> São mencionados acima somente os parâmetros obrigatórios da função, tendo o `…` como extensão para os opcionais.
+
+#### Parâmetros:
+Parâmetro|Tipo|Obrigatório|Descrição
+--------------|--------|-------|---------
+-b, --button|string|Sim|Um identificador válido onde será armazenado a estrutura do objeto.
+-t, --text|string|Sim|Texto do botão.
+-c, --calback_data|String|Sim|Dados a serem enviados em uma consulta de retorno ao bot quando o botão é pressionado, 1-64 bytes
+-l, --line|integer|Sim|Número da linha onde o botão será inserido. Esse valor determina sua posição no array da estrutura. É possível adicionar mais botões a mesma linha; Neste caso a sua posição será determinada pela ordem de declaração.
+-u, --url|String|Nâo|Url HTTP a ser aberta quando o botão é pressionado.
+-q, --switch_inline_query|String|Nâo|Se configurado, pressionar o botão solicitará ao usuário selecionar um dos seus bate-papos, abrir esse bate-papo e inserir o nome de usuário do bot e a consulta inline especificada no campo de entrada. Pode estar vazio, caso em que apenas o nome de usuário do bot será inserido.
+-s, --switch_inline_query_current_chat|String|Nâo|Se configurado, pressionar o botão irá inserir o nome de usuário do bot e a consulta inline especificada no campo de entrada do bate-papo atual. Pode estar vazio, caso em que apenas o nome de usuário do bot será inserido.
+
+## <a name="InlineKeyboardMarkup">ShellBot.InlineKeyboardMarkup</a>
+
+Cria um objeto do tipo teclado apartir de uma estrutura inline_button.
+
+#### Uso:
+```
+ShellBot.InlineKeyboardMarkup --k <identificador> ...
+```
+> São mencionados acima somente os parâmetros obrigatórios da função, tendo o `…` como extensão para os opcionais.
+
+#### Parâmetros:
+Parâmetro|Tipo|Obrigatório|Descrição
+--------------|--------|-------|---------
+-k, --keyboard|String|Sim|Indentificador válido contendo uma estrutura inline_button.
+-d, --delete||Não|Apaga a estrutura inline_button existente no identificador especificado.
+
+## <a name="deleteMessage">ShellBot.deleteMessage</a>
+
+Use esse método para excluir uma mensagem. Uma mensagem só pode ser excluída se for enviada há menos de 48 horas. Qualquer mensagem enviada recentemente pode ser excluída. Além disso, se o bot for um administrador em um bate-papo em grupo, ele pode excluir qualquer mensagem. Se o bot for um administrador em um supergrupo, ele pode excluir mensagens de qualquer outro usuário e mensagens de serviço sobre pessoas que se juntam ou deixam o grupo (outros tipos de mensagens de serviço só podem ser removidos pelo criador do grupo). Nos canais, os bots só podem remover suas próprias mensagens. Retorna Verdadeiro no sucesso.
+
+#### Uso:
+```
+ShellBot.deleteMessage --chat_id <identificador> --message_id <indentificador>
+```
+> São mencionados acima somente os parâmetros obrigatórios da função, tendo o `…` como extensão para os opcionais.
+
+#### Parâmetros:
+Parâmetro|Tipo|Obrigatório|Descrição
+--------------|--------|-------|---------
+-c, --chat_id|String ou inteiro|Sim|Identificador exclusivo para o bate-papo de destino ou nome de usuário do canal de destino (no formato @channelusername)
+-m, --message_id|Inteiro|Sim|Identificador da mensagem para excluir
+
 ## Variáveis/Arrays
 
 Os métodos do _Telegram_ suportam vários tipos de dados passados como argumento, porém o shell suporta apenas variáveis do tipo `integer` ou `string`; Para filtrar essas dados e garantir que tipos incompatíveis não sejam enviados aos métodos, foram criadas expressões regulares para validação dos mesmos. O valor é verificado com base no tipo suportado pelo parâmetro ao qual foi passado, caso seja incompatível, a função trata o erro e finaliza a função antes de enviar os dados ao _Servidor (Telegram)_ (Otimizando assim o tempo de resposta).
@@ -886,6 +939,26 @@ ${message_text[2]} = Última mensagem
 #### <a name="message">update</a>
 
 * update_id
+
+#### <a name="callback_query">callback_query</a>
+
+* callback_query.id
+* callback_query.from.id
+* callback_query.from.first_name
+* callback_query.from.username
+* callback_query.from.language_code
+* callback_query.message.message_id
+* callback_query.message.from.id
+* callback_query.message.from.first_name
+* callback_query.message.from.username
+* callback_query.message.chat.id
+* callback_query.message.chat.title
+* callback_query.message.chat.type
+* callback_query.message.date
+* callback_query.message.text
+* callback_query.message.edit_date
+* callback_query.chat_instance
+* callback_query.data
 
 #### <a name="message">Message</a> 
 
