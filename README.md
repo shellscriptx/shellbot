@@ -814,17 +814,17 @@ Cria um teclado personalizado de seleção a partir um array.
 
 #### Uso:
 ```
-ShellBot.ReplyKeyboardMarkup --keyboard ...
+ShellBot.ReplyKeyboardMarkup --button ...
 ```
 > São mencionados acima somente os parâmetros obrigatórios da função, tendo o `…` como extensão para os opcionais.
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
 --------------|--------|-------|---------
--k, --keyboard|Array|Sim|Array de linhas de botão, cada uma representada por uma matriz de objetos Keyboard.
--r, --resize_keyboard|Boolean|Nâo|Solicita aos clientes que redimensionem o teclado verticalmente para um ajuste ideal (por exemplo, faça o teclado menor se houver apenas duas linhas de botões). O padrão é false, caso em que o teclado personalizado é sempre da mesma altura que o teclado padrão do aplicativo.
--t, --one_time_keyboard|Boolean|Nâo|Solicita que os clientes ocultem o teclado assim que ele for usado. O teclado ainda estará disponível, mas os clientes exibirão automaticamente o teclado de letras usual no chat - o usuário pode pressionar um botão especial no campo de entrada para ver o teclado personalizado novamente. O padrão é false.
--s, --selective|Boolean|Nâo|Use esse parâmetro se você quiser mostrar o teclado somente para usuários específicos. Alvos: 1) usuários que são @mencionados no texto do objeto Mensagem; 2) se a mensagem do bot é uma resposta (tem reply_to_message_id), remetente da mensagem original. Exemplo: Um usuário solicita alterar o idioma do bot, bot responde ao pedido com um teclado para selecionar o novo idioma. Outros usuários no grupo não vêem o teclado.
+-b, --button <_array_>|Array|Sim|Array contendo uma lista de botões, cada uma representada por uma matriz de objetos Keyboard.
+-r, --resize_keyboard (<true ou false_>|Boolean|Nâo|Solicita aos clientes que redimensionem o teclado verticalmente para um ajuste ideal (por exemplo, faça o teclado menor se houver apenas duas linhas de botões). O padrão é false, caso em que o teclado personalizado é sempre da mesma altura que o teclado padrão do aplicativo.
+-t, --one_time_keyboard <_true ou false_>|Boolean|Nâo|Solicita que os clientes ocultem o teclado assim que ele for usado. O teclado ainda estará disponível, mas os clientes exibirão automaticamente o teclado de letras usual no chat - o usuário pode pressionar um botão especial no campo de entrada para ver o teclado personalizado novamente. O padrão é false.
+-s, --selective <_true ou false_>|Boolean|Nâo|Use esse parâmetro se você quiser mostrar o teclado somente para usuários específicos. Alvos: 1) usuários que são @mencionados no texto do objeto Mensagem; 2) se a mensagem do bot é uma resposta (tem reply_to_message_id), remetente da mensagem original. Exemplo: Um usuário solicita alterar o idioma do bot, bot responde ao pedido com um teclado para selecionar o novo idioma. Outros usuários no grupo não vêem o teclado.
 
 > Nota: O array deve ser um array de array.
 
@@ -868,7 +868,7 @@ ShellBot.InlineKeyboardButton --button <identificador> --callback_data <valor> -
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
 --------------|--------|-------|---------
--b, --button <_identificador_>|string|Sim|Um identificador válido onde será armazenado a estrutura do objeto.
+-b, --button <_identificador_>|string|Sim|Nome da varíavel onde será armazenado a estrutura do objeto.
 -t, --text <_texto_>|string|Sim|Texto do botão.
 -c, --calback_data <_dados_>|String|Sim|Dados a serem enviados em uma consulta de retorno ao bot quando o botão é pressionado, 1-64 bytes
 -l, --line <_numero_>|integer|Sim|Número da linha onde o botão será inserido. Esse valor determina sua posição no array da estrutura. É possível adicionar mais botões a mesma linha; Neste caso a sua posição será determinada pela ordem de declaração.
@@ -878,18 +878,18 @@ Parâmetro|Tipo|Obrigatório|Descrição
 
 ## <a name="InlineKeyboardMarkup">ShellBot.InlineKeyboardMarkup</a>
 
-Cria um objeto do tipo teclado apartir de uma estrutura inline_button.
+Retorna um objeto do tipo Inline_Keyboard apartir de uma variável inline_button.
 
 #### Uso:
 ```
-ShellBot.InlineKeyboardMarkup --keyboard <botao>
+ShellBot.InlineKeyboardMarkup --button <_identificador_>
 ```
 > São mencionados acima somente os parâmetros obrigatórios da função, tendo o `…` como extensão para os opcionais.
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
 --------------|--------|-------|---------
--k, --keyboard <_botao_>|String|Sim|Uma estrutura inline_button válida.
+-b, --button <_identificador_>|String|Sim|Nome da variável que contém a estrutura inline_button.
 -d, --delete||Não|Apaga a estrutura inline_button existente no identificador especificado.
 
 ## <a name="answerCallbackQuery">ShellBot.answerCallbackQuery</a>

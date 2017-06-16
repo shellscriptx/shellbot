@@ -53,16 +53,16 @@ str_len(){ echo $(($(wc -c <<< "$*")-1)); return 0; }
 trap "rm -f $_JSON_ &>/dev/null; exit 1" SIGQUIT SIGINT SIGKILL SIGTERM SIGSTOP SIGPWR
 
 # Erros registrados da API (Parâmetros/Argumentos)
-declare -r _ERR_TYPE_BOOL_='Tipo incompatível. Somente "true" ou "false".'
-declare -r _ERR_TYPE_PARSE_MODE_='Tipo incompatível. Somente "markdown" ou "html".'
-declare -r _ERR_TYPE_INT_='Tipo incompatível. Somente inteiro.'
-declare -r _ERR_TYPE_FLOAT_='Tipo incompatível. Somente float.'
-declare -r _ERR_CAPTION_MAX_CHAR_='Número máximo de caracteres excedido.'
-declare -r _ERR_ACTION_MODE_='Ação inválida. Somente "typing" ou "upload_photo" ou "record_video" ou "upload_video" ou "record_audio" ou "upload_audio" ou "upload_document" ou "find_location".'
-declare -r _ERR_PARAM_INVALID_='Parâmetro inválido.'
-declare -r _ERR_PARAM_REQUIRED_='Parâmetro/argumento requerido.'
-declare -r _ERR_TOKEN_="Não autorizado. Verifique o número do TOKEN ou se possui privilégios."
-
+declare -r _ERR_TYPE_BOOL_='tipo incompatível. Somente "true" ou "false".'
+declare -r _ERR_TYPE_PARSE_MODE_='tipo incompatível. Somente "markdown" ou "html".'
+declare -r _ERR_TYPE_INT_='tipo incompatível. Somente inteiro.'
+declare -r _ERR_TYPE_FLOAT_='tipo incompatível. Somente float.'
+declare -r _ERR_CAPTION_MAX_CHAR_='número máximo de caracteres excedido.'
+declare -r _ERR_ACTION_MODE_='tipo da ação inválida.'
+declare -r _ERR_PARAM_INVALID_='parâmetro inválido.'
+declare -r _ERR_PARAM_REQUIRED_='parâmetro/argumento requerido.'
+declare -r _ERR_TOKEN_='não autorizado. Verifique o número do TOKEN ou se possui privilégios.'
+declare -r _ERR_KEYBOARD_EXISTS_='teclado já foi inicializado.'
 # Trata os erros
 message_error()
 {
@@ -282,8 +282,7 @@ ShellBot.InlineKeyboardButton()
 	#
 	# Obrigatório: text, callback_data 
 	# Opcional: url, switch_inline_query, switch_inline_query_current_chat
-	_BUTTON_[$_LINE_]+="
-${_DELM_}${_LCH_}{ 
+	_BUTTON_[$_LINE_]+="${_DELM_}${_LCH_}{ 
 \"text\":\"${_TEXT_}\",
 \"callback_data\":\"${_CALLBACK_DATA_}\"
 ${_URL_:+,\"url\":\"${_URL_}\"}
@@ -301,10 +300,10 @@ ${_SWITCH_INLINE_QUERY_CURRENT_CHAT_:+,\"switch_inline_query_current_chat\":\"${
 
 ShellBot.InlineKeyboardMarkup()
 {
-	local 	_KEYBOARD_ _TEMP_KB_ \
+	local 	_BUTTON_ _TEMP_KB_ \
 			_DEL_=false
 
-    local 	_PARAM_=$(getopt --quiet --options 'k:d' --longoptions 'keyboard:,delete' -- "$@")
+    local 	_PARAM_=$(getopt --quiet --options 'b:d' --longoptions 'button:,delete' -- "$@")
 
 	# Sem erros
 	_STATUS_=0
@@ -314,10 +313,10 @@ ShellBot.InlineKeyboardMarkup()
 	while :
 	do
 		case $1 in
-			-k|--keyboard)
+			-b|--button)
 				# Ponteiro que recebe o endereço da variável "teclado" com as definições
 				# de configuração do botão inserido.
-				_KEYBOARD_="$2"
+				_BUTTON_="$2"
 				shift 2
 				;;
 			-d|--delete)
@@ -331,16 +330,14 @@ ShellBot.InlineKeyboardMarkup()
 		esac
 	done
 	
-	[[ $_KEYBOARD_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-k, --keyboard"
+	[[ $_BUTTON_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-b, --button"
 	
-	# Apaga o objeto teclado (se ele existir) e finaliza a função.
-	[[ $_DEL_ = true ]] && { unset $_KEYBOARD_; return $_STATUS_; }
-
 	# Ponteiro
-	declare -n _KEYBOARD_
+	declare -n _BUTTON_
 
-	# Sai da função se o objeto teclado já foi criado.
-	echo $_KEYBOARD_ | grep -Eqx '^{"inline_keyboard":\[.*\]}$' && return $_STATUS_
+	# Apaga o objeto teclado (se ele existir) e finaliza a função.
+	[[ $_DEL_ = true ]] && { unset $_BUTTON_; return $_STATUS_; }
+
 
 	# Salva todos elementos do array do teclado, convertendo-o em uma variável de índice 0.
 	# Cria-se uma estrutura do tipo 'inline_keyboard' e anexa os botões e fecha a estrutura.
@@ -356,15 +353,17 @@ ShellBot.InlineKeyboardMarkup()
 	#	 2				[inline_botao4] [inline_botao5]
 	#	 3			            [inline_botao7]
 	
-	_TMP_KB_="${_KEYBOARD_[@]}" || _STATUS_=1 
-	unset _KEYBOARD_
+	_KEYBOARD_="${_BUTTON_[@]}" || _STATUS_=1 
 	
-	# Criando estrutura do teclado
-	_KEYBOARD_="${_TMP_KB_/#/{\"inline_keyboard\":[}"
+	# Cria estrutura do teclado
+	_KEYBOARD_="${_KEYBOARD_/#/{\"inline_keyboard\":[}"
 	_KEYBOARD_="${_KEYBOARD_//]/],}"					
 	_KEYBOARD_="${_KEYBOARD_%,}"						
 	_KEYBOARD_="${_KEYBOARD_/%/]\}}"					
-	
+
+	# Retorna a estrutura	
+	echo $_KEYBOARD_
+
 	# status
 	return $_STATUS_
 }
@@ -439,11 +438,11 @@ ShellBot.answerCallbackQuery()
 ShellBot.ReplyKeyboardMarkup()
 {
 	# Variáveis locais
-	local _KEYBOARD_ _RESIZE_KEYBOARD_ _ON_TIME_KEYBOARD_ _SELECTIVE_
+	local 	_BUTTON_ _RESIZE_KEYBOARD_ _ON_TIME_KEYBOARD_ _SELECTIVE_
 	
 	# Lê os parâmetros da função.
-	local _PARAM_=$(getopt --quiet --options 'k:r:t:s:' \
-										--longoptions 'keyboard:,
+	local _PARAM_=$(getopt --quiet --options 'b:r:t:s:' \
+										--longoptions 'button:,
 														resize_keyboard:,
 														one_time_keyboard:,
 														selective:' \
@@ -465,9 +464,8 @@ ShellBot.ReplyKeyboardMarkup()
 		# salva o valor do argumento na posição '$2' e desloca duas posições a esquerda (shift 2); Repete o processo
 		# até que o valor de '$1' seja igual '--' e finaliza o loop.
 		case $1 in
-			-k|--keyboard)
-				_KEYBOARD_="$2"
-				declare -n _KEYBOARD_
+			-b|--button)
+				_BUTTON_="$2"
 				shift 2
 				;;
 			-r|--resize_keyboard)
@@ -496,17 +494,19 @@ ShellBot.ReplyKeyboardMarkup()
 	done
 	
 	# Imprime mensagem de erro se o parâmetro obrigatório for omitido.
-	[[ $_KEYBOARD_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-k, --keyboard"
-	
+	[[ $_BUTTON_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-b, --button"
+
+	# Ponteiro	
+	declare -n _BUTTON_
+
 	# Constroi a estrutura dos objetos + array keyboard, define os valores e salva as configurações.
 	# Por padrão todos os valores são 'false', até que seja definido.
-	_KEYBOARD_="$(cat << _EOF
-{"keyboard":$_KEYBOARD_,
+	cat << _EOF
+{"keyboard":$_BUTTON_,
 "resize_keyboard":${_RESIZE_KEYBOARD_:-false},
 "one_time_keyboard":${_ON_TIME_KEYBOARD_:-false},
 "selective": ${_SELECTIVE_:-false}}
 _EOF
-)" || _STATUS_=1
 
 	# status
 	return $_STATUS_
@@ -573,7 +573,6 @@ ShellBot.sendMessage()
 				;;
 			-k|--reply_markup)
 				_REPLY_MARKUP_="$2"
-				declare -n _REPLY_MARKUP_
 				shift 2
 				;;
 			--)
@@ -729,7 +728,6 @@ ShellBot.sendPhoto()
 				;;
 			-k|--reply_markup)
 				_REPLY_MARKUP_="$2"
-				declare -n _REPLY_MARKUP_
 				shift 2
 				;;
 			--)
@@ -827,7 +825,6 @@ ShellBot.sendAudio()
 				;;
 			-k|--reply_markup)
 				_REPLY_MARKUP_="$2"
-				declare -n _REPLY_MARKUP_
 				shift 2
 				;;
 			--)
@@ -986,7 +983,6 @@ ShellBot.sendSticker()
 				;;
 			-k|--reply_markup)
 				_REPLY_MARKUP_="$2"
-				declare -n _REPLY_MARKUP_
 				shift 2
 				;;
 			--)
@@ -1086,7 +1082,6 @@ ShellBot.sendVideo()
 				;;
 			-k|--reply_markup)
 				_REPLY_MARKUP_="$2"
-				declare -n _REPLY_MARKUP_
 				shift 2
 				;;
 			--)
@@ -1178,7 +1173,6 @@ ShellBot.sendVoice()
 				;;
 			-k|--reply_markup)
 				_REPLY_MARKUP_="$2"
-				declare -n _REPLY_MARKUP_
 				shift 2
 				;;
 			--)
@@ -1264,7 +1258,6 @@ ShellBot.sendLocation()
 				;;
 			-k|--reply_markup)
 				_REPLY_MARKUP_="$2"
-				declare -n _REPLY_MARKUP_
 				shift 2
 				;;
 			--)
@@ -1364,7 +1357,6 @@ ShellBot.sendVenue()
 				;;
 			-k|--reply_markup)
 				_REPLY_MARKUP_="$2"
-				declare -n _REPLY_MARKUP_
 				shift 2
 				;;
 			--)
@@ -1456,7 +1448,6 @@ ShellBot.sendContact()
 				;;
 			-k|--reply_markup)
 				_REPLY_MARKUP_="$2"
-				declare -n _REPLY_MARKUP_
 				shift 2
 				;;
 			--)
@@ -1513,7 +1504,11 @@ ShellBot.sendChatAction()
 				shift 2
 				;;
 			-a|--action)
-				[[ "$2" =~ ^(typing|upload_photo|record_video|upload_video|record_audio|upload_audio|upload_document|find_location)$ ]] || message_error API "$_ERR_ACTION_MODE_" "$1" "$2"
+				[[ $2 =~ ^(typing|upload_photo|record_video|upload_video|
+							record_audio|upload_audio|upload_document|
+							find_location|record_video_note|upload_video_note)$ ]] || \
+							# erro
+							message_error API "$_ERR_ACTION_MODE_" "$1" "$2"
 				_ACTION_="$2"
 				shift 2
 				;;
@@ -2053,7 +2048,6 @@ ShellBot.editMessageText()
 					;;
 				-r|--reply_markup)
 					_REPLY_MARKUP_="$2"
-					declare -n _REPLY_MARKUP_
 					shift 2
 					;;
 				--)
@@ -2128,7 +2122,6 @@ ShellBot.editMessageCaption()
 					;;
 				-r|--reply_markup)
 					_REPLY_MARKUP_="$2"
-					declare -n _REPLY_MARKUP_
 					shift 2
 					;;
 				--)
@@ -2188,7 +2181,6 @@ ShellBot.editMessageReplyMarkup()
 					;;
 				-r|--reply_markup)
 					_REPLY_MARKUP_="$2"
-					declare -n _REPLY_MARKUP_
 					shift 2
 					;;
 				--)
