@@ -147,8 +147,9 @@ ShellBot.funcao -p arg1 -p arg2 ...
 * <a href="#editMessageText">ShellBot.editMessageText</a>
 * <a href="#editMessageCaption">ShellBot.editMessageCaption</a>
 * <a href="#editMessageReplyMarkup">ShellBot.editMessageReplyMarkup</a>
-
-> Os métodos `inline bots` não são suportados
+* <a href="#deleteMessage">ShellBot.deleteMessage</a>
+* <a href="#InlineKeyboardMarkup">ShellBot.InlineKeyboardMarkup</a>
+* <a href="#InlineKeyboardButton">ShellBot.InlineKeyboardButton</a>
 
 #### Retorno
 
