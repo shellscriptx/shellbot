@@ -868,13 +868,13 @@ ShellBot.InlineKeyboardButton --button <identificador> --callback_data <valor> -
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
 --------------|--------|-------|---------
--b, --button|string|Sim|Um identificador válido onde será armazenado a estrutura do objeto.
--t, --text|string|Sim|Texto do botão.
--c, --calback_data|String|Sim|Dados a serem enviados em uma consulta de retorno ao bot quando o botão é pressionado, 1-64 bytes
--l, --line|integer|Sim|Número da linha onde o botão será inserido. Esse valor determina sua posição no array da estrutura. É possível adicionar mais botões a mesma linha; Neste caso a sua posição será determinada pela ordem de declaração.
--u, --url|String|Nâo|Url HTTP a ser aberta quando o botão é pressionado.
--q, --switch_inline_query|String|Nâo|Se configurado, pressionar o botão solicitará ao usuário selecionar um dos seus bate-papos, abrir esse bate-papo e inserir o nome de usuário do bot e a consulta inline especificada no campo de entrada. Pode estar vazio, caso em que apenas o nome de usuário do bot será inserido.
--s, --switch_inline_query_current_chat|String|Nâo|Se configurado, pressionar o botão irá inserir o nome de usuário do bot e a consulta inline especificada no campo de entrada do bate-papo atual. Pode estar vazio, caso em que apenas o nome de usuário do bot será inserido.
+-b, --button <identificador>|string|Sim|Um identificador válido onde será armazenado a estrutura do objeto.
+-t, --text <texto>|string|Sim|Texto do botão.
+-c, --calback_data <dados>|String|Sim|Dados a serem enviados em uma consulta de retorno ao bot quando o botão é pressionado, 1-64 bytes
+-l, --line <numero>|integer|Sim|Número da linha onde o botão será inserido. Esse valor determina sua posição no array da estrutura. É possível adicionar mais botões a mesma linha; Neste caso a sua posição será determinada pela ordem de declaração.
+-u, --url <url>|String|Nâo|Url HTTP a ser aberta quando o botão é pressionado.
+-q, --switch_inline_query <texto>|String|Nâo|Se configurado, pressionar o botão solicitará ao usuário selecionar um dos seus bate-papos, abrir esse bate-papo e inserir o nome de usuário do bot e a consulta inline especificada no campo de entrada. Pode estar vazio, caso em que apenas o nome de usuário do bot será inserido.
+-s, --switch_inline_query_current_chat <texto>|String|Nâo|Se configurado, pressionar o botão irá inserir o nome de usuário do bot e a consulta inline especificada no campo de entrada do bate-papo atual. Pode estar vazio, caso em que apenas o nome de usuário do bot será inserido.
 
 ## <a name="InlineKeyboardMarkup">ShellBot.InlineKeyboardMarkup</a>
 
@@ -889,7 +889,7 @@ ShellBot.InlineKeyboardMarkup --k <identificador> ...
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
 --------------|--------|-------|---------
--k, --keyboard|String|Sim|Indentificador válido contendo uma estrutura inline_button.
+-k, --keyboard <botao>|String|Sim|Indentificador válido contendo uma estrutura inline_button.
 -d, --delete||Não|Apaga a estrutura inline_button existente no identificador especificado.
 
 ## <a name="answerCallbackQuery">ShellBot.answerCallbackQuery</a>
@@ -905,11 +905,11 @@ ShellBot.answerCallbackQuery --callback_query_id <identificador> ...
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
 --------------|--------|-------|---------
--c, --callback_query_id|String|Sim|Identificador exclusivo para a consulta a ser respondida.
--t, --text|String|Não|Texto da notificação. Se não for especificado, nada será mostrado ao usuário, 0 a 200 caracteres.
--s, --show_alert|Boolean|Não|Se for verdade, um alerta será mostrado pelo cliente em vez de uma notificação na parte superior da tela de bate-papo. Por padrão, é falso.
--u, --url|String|Não|URL que será aberto pelo cliente do usuário.
--t, --cache_time|Integer|Não|A quantidade máxima de tempo em segundos que o resultado da consulta de retorno de chamada pode ser armazenada no lado do cliente. Os aplicativos de Telegram suportarão o armazenamento em cache a partir da versão 3.14. Padrão para 0.
+-c, --callback_query_id <identificador>|String|Sim|Identificador exclusivo para a consulta a ser respondida.
+-t, --text <texto>|String|Não|Texto da notificação. Se não for especificado, nada será mostrado ao usuário, 0 a 200 caracteres.
+-s, --show_alert <true ou false>|Boolean|Não|Se for verdade, um alerta será mostrado pelo cliente em vez de uma notificação na parte superior da tela de bate-papo. Por padrão, é falso.
+-u, --url <url>|String|Não|URL que será aberto pelo cliente do usuário.
+-t, --cache_time <tempo>|Integer|Não|A quantidade máxima de tempo em segundos que o resultado da consulta de retorno de chamada pode ser armazenada no lado do cliente. Os aplicativos de Telegram suportarão o armazenamento em cache a partir da versão 3.14. Padrão para 0.
 
 ## <a name="deleteMessage">ShellBot.deleteMessage</a>
 
@@ -924,8 +924,8 @@ ShellBot.deleteMessage --chat_id <identificador> --message_id <indentificador>
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
 --------------|--------|-------|---------
--c, --chat_id|String ou inteiro|Sim|Identificador exclusivo para o bate-papo de destino ou nome de usuário do canal de destino (no formato @channelusername)
--m, --message_id|Inteiro|Sim|Identificador da mensagem para excluir
+-c, --chat_id <identificador>|String ou Integer|Sim|Identificador exclusivo para o bate-papo de destino ou nome de usuário do canal de destino (no formato @channelusername)
+-m, --message_id <identificador>|Inteiro|Sim|Identificador da mensagem para excluir
 
 ## Variáveis/Arrays
 
