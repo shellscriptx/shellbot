@@ -822,7 +822,7 @@ ShellBot.ReplyKeyboardMarkup --button ...
 Parâmetro|Tipo|Obrigatório|Descrição
 --------------|--------|-------|---------
 -b, --button <_array_>|Array|Sim|Array contendo uma lista de botões, cada uma representada por uma matriz de objetos Keyboard.
--r, --resize_keyboard (<true ou false_>|Boolean|Nâo|Solicita aos clientes que redimensionem o teclado verticalmente para um ajuste ideal (por exemplo, faça o teclado menor se houver apenas duas linhas de botões). O padrão é false, caso em que o teclado personalizado é sempre da mesma altura que o teclado padrão do aplicativo.
+-r, --resize_keyboard <true ou false_>|Boolean|Nâo|Solicita aos clientes que redimensionem o teclado verticalmente para um ajuste ideal (por exemplo, faça o teclado menor se houver apenas duas linhas de botões). O padrão é false, caso em que o teclado personalizado é sempre da mesma altura que o teclado padrão do aplicativo.
 -t, --one_time_keyboard <_true ou false_>|Boolean|Nâo|Solicita que os clientes ocultem o teclado assim que ele for usado. O teclado ainda estará disponível, mas os clientes exibirão automaticamente o teclado de letras usual no chat - o usuário pode pressionar um botão especial no campo de entrada para ver o teclado personalizado novamente. O padrão é false.
 -s, --selective <_true ou false_>|Boolean|Nâo|Use esse parâmetro se você quiser mostrar o teclado somente para usuários específicos. Alvos: 1) usuários que são @mencionados no texto do objeto Mensagem; 2) se a mensagem do bot é uma resposta (tem reply_to_message_id), remetente da mensagem original. Exemplo: Um usuário solicita alterar o idioma do bot, bot responde ao pedido com um teclado para selecionar o novo idioma. Outros usuários no grupo não vêem o teclado.
 
