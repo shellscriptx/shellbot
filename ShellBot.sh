@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #-----------------------------------------------------------------------------------------------------------
-#	Data:				17 de Junho de 2017
+#	Data:				16 de Junho de 2017
 #	Script:				ShellBot.sh
 #	Versão:				3.0
 #	Desenvolvido por:	Juliano Santos [SHAMAN]
