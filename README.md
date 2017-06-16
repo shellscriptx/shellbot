@@ -898,7 +898,7 @@ Use este método para enviar respostas para consultas de retorno de chamada envi
 
 #### Uso:
 ```
-ShellBot.answerCallbackQuery --c <identificador> ...
+ShellBot.answerCallbackQuery --callback_query_id <identificador> ...
 ```
 > São mencionados acima somente os parâmetros obrigatórios da função, tendo o `…` como extensão para os opcionais.
 
