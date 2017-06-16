@@ -882,7 +882,7 @@ Cria um objeto do tipo teclado apartir de uma estrutura inline_button.
 
 #### Uso:
 ```
-ShellBot.InlineKeyboardMarkup --k <identificador> ...
+ShellBot.InlineKeyboardMarkup --keyboard <botao>
 ```
 > São mencionados acima somente os parâmetros obrigatórios da função, tendo o `…` como extensão para os opcionais.
 
