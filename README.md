@@ -882,14 +882,14 @@ Retorna um objeto do tipo Inline_Keyboard apartir de uma variável inline_button
 
 #### Uso:
 ```
-ShellBot.InlineKeyboardMarkup --button <_identificador_>
+ShellBot.InlineKeyboardMarkup --button <identificador>
 ```
 > São mencionados acima somente os parâmetros obrigatórios da função, tendo o `…` como extensão para os opcionais.
 
 #### Parâmetros:
 Parâmetro|Tipo|Obrigatório|Descrição
 --------------|--------|-------|---------
--b, --button <_identificador_>|String|Sim|Nome da variável que contém a estrutura inline_button.
+-b, --button <_identificador_>|String|Sim|Nome da variável do tipo inline_button.
 -d, --delete||Não|Apaga a estrutura inline_button existente no identificador especificado.
 
 ## <a name="answerCallbackQuery">ShellBot.answerCallbackQuery</a>
