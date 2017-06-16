@@ -112,7 +112,7 @@ ShellBot.funcao -p arg1 -p arg2 ...
 
 > Nota: É possível mesclar ambos os parâmetros na mesma função. 
 
-**Segue as funções disponíveis.**
+**Funções disponíveis.**
 
 * <a href="#init">ShellBot.init</a>
 * <a href="#token">ShellBot.token</a>
