@@ -857,7 +857,7 @@ array=‘[[“botao1”],[”botao2”,“botao3”]]’
 
 ## <a name="InlineKeyboardButton">ShellBot.InlineKeyboardButton</a>
 
-Cria um objeto do tipo botão para ser anexado em uma estrutura inline_keyboard.
+Cria um objeto inline_button contendo uma estrutura de configurações.
 
 #### Uso:
 ```
