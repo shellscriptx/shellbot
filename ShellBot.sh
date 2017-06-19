@@ -3213,6 +3213,10 @@ declare -rf json_status
 declare -rf str_len
 declare -rf message_error
 
+# API
+declare -rf ShellBot.regHandleFunction
+declare -rf ShellBot.watchHandle
+
 # Bot métodos
 declare -rf ShellBot.getMe
 declare -rf ShellBot.init
