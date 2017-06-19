@@ -28,6 +28,9 @@ done
 # Verifica se a API já foi instanciada.
 [[ $_INIT_ ]] && return 1
 
+# Desabilitar globbing
+set -f
+
 declare -r _INIT_=1		# API inicializada.
 declare -i _STATUS_=0	# Inicia sem erros.
 
@@ -62,7 +65,8 @@ declare -r _ERR_ACTION_MODE_='tipo da ação inválida.'
 declare -r _ERR_PARAM_INVALID_='parâmetro inválido.'
 declare -r _ERR_PARAM_REQUIRED_='parâmetro/argumento requerido.'
 declare -r _ERR_TOKEN_='não autorizado. Verifique o número do TOKEN ou se possui privilégios.'
-declare -r _ERR_KEYBOARD_EXISTS_='teclado já foi inicializado.'
+declare -r _ERR_FUNCTION_NOT_FOUND_='nome da função inválida ou não existe.'
+
 # Trata os erros
 message_error()
 {
@@ -107,6 +111,104 @@ message_error()
 	[[ $_EXIT_ ]] && exit 1 || return $_STATUS_
 }
 
+ShellBot.regHandleFunction()
+{
+	local _FUNCTION_ _CALLBACK_DATA_ _HANDLE_ _ARGS_
+
+	local _PARAM_=$(getopt --quiet --options 'f:a:d:' \
+									--longoptions 'function:,
+													args:,
+													callback_data:' \
+													-- "$@")
+
+	_STATUS_=0
+	
+	eval set -- "$_PARAM_"
+	
+	while :
+	do
+		case $1 in
+			-f|--function)
+				# Verifica se a função especificada existe.
+				if ! declare -fp $2 &>/dev/null; then
+					message_error API "$_ERR_FUNCTION_NOT_FOUND_" "$1" "$2"
+					return 1
+				fi
+				_FUNCTION_="$2"
+				shift 2
+				;;
+			-a|--args)
+				_ARGS_="$2"
+				shift 2
+				;;
+			-d|--callback_data)
+				_CALLBACK_DATA_="$2"
+				shift 2
+				;;
+			--)
+				shift
+				break
+				;;
+		esac
+	done
+	
+	[[ $_FUNCTION_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-f, --function]"
+	[[ $_CALLBACK_DATA_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-d, --callback_data]"
+
+	# Testa se o indentificador armazenado em _HANDLE_ já existe. Caso já exista, repete
+	# o procedimento até que um handle válido seja gerado; Evitando sobreescrever handle's existentes.
+	until ! declare -fp $_HANDLE_ &>/dev/null; do
+		_HANDLE_=HandleID:$(tr -dc A-Za-z0-9_ < /dev/urandom | head -c15)
+	done
+
+	# Cria a função com o nome gerado e adiciona a chamada com os argumentos especificados.
+	# Anexa o novo handle a lista no índice associativo definindo em _CALLBACK_DATA_	
+	eval "$_HANDLE_(){ $_FUNCTION_ $_ARGS_; }"
+	
+	declare -Ag _LIST_REG_FUNC_HANDLE_
+	_LIST_REG_FUNC_HANDLE_[$_CALLBACK_DATA_]+="$_HANDLE_ "
+
+	return $_STATUS_
+}
+
+ShellBot.watchHandle()
+{
+	local 	_CALLBACK_DATA_ \
+			_FUNC_HANDLE_ \
+			_PARAM_=$(getopt --quiet --options 'd:' --longoptions '--callback_data:' -- "$@")
+
+	_STATUS_=0
+	
+	eval set -- "$_PARAM_"
+
+	while :
+	do
+		case $1 in
+			-d|--callback_data)
+				_CALLBACK_DATA_="$2"
+				shift 2
+				;;
+			--)
+				shift
+				break
+				;;
+		esac
+	done
+	
+	# O parâmetro callback_data é parcial, ou seja, Se o handle for válido, os elementos
+	# serão listados. Caso contrário a função é finalizada.
+	[[ $_CALLBACK_DATA_ ]] || return 1
+
+	# Lista todos os handles no índice _CALLBACK_DATA_  e executa-os
+	# consecutivamente. A ordem de execução das funções é determinada
+	# pela ordem de declaração.
+	for _FUNC_HANDLE_ in ${_LIST_REG_FUNC_HANDLE_[$_CALLBACK_DATA_]}; do 
+		$_FUNC_HANDLE_; done	# executa
+
+	# retorno
+	return $_STATUS_
+}
+	
 # Inicializa o bot, definindo sua API e TOKEN.
 # Atenção: Essa função precisa ser instanciada antes de qualquer outro método.
 ShellBot.init()
@@ -198,7 +300,7 @@ ShellBot.InlineKeyboardButton()
 {
     local 	_BUTTON_ _LINE_ _TEXT_ _URL_ _CALLBACK_DATA_ \
             _SWITCH_INLINE_QUERY_ _SWITCH_INLINE_QUERY_CURRENT_CHAT_ \
-			_DELM_ _LCH_ _RCH_ _INS_ 
+			_DELM_
 
     local	_PARAM_=$(getopt --quiet --options 'b:l:t:u:c:q:s:' \
                                         --longoptions 'button:,
@@ -267,32 +369,28 @@ ShellBot.InlineKeyboardButton()
 	declare -g $_BUTTON_
 	declare -n _BUTTON_	# Ponteiro
 	
+	# Abre o array para receber o novo objeto
+	_BUTTON_[$_LINE_]="${_BUTTON_[$_LINE_]#[}"
+	_BUTTON_[$_LINE_]="${_BUTTON_[$_LINE_]%]}"
+
 	# Verifica se já existe um botão na linha especificada.
-	if [[ ${_BUTTON_[$_LINE_]} ]]; then
-		# Abre o array para receber o novo objeto
-		_BUTTON_[$_LINE_]="${_BUTTON_[$_LINE_]#[}"
-		_BUTTON_[$_LINE_]="${_BUTTON_[$_LINE_]%]}"
-		_DELM_=','
-		_INS_=true	# flag: novo botão
-	else
-		_LCH_='['; _RCH_=']'
-	fi
+	[[ ${_BUTTON_[$_LINE_]} ]] && _DELM_=','
 
 	# Salva as configurações do botão.
 	#
 	# Obrigatório: text, callback_data 
 	# Opcional: url, switch_inline_query, switch_inline_query_current_chat
-	_BUTTON_[$_LINE_]+="${_DELM_}${_LCH_}{ 
+	_BUTTON_[$_LINE_]+="${_DELM_}{ 
 \"text\":\"${_TEXT_}\",
 \"callback_data\":\"${_CALLBACK_DATA_}\"
 ${_URL_:+,\"url\":\"${_URL_}\"}
 ${_SWITCH_INLINE_QUERY_:+,\"switch_inline_query\":\"${_SWITCH_INLINE_QUERY_}\"}
 ${_SWITCH_INLINE_QUERY_CURRENT_CHAT_:+,\"switch_inline_query_current_chat\":\"${_SWITCH_INLINE_QUERY_CURRENT_CHAT_}\"}
-}${_RCH_}" || _STATUS_=1	# Erro ao salvar o botão. 
+}" || _STATUS_=1	# Erro ao salvar o botão. 
 	
 	# Fecha o array
-	_BUTTON_[$_LINE_]="${_BUTTON_[$_LINE_]/#/${_INS_:+[}}"
-	_BUTTON_[$_LINE_]="${_BUTTON_[$_LINE_]/%/${_INS_:+]}}"
+	_BUTTON_[$_LINE_]="${_BUTTON_[$_LINE_]/#/[}"
+	_BUTTON_[$_LINE_]="${_BUTTON_[$_LINE_]/%/]}"
 
 	# retorno
 	return $_STATUS_
