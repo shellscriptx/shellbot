@@ -3,7 +3,7 @@
 #-----------------------------------------------------------------------------------------------------------
 #	Data:				16 de Junho de 2017
 #	Script:				ShellBot.sh
-#	Versão:				3.0
+#	Versão:				3.5
 #	Desenvolvido por:	Juliano Santos [SHAMAN]
 #	Página:				http://www.shellscriptx.blogspot.com.br
 #	Fanpage:			https://www.facebook.com/shellscriptx
