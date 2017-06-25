@@ -32,7 +32,6 @@ done
 set -f
 
 declare -r _INIT_=1		# API inicializada.
-declare -i _STATUS_=0	# Inicia sem erros.
 declare -r _BOT_SCRIPT_=$(basename "$0")
 
 # Arquivo JSON (JavaScript Object Notation) onde são gravados os objetos sempre que função getUpdates é chamada.
@@ -85,9 +84,6 @@ message_error()
 	local _LINE=${BASH_LINENO[1]}	# Obtem o número da linha no shell pai.
 	local _FUNC=${FUNCNAME[1]}		# Obtem o nome da função no shell pai.
 	
-	# Define a execução com a tag de erro.
-	_STATUS_=1
-
 	# Lê o tipo de ocorrência do erro.
 	# TG - Erro externo, retornado pelo core do telegram
 	# API - Erro interno, gerado pela API ShellBot.
@@ -110,10 +106,10 @@ message_error()
 	esac
 
 	# Imprime mensagem de erro
-	echo "$(basename "$0"): linha ${_LINE:--}: ${_FUNC:-NULL}: ${_ERR_MESSAGE_}" 1>&2
+	echo "$_BOT_SCRIPT_: linha ${_LINE:--}: ${_FUNC:-NULL}: ${_ERR_MESSAGE_}" 1>&2
 
 	# Finaliza script em caso de erro interno, caso contrário retorna o valor $_STATUS_
-	[[ $_EXIT_ ]] && exit 1 || return $_STATUS_
+	[[ $_EXIT_ ]] && exit 1 || return 1
 }
 
 ShellBot.ListUpdates(){ echo ${!update_id[@]}; }
@@ -131,8 +127,6 @@ ShellBot.regHandleFunction()
 													callback_data:' \
 													-- "$@")
 
-	_STATUS_=0
-	
 	eval set -- "$_PARAM_"
 	
 	while :
@@ -178,7 +172,7 @@ ShellBot.regHandleFunction()
 	declare -Ag _LIST_REG_FUNC_HANDLE_
 	_LIST_REG_FUNC_HANDLE_[$_CALLBACK_DATA_]+="$_HANDLE_ "
 
-	return $_STATUS_
+	return 0
 }
 
 ShellBot.watchHandle()
@@ -187,8 +181,6 @@ ShellBot.watchHandle()
 			_FUNC_HANDLE_ \
 			_PARAM_=$(getopt --name $FUNCNAME --options 'd' --longoptions 'callback_data' -- "$@")
 
-	_STATUS_=0
-	
 	eval set -- "$_PARAM_"
 
 	while :
@@ -213,10 +205,10 @@ ShellBot.watchHandle()
 	# consecutivamente. A ordem de execução das funções é determinada
 	# pela ordem de declaração.
 	for _FUNC_HANDLE_ in ${_LIST_REG_FUNC_HANDLE_[$_CALLBACK_DATA_]}; do 
-		$_FUNC_HANDLE_; done	# executa
+		$_FUNC_HANDLE_ || return 1; done	# executa
 
 	# retorno
-	return $_STATUS_
+	return 0
 }
 	
 # Inicializa o bot, definindo sua API e TOKEN.
@@ -228,9 +220,6 @@ ShellBot.init()
 										--longoptions 'token:' \
 										-- "$@")
 	
-	# Inicia a função sem erros
-	_STATUS_=0
-
 	# Define os parâmetros posicionais
 	eval set -- "$_PARAM_"
 
@@ -279,7 +268,7 @@ ShellBot.init()
 	declare -rf Shellbot.last_name
 		
 	# status
-	return $_STATUS_
+	return 0
 }
 
 # Um método simples para testar o token de autenticação do seu bot. 
@@ -289,21 +278,16 @@ ShellBot.getMe()
 	# Variável local
 	local _METHOD_=getMe	# Método
 	
-	# Inicia a função sem erros
-	_STATUS_=0
-
 	# Chama o método getMe passando o endereço da API, seguido do nome do método.
 	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ > $_JSON_
 	
 	# Verifica o status de retorno do método
-	json_status || message_error TG
+	json_status && {
+		# Retorna as informações armazenadas em "result".
+		json '.result|.id,.username,.first_name,.last_name' | sed ':a;$!N;s/\n/|/;ta'
+	} || message_error TG
 
-	# Retorna as informações armazenadas em "result".
-	json '.result|.id,.username,.first_name,.last_name' | sed ':a;$!N;s/\n/|/;ta'
-	
-	# status
-	return $_STATUS_
-
+	return $?
 }
 
 ShellBot.InlineKeyboardButton()
@@ -321,9 +305,6 @@ ShellBot.InlineKeyboardButton()
                                                         switch_inline_query:,
                                                         switch_inline_query_chat:' \
                                                         -- "$@")
-
-	# Sem erros
-	_STATUS_=0
 
 	eval set -- "$_PARAM_"
 
@@ -396,25 +377,20 @@ ShellBot.InlineKeyboardButton()
 ${_URL_:+,\"url\":\"${_URL_}\"}
 ${_SWITCH_INLINE_QUERY_:+,\"switch_inline_query\":\"${_SWITCH_INLINE_QUERY_}\"}
 ${_SWITCH_INLINE_QUERY_CURRENT_CHAT_:+,\"switch_inline_query_current_chat\":\"${_SWITCH_INLINE_QUERY_CURRENT_CHAT_}\"}
-}" || _STATUS_=1	# Erro ao salvar o botão. 
+}" || return 1	# Erro ao salvar o botão. 
 	
 	# Fecha o array
 	_BUTTON_[$_LINE_]="${_BUTTON_[$_LINE_]/#/[}"
 	_BUTTON_[$_LINE_]="${_BUTTON_[$_LINE_]/%/]}"
 
 	# retorno
-	return $_STATUS_
+	return 0
 }
 
 ShellBot.InlineKeyboardMarkup()
 {
-	local 	_BUTTON_ _TEMP_KB_ \
-			_DEL_=false
-
+	local 	_BUTTON_ _TEMP_KB_ 
     local 	_PARAM_=$(getopt --name $FUNCNAME --options 'b:' --longoptions 'button:' -- "$@")
-
-	# Sem erros
-	_STATUS_=0
 
 	eval set -- "$_PARAM_"
 
@@ -453,7 +429,7 @@ ShellBot.InlineKeyboardMarkup()
 	#	 2				[inline_botao4] [inline_botao5]
 	#	 3			            [inline_botao7]
 	
-	_KEYBOARD_="${_BUTTON_[@]}" || _STATUS_=1 
+	_KEYBOARD_="${_BUTTON_[@]}" || return 1
 	
 	# Cria estrutura do teclado
 	_KEYBOARD_="${_KEYBOARD_/#/{\"inline_keyboard\":[}"
@@ -465,7 +441,7 @@ ShellBot.InlineKeyboardMarkup()
 	echo $_KEYBOARD_
 
 	# status
-	return $_STATUS_
+	return 0
 }
 
 ShellBot.answerCallbackQuery()
@@ -481,9 +457,6 @@ ShellBot.answerCallbackQuery()
 														-- "$@")
 
 
-	# Sem erros
-	_STATUS_=0
-	
 	eval set -- "$_PARAM_"
 	
 	while :
@@ -530,8 +503,7 @@ ShellBot.answerCallbackQuery()
 
 	json_status || message_error TG
 
-	return $_STATUS_
-														
+	return $?
 }
 
 # Cria objeto que representa um teclado personalizado com opções de resposta
@@ -547,8 +519,6 @@ ShellBot.ReplyKeyboardMarkup()
 														one_time_keyboard:,
 														selective:' \
 														-- "$@")
-	# Iniciliaza a função sem erros.
-	_STATUS_=0
 	
 	# Transforma os parâmetros da função em parâmetros posicionais
 	#
@@ -609,7 +579,7 @@ ShellBot.ReplyKeyboardMarkup()
 _EOF
 
 	# status
-	return $_STATUS_
+	return 0
 }
 
 # Envia mensagens 
@@ -630,8 +600,6 @@ ShellBot.sendMessage()
 														reply_markup:' \
 														-- "$@")
 
-	# Sem erros
-	_STATUS_=0
 	
 	# Define os parâmetros posicionais
 	eval set -- "$_PARAM_"
@@ -701,7 +669,7 @@ ShellBot.sendMessage()
 	json_status || message_error TG
 	
 	# Status
-	return $_STATUS_
+	return $?
 }
 
 # Função para reencaminhar mensagens de qualquer tipo.
@@ -719,8 +687,6 @@ ShellBot.forwardMessage()
 														message_id:' \
 														-- "$@")
 
-	# Sem erros
-	_STATUS_=0
 	
 	# Define os parâmetros posicionais
 	eval set -- "$_PARAM_"
@@ -770,7 +736,7 @@ ShellBot.forwardMessage()
 	json_status || message_error TG
 
 	# status
-	return $_STATUS_
+	return $?
 }
 
 # Utilize essa função para enviar fotos.
@@ -791,9 +757,6 @@ ShellBot.sendPhoto()
 														-- "$@")
 
 
-	# Sem erros
-	_STATUS_=0
-	
 	# Define os parâmetros posicionais
 	eval set -- "$_PARAM_"
 
@@ -853,7 +816,7 @@ ShellBot.sendPhoto()
 	json_status || message_error TG
 
 	# Status
-	return $_STATUS_
+	return $?
 }
 
 # Utilize essa função para enviar arquivos de audio.
@@ -876,9 +839,6 @@ ShellBot.sendAudio()
 														reply_markup:' \
 														-- "$@")
 
-	# Sem erros
-	_STATUS_=0
-	
 	# Define os parâmetros posicionais
 	eval set -- "$_PARAM_"
 
@@ -953,7 +913,7 @@ ShellBot.sendAudio()
 	json_status || message_error TG
 
 	# Status
-	return $_STATUS_
+	return $?
 		
 }
 
@@ -974,8 +934,6 @@ ShellBot.sendDocument()
 														reply_markup:' \
 														-- "$@")
 
-	# Sem erros
-	_STATUS_=0
 	
 	# Define os parâmetros posicionais
 	eval set -- "$_PARAM_"
@@ -1032,7 +990,7 @@ ShellBot.sendDocument()
 	json_status || message_error TG
 
 	# Status
-	return $_STATUS_
+	return $?
 	
 }
 
@@ -1052,9 +1010,6 @@ ShellBot.sendSticker()
 														reply_markup:' \
 														-- "$@")
 
-	# Sem erros
-	_STATUS_=0
-	
 	# Define os parâmetros posicionais
 	eval set -- "$_PARAM_"
 
@@ -1107,7 +1062,7 @@ ShellBot.sendSticker()
 	json_status || message_error TG
 
 	# Status
-	return $_STATUS_
+	return $?
 }
 
 # Função para enviar arquivos de vídeo.
@@ -1130,8 +1085,6 @@ ShellBot.sendVideo()
 														reply_markup:' \
 														-- "$@")
 
-	# Sem erros
-	_STATUS_=0
 	
 	# Define os parâmetros posicionais
 	eval set -- "$_PARAM_"
@@ -1210,7 +1163,7 @@ ShellBot.sendVideo()
 	json_status || message_error TG
 
 	# Status
-	return $_STATUS_
+	return $?
 	
 }
 
@@ -1232,8 +1185,6 @@ ShellBot.sendVoice()
 														reply_markup:' \
 														-- "$@")
 
-	# Sem erros
-	_STATUS_=0
 	
 	# Define os parâmetros posicionais
 	eval set -- "$_PARAM_"
@@ -1298,7 +1249,7 @@ ShellBot.sendVoice()
 	json_status || message_error TG
 
 	# Status
-	return $_STATUS_
+	return $?
 	
 }
 
@@ -1319,8 +1270,6 @@ ShellBot.sendLocation()
 														reply_markup:' \
 														-- "$@")
 
-	# Sem erros
-	_STATUS_=0
 	
 	# Define os parâmetros posicionais
 	eval set -- "$_PARAM_"
@@ -1382,7 +1331,7 @@ ShellBot.sendLocation()
 	# Testa o retorno do método
 	json_status || message_error TG
 
-	return $_STATUS_
+	return $?
 	
 }
 
@@ -1406,9 +1355,6 @@ ShellBot.sendVenue()
 														reply_markup:' \
 														-- "$@")
 
-	# Sem erros
-	_STATUS_=0
-	
 	# Define os parâmetros posicionais
 	eval set -- "$_PARAM_"
 	
@@ -1487,7 +1433,7 @@ ShellBot.sendVenue()
 	json_status || message_error TG
 
 	# Status
-	return $_STATUS_
+	return $?
 }
 
 # Utilize essa função para enviar um contato + numero
@@ -1509,9 +1455,6 @@ ShellBot.sendContact()
 														-- "$@")
 
 
-	# Sem erros
-	_STATUS_=0
-	
 	# Define os parâmetros posicionais
 	eval set -- "$_PARAM_"
 
@@ -1574,7 +1517,7 @@ ShellBot.sendContact()
 	json_status || message_error TG
 
 	# Status
-	return $_STATUS_
+	return $?
 }
 
 # Envia uma ação para bot.
@@ -1589,9 +1532,6 @@ ShellBot.sendChatAction()
 										--longoptions 'chat_id:,
 														action:' \
 														-- "$@")
-
-	# Sem erros
-	_STATUS_=0
 
 	# Define os parâmetros posicionais
 	eval set -- "$_PARAM_"
@@ -1630,14 +1570,14 @@ ShellBot.sendChatAction()
 	json_status || message_error TG
 
 	# Status
-	return $_STATUS_
+	return $?
 }
 
 # Utilize essa função para obter as fotos de um determinado usuário.
 ShellBot.getUserProfilePhotos()
 {
 	# Variáveis locais 
-	local _USER_ID_ _OFFSET_ _LIMIT_ _IND_ _TOTAL_ _LAST_ _INDEX_ _MAX_ _ITEM_
+	local _USER_ID_ _OFFSET_ _LIMIT_ _IND_ _LAST_ _INDEX_ _MAX_ _ITEM_ _TOTAL_
 	local _METHOD_=getUserProfilePhotos # Método
 	
 	# Lê os parâmetros da função
@@ -1647,9 +1587,7 @@ ShellBot.getUserProfilePhotos()
 														limit:' \
 														-- "$@")
 
-	# Sem erros
-	_STATUS_=0
-
+	
 	# Define os parâmetros posicionais
 	eval set -- "$_PARAM_"
 	
@@ -1687,26 +1625,25 @@ ShellBot.getUserProfilePhotos()
 													${_LIMIT_:+-d limit="'$_LIMIT_'"} > $_JSON_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status || message_error TG
+	json_status && {
 
+		_TOTAL_=$(json '.result.total_count')
 
-	_TOTAL_=$(json '.result.total_count')
-
-	if [ $_TOTAL_ -gt 0 ]; then	
-		for _INDEX_ in $(seq 0 $((_TOTAL_-1)))
-		do
-			_MAX_=$(json ".result.photos[$_INDEX_]|length")
-			for _ITEM_ in $(seq 0 $((_MAX_-1)))
+		if [[ $_TOTAL_ -gt 0 ]]; then	
+			for _INDEX_ in $(seq 0 $((_TOTAL_-1)))
 			do
-				json ".result.photos[$_INDEX_][$_ITEM_]|.file_id, .file_size, .width, .height" | sed ':a;$!N;s/\n/|/;ta'
+				_MAX_=$(json ".result.photos[$_INDEX_]|length")
+				for _ITEM_ in $(seq 0 $((_MAX_-1)))
+				do
+					json ".result.photos[$_INDEX_][$_ITEM_]|.file_id, .file_size, .width, .height" | sed ':a;$!N;s/\n/|/;ta'
+				done
 			done
-		done
-	else
-		echo null
-	fi
+		fi	
+
+	} || message_error TG
 
 	# Status
-	return $_STATUS_
+	return $?
 }
 
 # Função para listar informações do arquivo especificado.
@@ -1721,9 +1658,7 @@ ShellBot.getFile()
 										--longoptions 'file_id:' \
 														-- "$@")
 
-	# Sem erros
-	_STATUS_=0
-
+	
 	# Define os parâmetros posicionais
 	eval set -- "$_PARAM_"
 
@@ -1748,13 +1683,13 @@ ShellBot.getFile()
 	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ ${_FILE_ID_:+-d file_id="'$_FILE_ID_'"} > $_JSON_
 
 	# Testa o retorno do método.
-	json_status || message_error TG
-
-	# Extrai as informações, agrupando-as em uma única linha e insere o delimitador '|' PIPE entre os campos.
-	json '.result|.file_id, .file_size, .file_path' | sed ':a;$!N;s/\n/|/;ta'
+	json_status && {
+		# Extrai as informações, agrupando-as em uma única linha e insere o delimitador '|' PIPE entre os campos.
+		json '.result|.file_id, .file_size, .file_path' | sed ':a;$!N;s/\n/|/;ta'
+	} || message_error TG
 
 	# Status
-	return $_STATUS_
+	return $?
 }		
 
 # Essa função kicka o usuário do chat ou canal. (somente administradores)
@@ -1769,9 +1704,6 @@ ShellBot.kickChatMember()
 										--longoptions 'chat_id:,
 														user_id:' \
 														-- "$@")
-
-	# Sem erros
-	_STATUS_=0
 
 	# Define os parâmetros posicionais
 	eval set -- "$_PARAM_"
@@ -1808,7 +1740,7 @@ ShellBot.kickChatMember()
 	json_status || message_error TG
 
 	# Status
-	return $_STATUS_
+	return $?
 }
 
 # Utilize essa função para remove o bot do grupo ou canal.
@@ -1824,8 +1756,6 @@ ShellBot.leaveChat()
 														-- "$@")
 
 	
-	_STATUS_=0
-
 	# Define os parâmetros posicionais
 	eval set -- "$_PARAM_"
 
@@ -1850,7 +1780,7 @@ ShellBot.leaveChat()
 	# Verifica se ocorreu erros durante a chamada do método	
 	json_status || message_error TG
 
-	return $_STATUS_
+	return $?
 	
 }
 
@@ -1866,8 +1796,6 @@ ShellBot.unbanChatMember()
 
 	local _METHOD_=unbanChatMember
 	
-	_STATUS_=0
-
 	# Define os parâmetros posicionais
 	eval set -- "$_PARAM_"
 
@@ -1899,7 +1827,7 @@ ShellBot.unbanChatMember()
 	# Verifica se ocorreu erros durante a chamada do método	
 	json_status || message_error TG
 
-	return $_STATUS_
+	return $?
 }
 
 ShellBot.getChat()
@@ -1914,8 +1842,6 @@ ShellBot.getChat()
 														-- "$@")
 
 	
-	_STATUS_=0
-
 	# Define os parâmetros posicionais
 	eval set -- "$_PARAM_"
 
@@ -1938,13 +1864,13 @@ ShellBot.getChat()
 	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} > $_JSON_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status || message_error TG
+	json_status && {
+		# Imprime os dados.
+		json '.result|.id, .username, .type, .title' |  sed ':a;$!N;s/\n/|/;ta'
+	} || message_error TG
 
-	# Imprime os dados.
-	json '.result|.id, .username, .type, .title' |  sed ':a;$!N;s/\n/|/;ta'
-	
 	# Status
-	return $_STATUS_
+	return $?
 }
 
 ShellBot.getChatAdministrators()
@@ -1958,8 +1884,6 @@ ShellBot.getChatAdministrators()
 
 	local _METHOD_=getChatAdministrators
 	
-	_STATUS_=0
-
 	# Define os parâmetros posicionais
 	eval set -- "$_PARAM_"
 
@@ -1982,25 +1906,24 @@ ShellBot.getChatAdministrators()
 	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} > $_JSON_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status || message_error TG
+	json_status && {
 
-	# Total de administratores
-	declare -i _TOTAL_=$(json '.result|length')
+		# Total de administratores
+		declare -i _TOTAL_=$(json '.result|length')
 
-	# Lê os administradores do grupo se houver.
-	if [ $_TOTAL_ -gt 0 ]; then
-		for _INDEX_ in $(seq 0 $((_TOTAL_-1)))
-		do
-			# Lê as informações do usuário armazenadas em '_INDEX_'.
-			json ".result[$_INDEX_]|.user.id, .user.username, .user.first_name, .user.last_name, .status" | sed ':a;$!N;s/\n/|/;ta'
-		done
-	else
-		# Retorna 'null' se o grupo não possui administradores.
-		echo null
-	fi
+		# Lê os administradores do grupo se houver.
+		if [ $_TOTAL_ -gt 0 ]; then
+			for _INDEX_ in $(seq 0 $((_TOTAL_-1)))
+			do
+				# Lê as informações do usuário armazenadas em '_INDEX_'.
+				json ".result[$_INDEX_]|.user.id, .user.username, .user.first_name, .user.last_name, .status" | sed ':a;$!N;s/\n/|/;ta'
+			done
+		fi
+
+	} || message_error TG
 
 	# Status	
-	return $_STATUS_
+	return $?
 }
 
 ShellBot.getChatMembersCount()
@@ -2014,8 +1937,6 @@ ShellBot.getChatMembersCount()
 
 	local _METHOD_=getChatMembersCount
 	
-	_STATUS_=0
-
 	# Define os parâmetros posicionais
 	eval set -- "$_PARAM_"
 
@@ -2038,11 +1959,9 @@ ShellBot.getChatMembersCount()
 	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} > $_JSON_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status || message_error TG
+	json_status && json '.result' || message_error TG
 
-	json '.result'
-
-	return $_STATUS_
+	return $?
 }
 
 ShellBot.getChatMember()
@@ -2058,8 +1977,6 @@ ShellBot.getChatMember()
 														-- "$@")
 
 	
-	_STATUS_=0
-
 	# Define os parâmetros posicionais
 	eval set -- "$_PARAM_"
 
@@ -2089,11 +2006,11 @@ ShellBot.getChatMember()
 												${_USER_ID_:+-d user_id="'$_USER_ID_'"} > $_JSON_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status || message_error TG
-	
-	json '.result| .user.id, .user.username, .user.first_name, .user.last_name, .status' | sed ':a;$!N;s/\n/|/;ta'
-	
-	return $_STATUS_
+	json_status && {
+			json '.result| .user.id, .user.username, .user.first_name, .user.last_name, .status' | sed ':a;$!N;s/\n/|/;ta'
+	} || message_error TG
+
+	return $?
 }
 
 ShellBot.editMessageText()
@@ -2111,8 +2028,6 @@ ShellBot.editMessageText()
 														reply_markup:' \
 														-- "$@")
 	
-	_STATUS_=0
-
 	eval set -- "$_PARAM_"
 
 	while :
@@ -2178,7 +2093,7 @@ ShellBot.editMessageText()
 	# Verifica se ocorreu erros durante a chamada do método	
 	json_status || message_error TG
 	
-	return $_STATUS_
+	return $?
 	
 }
 
@@ -2195,8 +2110,6 @@ ShellBot.editMessageCaption()
 														reply_markup:' \
 														-- "$@")
 	
-	_STATUS_=0
-
 	eval set -- "$_PARAM_"
 
 	while :
@@ -2242,7 +2155,7 @@ ShellBot.editMessageCaption()
 	# Verifica se ocorreu erros durante a chamada do método	
 	json_status || message_error TG
 	
-	return $_STATUS_
+	return $?
 	
 }
 
@@ -2258,8 +2171,6 @@ ShellBot.editMessageReplyMarkup()
 														reply_markup:' \
 														-- "$@")
 	
-	_STATUS_=0
-
 	eval set -- "$_PARAM_"
 
 	while :
@@ -2306,7 +2217,7 @@ ShellBot.editMessageReplyMarkup()
 	# Verifica se ocorreu erros durante a chamada do método	
 	json_status || message_error TG
 	
-	return $_STATUS_
+	return $?
 	
 }
 
@@ -2320,8 +2231,6 @@ ShellBot.deleteMessage()
 														message_id:' \
 														-- "$@")
 	
-	_STATUS_=0
-
 	eval set -- "$_PARAM_"
 
 	while :
@@ -2351,7 +2260,7 @@ ShellBot.deleteMessage()
 	# Verifica se ocorreu erros durante a chamada do método	
 	json_status || message_error TG
 	
-	return $_STATUS_
+	return $?
 
 }
 
@@ -2372,8 +2281,6 @@ ShellBot.getUpdates()
 														-- "$@")
 
 	
-	_STATUS_=0
-
 	eval set -- "$_PARAM_"
 	
 	while :
@@ -2412,11 +2319,12 @@ ShellBot.getUpdates()
 						${_TIMEOUT_:+-d timeout="'$_TIMEOUT_'"} \
 						${_ALLOWED_UPDATES_:+-d allowed_updates="'$_ALLOWED_UPDATES_'"} > $_JSON_
 
-	# Verifica se ocorreu erros durante a chamada do método	
-	json_status || message_error TG
 	
 	# Limpa todas as variáveis.
 	unset update_id ${!message_*} ${!edited_message_*} ${!channel_post_*} ${!edited_channel_post_*} ${!callback_query_*}
+	
+	# Verifica se ocorreu erros durante a chamada do método	
+	json_status && {
 
 	# Total de atualizações
 	_TOTAL_KEYS_=$(json '.result|length')
@@ -3205,9 +3113,11 @@ ShellBot.getUpdates()
 				done
 			done
 		fi
+	
+	} || message_error TG
 
 	# Status
-	return $_STATUS_
+	return $?
 }
 
 
