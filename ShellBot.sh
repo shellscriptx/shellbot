@@ -33,12 +33,17 @@ set -f
 
 declare -r _INIT_=1		# API inicializada.
 declare -i _STATUS_=0	# Inicia sem erros.
+declare -r _BOT_SCRIPT_=$(basename "$0")
 
 # Arquivo JSON (JavaScript Object Notation) onde são gravados os objetos sempre que função getUpdates é chamada.
 # O arquivo armazena os dados da atualização que serão acessados durante a execução de outros métodos; Onde o mesmo
 # é sobrescrito sempre que um valor é retornado.
-_JSON_=$(mktemp -q --tmpdir=/tmp --suffix=.json update-XXXXX) && \
-declare -r _JSON_ || { echo "Falha ao tentar criar o arquivo JSON updates em '/tmp'." 1>&2; exit 1; } 
+_JSON_=$(mktemp -q --tmpdir=/tmp --suffix=.json ${_BOT_SCRIPT_%%.*}-XXXXX) && \
+declare -r _JSON_ || { 
+	echo "ShellBot: erro: não foi possível criar o arquivo JSON em '/tmp'" 1>&2
+	echo "verifique se o diretório existe ou se possui permissões de escrita e tenta novamente." 1>&2
+	exit 1
+} 
 
 # Define a linha de comando para as chamadas GET e PUT do métodos da API via curl.
 declare -r _GET_='curl --silent --request GET --url'
@@ -48,7 +53,7 @@ declare -r _POST_='curl --silent --request POST --url'
 # 
 # Verifica o retorno após a chamada de um método, se for igual a true (sucesso) retorna 0, caso contrário, retorna 1
 json() { jq -r "$*" $_JSON_ 2>/dev/null; }
-json_status(){ [[ $(json '.ok') = true ]] && return 0 || return 1; }
+json_status(){ [[ $(json '.ok') != false ]] && return 0 || return 1; }
 # Extrai o comprimento da string removendo o caractere nova-linha (\n)
 str_len(){ echo $(($(wc -c <<< "$*")-1)); return 0; }
 
@@ -77,9 +82,9 @@ message_error()
 	# Quando chamada dentro de um subshell, passa ser instanciada como um array, armazenando diversos
 	# valores onde cada índice refere-se a um shell/subshell. As mesmas caracteristicas se aplicam a variável
 	# 'FUNCNAME', onde é armazenado o nome da função onde foi chamada.
-	local _LINE=${BASH_LINENO[$((${#BASH_LINENO[*]}-2))]}	# Obtem o número da linha no shell pai.
-	local _FUNC=${FUNCNAME[$((${#FUNCNAME[*]}-2))]}			# Obtem o nome da função no shell pai.
-
+	local _LINE=${BASH_LINENO[1]}	# Obtem o número da linha no shell pai.
+	local _FUNC=${FUNCNAME[1]}		# Obtem o nome da função no shell pai.
+	
 	# Define a execução com a tag de erro.
 	_STATUS_=1
 
@@ -103,19 +108,24 @@ message_error()
 			_EXIT_=1
 			;;
 	esac
-	
+
 	# Imprime mensagem de erro
 	echo "$(basename "$0"): linha ${_LINE:--}: ${_FUNC:-NULL}: ${_ERR_MESSAGE_}" 1>&2
-	
+
 	# Finaliza script em caso de erro interno, caso contrário retorna o valor $_STATUS_
 	[[ $_EXIT_ ]] && exit 1 || return $_STATUS_
 }
+
+ShellBot.ListUpdates(){ echo ${!update_id[@]}; }
+ShellBot.TotalUpdates(){ echo ${#update_id[@]}; }
+ShellBot.OffsetEnd(){ local -i _OFFSET_=${update_id[@]: -1}; echo $_OFFSET_; }
+ShellBot.OffsetNext(){ echo $(($(ShellBot.OffsetEnd)+1)); }
 
 ShellBot.regHandleFunction()
 {
 	local _FUNCTION_ _CALLBACK_DATA_ _HANDLE_ _ARGS_
 
-	local _PARAM_=$(getopt --quiet --options 'f:a:d:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'f:a:d:' \
 									--longoptions 'function:,
 													args:,
 													callback_data:' \
@@ -175,7 +185,7 @@ ShellBot.watchHandle()
 {
 	local 	_CALLBACK_DATA_ \
 			_FUNC_HANDLE_ \
-			_PARAM_=$(getopt --quiet --options 'd:' --longoptions '--callback_data:' -- "$@")
+			_PARAM_=$(getopt --name $FUNCNAME --options 'd' --longoptions 'callback_data' -- "$@")
 
 	_STATUS_=0
 	
@@ -185,10 +195,10 @@ ShellBot.watchHandle()
 	do
 		case $1 in
 			-d|--callback_data)
-				_CALLBACK_DATA_="$2"
 				shift 2
+				_CALLBACK_DATA_="$1"
 				;;
-			--)
+			*)
 				shift
 				break
 				;;
@@ -214,7 +224,7 @@ ShellBot.watchHandle()
 ShellBot.init()
 {
 	# Variável local
-	local _PARAM_=$(getopt --quiet --options 't:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 't:' \
 										--longoptions 'token:' \
 										-- "$@")
 	
@@ -302,7 +312,7 @@ ShellBot.InlineKeyboardButton()
             _SWITCH_INLINE_QUERY_ _SWITCH_INLINE_QUERY_CURRENT_CHAT_ \
 			_DELM_
 
-    local	_PARAM_=$(getopt --quiet --options 'b:l:t:u:c:q:s:' \
+    local	_PARAM_=$(getopt --name $FUNCNAME --options 'b:l:t:u:c:q:s:' \
                                         --longoptions 'button:,
                                                         line:,
                                                         text:,
@@ -401,7 +411,7 @@ ShellBot.InlineKeyboardMarkup()
 	local 	_BUTTON_ _TEMP_KB_ \
 			_DEL_=false
 
-    local 	_PARAM_=$(getopt --quiet --options 'b:d' --longoptions 'button:,delete' -- "$@")
+    local 	_PARAM_=$(getopt --name $FUNCNAME --options 'b:' --longoptions 'button:' -- "$@")
 
 	# Sem erros
 	_STATUS_=0
@@ -417,10 +427,6 @@ ShellBot.InlineKeyboardMarkup()
 				_BUTTON_="$2"
 				shift 2
 				;;
-			-d|--delete)
-				_DEL_=true
-				shift 1
-				;;
 			--)
 				shift
 				break
@@ -432,10 +438,6 @@ ShellBot.InlineKeyboardMarkup()
 	
 	# Ponteiro
 	declare -n _BUTTON_
-
-	# Apaga o objeto teclado (se ele existir) e finaliza a função.
-	[[ $_DEL_ = true ]] && { unset $_BUTTON_; return $_STATUS_; }
-
 
 	# Salva todos elementos do array do teclado, convertendo-o em uma variável de índice 0.
 	# Cria-se uma estrutura do tipo 'inline_keyboard' e anexa os botões e fecha a estrutura.
@@ -470,7 +472,7 @@ ShellBot.answerCallbackQuery()
 {
 	local _CALLBACK_QUERY_ID_ _TEXT_ _SHOW_ALERT_ _URL_ _CACHE_TIME_
 	local _METHOD_=answerCallbackQuery # Método
-	local _PARAM_=$(getopt --quiet --options 'c:t:s:u:t:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:t:s:u:t:' \
 										--longoptions 'callback_query_id:,
 														text:,
 														show_alert:,
@@ -539,7 +541,7 @@ ShellBot.ReplyKeyboardMarkup()
 	local 	_BUTTON_ _RESIZE_KEYBOARD_ _ON_TIME_KEYBOARD_ _SELECTIVE_
 	
 	# Lê os parâmetros da função.
-	local _PARAM_=$(getopt --quiet --options 'b:r:t:s:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'b:r:t:s:' \
 										--longoptions 'button:,
 														resize_keyboard:,
 														one_time_keyboard:,
@@ -618,7 +620,7 @@ ShellBot.sendMessage()
 	local _METHOD_=sendMessage # Método
 	
 	# Lê os parâmetros da função
-	local _PARAM_=$(getopt --quiet --options 'c:t:p:w:n:r:k:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:t:p:w:n:r:k:' \
 										--longoptions 'chat_id:,
 														text:,
 														parse_mode:,
@@ -710,7 +712,7 @@ ShellBot.forwardMessage()
 	local _METHOD_=forwardMessage # Método
 	
 	# Lê os parâmetros da função
-	local _PARAM_=$(getopt --quiet --options 'c:f:n:m:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:f:n:m:' \
 										--longoptions 'chat_id:,
 														from_chat_id:,
 														disable_notification:,
@@ -779,7 +781,7 @@ ShellBot.sendPhoto()
 	local _METHOD_=sendPhoto	# Método
 
 	# Lê os parâmetros da função
-	local _PARAM_=$(getopt --quiet --options 'c:p:t:n:r:k:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:p:t:n:r:k:' \
 										--longoptions 'chat_id:, 
 														photo:,
 														caption:,
@@ -862,7 +864,7 @@ ShellBot.sendAudio()
 	local _METHOD_=sendAudio	# Método
 	
 	# Lê os parâmetros da função
-	local _PARAM_=$(getopt --quiet --options 'c:a:t:d:e:i:n:r:k' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:a:t:d:e:i:n:r:k' \
 										 --longoptions 'chat_id:,
 														audio:,
 														caption:,
@@ -963,7 +965,7 @@ ShellBot.sendDocument()
 	local _METHOD_=sendDocument	# Método
 	
 	# Lê os parâmetros da função
-	local _PARAM_=$(getopt --quiet --options 'c:d:t:n:r:k:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:d:t:n:r:k:' \
 										--longoptions 'chat_id:,
 														document:,
 														caption:,
@@ -1042,7 +1044,7 @@ ShellBot.sendSticker()
 	local _METHOD_=sendSticker	# Método
 
 	# Lê os parâmetros da função
-	local _PARAM_=$(getopt --quiet --options 'c:s:n:r:k:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:s:n:r:k:' \
 										--longoptions 'chat_id:,
 														sticker:,
 														disable_notification:,
@@ -1116,7 +1118,7 @@ ShellBot.sendVideo()
 	local _METHOD_=sendVideo	# Método
 
 	# Lê os parâmetros da função
-	local _PARAM_=$(getopt --quiet --options 'c:v:d:w:h:t:n:r:k:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:v:d:w:h:t:n:r:k:' \
 										--longoptions 'chat_id:,
 														video:,
 														duration:,
@@ -1220,7 +1222,7 @@ ShellBot.sendVoice()
 	local _METHOD_=sendVoice	# Método
 
 	# Lê os parâmetros da função
-	local _PARAM_=$(getopt --quiet --options 'c:v:t:d:n:r:k:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:v:t:d:n:r:k:' \
 										--longoptions 'chat_id:,
 														voice:,
 														caption:,
@@ -1308,7 +1310,7 @@ ShellBot.sendLocation()
 	local _METHOD_=sendLocation	# Método
 
 	# Lê os parâmetros da função
-	local _PARAM_=$(getopt --quiet --options 'c:l:g:n:r:k:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:l:g:n:r:k:' \
 										--longoptions 'chat_id:,
 														latitude:,
 														longitude:,
@@ -1392,7 +1394,7 @@ ShellBot.sendVenue()
 	local _METHOD_=sendVenue	# Método
 	
 	# Lê os parâmetros da função
-	local _PARAM_=$(getopt --quiet --options 'c:l:g:i:a:f:n:r:k:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:l:g:i:a:f:n:r:k:' \
 										--longoptions 'chat_id:,
 														latitude:,
 														longitude:,
@@ -1496,7 +1498,7 @@ ShellBot.sendContact()
 	local _METHOD_=sendContact	# Método
 	
 	# Lê os parâmetros da função
-	local _PARAM_=$(getopt --quiet --options 'c:p:f:l:n:r:k:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:p:f:l:n:r:k:' \
 										--longoptions 'chat_id:,
 														phone_number:,
 														first_name:,
@@ -1583,7 +1585,7 @@ ShellBot.sendChatAction()
 	local _METHOD_=sendChatAction		# Método
 	
 	# Lê os parâmetros da função
-	local _PARAM_=$(getopt --quiet --options 'c:a:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:a:' \
 										--longoptions 'chat_id:,
 														action:' \
 														-- "$@")
@@ -1639,7 +1641,7 @@ ShellBot.getUserProfilePhotos()
 	local _METHOD_=getUserProfilePhotos # Método
 	
 	# Lê os parâmetros da função
-	local _PARAM_=$(getopt --quiet --options 'u:o:l:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'u:o:l:' \
 										--longoptions 'user_id:,
 														offset:,
 														limit:' \
@@ -1715,7 +1717,7 @@ ShellBot.getFile()
 	local _METHOD_=getFile # Método
 
 	# Lê os parâmetros da função
-	local _PARAM_=$(getopt --quiet --options 'f:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'f:' \
 										--longoptions 'file_id:' \
 														-- "$@")
 
@@ -1763,7 +1765,7 @@ ShellBot.kickChatMember()
 	local _METHOD_=kickChatMember		# Método
 
 	# Lê os parâmetros da função
-	local _PARAM_=$(getopt --quiet --options 'c:u:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:u:' \
 										--longoptions 'chat_id:,
 														user_id:' \
 														-- "$@")
@@ -1817,7 +1819,7 @@ ShellBot.leaveChat()
 	local _METHOD_=leaveChat	# Método
 
 	# Lê os parâmetros da função
-	local _PARAM_=$(getopt --quiet --options 'c:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:' \
 										--longoptions 'chat_id:' \
 														-- "$@")
 
@@ -1857,7 +1859,7 @@ ShellBot.unbanChatMember()
 	local _CHAT_ID_ _USER_ID_
 
 	# Lê os parâmetros da função
-	local _PARAM_=$(getopt --quiet --options 'c:u:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:u:' \
 										--longoptions 'chat_id:,
 														user_id:' \
 														-- "$@")
@@ -1907,7 +1909,7 @@ ShellBot.getChat()
 	local _METHOD_=getChat	# Método
 
 	# Lê os parâmetros da função
-	local _PARAM_=$(getopt --quiet --options 'c:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:' \
 										--longoptions 'chat_id:' \
 														-- "$@")
 
@@ -1950,7 +1952,7 @@ ShellBot.getChatAdministrators()
 	local _CHAT_ID_ _TOTAL_ _KEY_ _INDEX_
 
 	# Lê os parâmetros da função
-	local _PARAM_=$(getopt --quiet --options 'c:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:' \
 										--longoptions 'chat_id:' \
 														-- "$@")
 
@@ -2006,7 +2008,7 @@ ShellBot.getChatMembersCount()
 	local _CHAT_ID_
 
 	# Lê os parâmetros da função
-	local _PARAM_=$(getopt --quiet --options 'c:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:' \
 										--longoptions 'chat_id:' \
 														-- "$@")
 
@@ -2050,7 +2052,7 @@ ShellBot.getChatMember()
 	local _METHOD_=getChatMember	# Método
 
 	# Lê os parâmetros da função
-	local _PARAM_=$(getopt --quiet --options 'c:u:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:u:' \
 										--longoptions 'chat_id:,
 														user_id:' \
 														-- "$@")
@@ -2099,7 +2101,7 @@ ShellBot.editMessageText()
 	local _CHAT_ID_ _MESSAGE_ID_ _INLINE_MESSAGE_ID_ _TEXT_ _PARSE_MODE_ _DISABLE_WEB_PAGE_PREVIEW_ _REPLY_MARKUP_
 	local _METHOD_=editMessageText
 	
-	local _PARAM_=$(getopt --quiet --options 'c:m:i:t:p:w:r:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:m:i:t:p:w:r:' \
 										--longoptions 'chat_id:,
 														message_id:,
 														inline_message_id:,
@@ -2185,7 +2187,7 @@ ShellBot.editMessageCaption()
 	local _CHAT_ID_ _MESSAGE_ID_ _INLINE_MESSAGE_ID_ _CAPTION_ _REPLY_MARKUP_
 	local _METHOD_=editMessageCaption
 	
-	local _PARAM_=$(getopt --quiet --options 'c:m:i:t:r:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:m:i:t:r:' \
 										--longoptions 'chat_id:,
 														message_id:,
 														inline_message_id:,
@@ -2249,7 +2251,7 @@ ShellBot.editMessageReplyMarkup()
 	local _CHAT_ID_ _MESSAGE_ID_ _INLINE_MESSAGE_ID_ _REPLY_MARKUP_
 	local _METHOD_=editMessageReplyMarkup
 	
-	local _PARAM_=$(getopt --quiet --options 'c:m:i:r:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:m:i:r:' \
 										--longoptions 'chat_id:,
 														message_id:,
 														inline_message_id:,
@@ -2313,7 +2315,7 @@ ShellBot.deleteMessage()
 	local _CHAT_ID_ _MESSAGE_ID_
 	local _METHOD_=deleteMessage
 	
-	local _PARAM_=$(getopt --quiet --options 'c:m' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:m:' \
 										--longoptions 'chat_id:,
 														message_id:' \
 														-- "$@")
@@ -2362,8 +2364,8 @@ ShellBot.getUpdates()
 	local _METHOD_=getUpdates	# Mètodo
 
 	# Define os parâmetros da função
-	local _PARAM_=$(getopt  --quiet --options 'o:l:t:a:' \
-										--longoptions 'offset:,
+	local _PARAM_=$(getopt  --name $FUNCNAME --options 'o:l:t:a:' \
+												--longoptions 'offset:,
 														limit:,
 														timeout:,
 														allowed_updates:' \
@@ -3203,19 +3205,24 @@ ShellBot.getUpdates()
 				done
 			done
 		fi
-	
+
 	# Status
 	return $_STATUS_
 }
+
 
 # Funções somente leitura
 declare -rf json_status
 declare -rf str_len
 declare -rf message_error
 
-# API
+# 
 declare -rf ShellBot.regHandleFunction
 declare -rf ShellBot.watchHandle
+declare -rf ShellBot.ListUpdates
+declare -rf ShellBot.TotalUpdates
+declare -rf ShellBot.OffsetEnd
+declare -rf ShellBot.OffsetNext
 
 # Bot métodos
 declare -rf ShellBot.getMe
@@ -3251,3 +3258,4 @@ declare -rf ShellBot.answerCallbackQuery
 declare -rf ShellBot.deleteMessage
 declare -rf ShellBot.getUpdates
 #FIM
+
