@@ -935,7 +935,7 @@ Parâmetro|Tipo|Obrigatório|Descrição
 
 ## <a name="regHandleFunction">ShellBot.regHandleFunction</a>
 
-Registra o handle da função, associando-a a um valor armazenado em callback_data. Quando um inline_button é pressionado, este valor é retornado e a função ShellBot.watchHandle chama a função registrada.
+Associa um valor armazenado em $callback_query_data a uma função. Registra o handle do identificador a ser monitorado pela função ShellBot.watchHandle. O valor é retornado sempre que um inline_button é pressionado.
 
 #### Uso:
 ```
@@ -950,7 +950,6 @@ Parâmetro|Tipo|Obrigatório|Descrição
 -f, --function <_identificador_>|String|Sim|Nome da função válida que será executada.
 -d, --callback_data <_valor_>|String|Sim|Valor associado a um inline_button a ser retornado.
 -a, --args <_argumentos_>|String|Não|Argumentos a serem passados na chamada da função.
-
 
 ## <a name="watchHandle">ShellBot.watchHandle</a>
 
@@ -967,6 +966,52 @@ ShellBot.watchHandle --callback_data <$callback_query_data>
 Parâmetro|Tipo|Obrigatório|Descrição
 --------------|--------|-------|---------
 -d, --callback_data <_$callback_query_data_>|String|Sim|Variável dinâmica onde é armazenado o valor callback_data retornado quando um inline_button é pressionado.
+
+
+## <a name="TotalUpdates">ShellBot.TotalUpdates</a>
+
+Retorna o total de atualizações. O valor máximo de resultados é especificado em ShellBot.getUpdates.
+
+#### Uso:
+```
+ShellBot.TotalUpdates
+```
+
+> Função não requer parâmetros/argumentos.
+
+## <a name="ListUpdates">ShellBot.ListUpdates</a>
+
+Retorna os índices das atualizações armazenadas. Se o número de atualizações for maior que 1 os resultados são armazenados em um array's indexado.
+
+#### Uso:
+```
+ShellBot.ListUpdates
+```
+
+> Função não requer parâmetros/argumentos.
+
+
+## <a name="OffsetEnd">ShellBot.OffsetEnd</a>
+
+Retorna o ID da última atualização. Retorna 0 caso não haja atualizações.
+
+#### Uso:
+```
+ShellBot.OffsetEnd
+```
+
+> Função não requer parâmetros/argumentos.
+
+## <a name="OffsetNext">ShellBot.OffsetNext</a>
+
+Retorna o ID da próxima atualização (offset+1)
+
+#### Uso:
+```
+ShellBot.OffsetNext
+```
+
+> Função não requer parâmetros/argumentos.
 
 ## Variáveis/Arrays
 
