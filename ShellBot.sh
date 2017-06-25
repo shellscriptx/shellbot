@@ -472,7 +472,7 @@ ShellBot.answerCallbackQuery()
 {
 	local _CALLBACK_QUERY_ID_ _TEXT_ _SHOW_ALERT_ _URL_ _CACHE_TIME_
 	local _METHOD_=answerCallbackQuery # Método
-	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:t:s:u:t:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:t:s:u:e:' \
 										--longoptions 'callback_query_id:,
 														text:,
 														show_alert:,
@@ -507,7 +507,7 @@ ShellBot.answerCallbackQuery()
 				_URL_="$2"
 				shift 2
 				;;
-			-t|--cache_time)
+			-e|--cache_time)
 				# inteiro
 				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_CACHE_TIME_="$2"
