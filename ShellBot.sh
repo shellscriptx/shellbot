@@ -1842,8 +1842,6 @@ ShellBot.getChat()
 														-- "$@")
 
 	
-	_STATUS_=0
-
 	# Define os parâmetros posicionais
 	eval set -- "$_PARAM_"
 
