@@ -205,7 +205,7 @@ ShellBot.watchHandle()
 	# consecutivamente. A ordem de execução das funções é determinada
 	# pela ordem de declaração.
 	for _FUNC_HANDLE_ in ${_LIST_REG_FUNC_HANDLE_[$_CALLBACK_DATA_]}; do 
-		$_FUNC_HANDLE_ || return 1; done	# executa
+		$_FUNC_HANDLE_; done	# executa
 
 	# retorno
 	return 0
