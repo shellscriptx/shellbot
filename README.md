@@ -151,6 +151,12 @@ ShellBot.funcao -p arg1 -p arg2 ...
 * <a href="#InlineKeyboardMarkup">ShellBot.InlineKeyboardMarkup</a>
 * <a href="#InlineKeyboardButton">ShellBot.InlineKeyboardButton</a>
 * <a href="#answerCallbackQuery">ShellBot.answerCallbackQuery</a>
+* <a href="#regHandleFunction">ShellBot.regHandleFunction</a>
+* <a href="#watchHandle">ShellBot.watchHandle</a>
+* <a href="#ListUpdates">ShellBot.ListUpdates</a>
+* <a href="#TotalUpdates">ShellBot.TotalUpdates</a>
+* <a href="#OffsetEnd">ShellBot.OffsetEnd</a>
+* <a href="#OffsetNext">ShellBot.OffsetNext</a>
 
 #### Retorno
 
@@ -909,7 +915,7 @@ Parâmetro|Tipo|Obrigatório|Descrição
 -t, --text <_texto_>|String|Não|Texto da notificação. Se não for especificado, nada será mostrado ao usuário, 0 a 200 caracteres.
 -s, --show_alert <_true ou false_>|Boolean|Não|Se for verdade, um alerta será mostrado pelo cliente em vez de uma notificação na parte superior da tela de bate-papo. Por padrão, é falso.
 -u, --url <_url_>|String|Não|URL que será aberto pelo cliente do usuário.
--t, --cache_time <_tempo_>|Integer|Não|A quantidade máxima de tempo em segundos que o resultado da consulta de retorno de chamada pode ser armazenada no lado do cliente. Os aplicativos de Telegram suportarão o armazenamento em cache a partir da versão 3.14. Padrão para 0.
+-e, --cache_time <_tempo_>|Integer|Não|A quantidade máxima de tempo em segundos que o resultado da consulta de retorno de chamada pode ser armazenada no lado do cliente. Os aplicativos de Telegram suportarão o armazenamento em cache a partir da versão 3.14. Padrão para 0.
 
 ## <a name="deleteMessage">ShellBot.deleteMessage</a>
 
@@ -926,6 +932,41 @@ Parâmetro|Tipo|Obrigatório|Descrição
 --------------|--------|-------|---------
 -c, --chat_id <_identificador_>|String ou Integer|Sim|Identificador exclusivo para o bate-papo de destino ou nome de usuário do canal de destino (no formato @channelusername)
 -m, --message_id <_identificador_>|Inteiro|Sim|Identificador da mensagem para excluir
+
+## <a name="regHandleFunction">ShellBot.regHandleFunction</a>
+
+Registra o handle da função, associando-a a um valor armazenado em callback_data. Quando um inline_button é pressionado, este valor é retornado e a função ShellBot.watchHandle chama a função registrada.
+
+#### Uso:
+```
+ShellBot.RegHandleFunction --function <identificador> --callback_data <valor> ...
+```
+
+> São mencionados acima somente os parâmetros obrigatórios da função, tendo o `…` como extensão para os opcionais.
+
+#### Parâmetros:
+Parâmetro|Tipo|Obrigatório|Descrição
+--------------|--------|-------|---------
+-f, --function <_identificador_>|String|Sim|Nome da função válida que será executada.
+-d, --callback_data <_valor_>|String|Sim|Valor associado a um inline_button a ser retornado.
+-a, --args <_argumentos_>|String|Não|Argumentos a serem passados na chamada da função.
+
+
+## <a name="watchHandle">ShellBot.watchHandle</a>
+
+Monitora as funções registradas com ShellBot.regHandleFunction e executa caso o valor especificado em callback_data for encontrado. A função deve receber um valor dinâmico. Ou seja, Utiliza-se a variável $callback_query_data como argumento.
+
+#### Uso:
+```
+ShellBot.watchHandle --callback_data <$callback_query_data>
+```
+
+> São mencionados acima somente os parâmetros obrigatórios da função, tendo o `…` como extensão para os opcionais.
+
+#### Parâmetros:
+Parâmetro|Tipo|Obrigatório|Descrição
+--------------|--------|-------|---------
+-d, --callback_data <_$callback_query_data_>|String|Sim|Variável dinâmica onde é armazenado o valor callback_data retornado quando um inline_button é pressionado.
 
 ## Variáveis/Arrays
 
