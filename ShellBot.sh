@@ -1577,7 +1577,7 @@ ShellBot.sendChatAction()
 ShellBot.getUserProfilePhotos()
 {
 	# Variáveis locais 
-	local _USER_ID_ _OFFSET_ _LIMIT_ _IND_ _TOTAL_ _LAST_ _INDEX_ _MAX_ _ITEM_
+	local _USER_ID_ _OFFSET_ _LIMIT_ _IND_ _LAST_ _INDEX_ _MAX_ _ITEM_ _TOTAL_
 	local _METHOD_=getUserProfilePhotos # Método
 	
 	# Lê os parâmetros da função
