@@ -41,7 +41,7 @@ declare -r _BOT_SCRIPT_=$(basename "$0")
 _JSON_=$(mktemp -q --tmpdir=/tmp --suffix=.json ${_BOT_SCRIPT_%%.*}-XXXXX) && \
 declare -r _JSON_ || { 
 	echo "ShellBot: erro: não foi possível criar o arquivo JSON em '/tmp'" 1>&2
-	echo "verifique se o diretório existe ou se possui permissões de escrita e tenta novamente." 1>&2
+	echo "verifique se o diretório existe ou se possui permissões de escrita e tente novamente." 1>&2
 	exit 1
 } 
 
