@@ -38,7 +38,8 @@ declare -r _BOT_SCRIPT_=$(basename "$0")
 # O arquivo armazena os dados da atualização que serão acessados durante a execução de outros métodos; Onde o mesmo
 # é sobrescrito sempre que um valor é retornado.
 _JSON_=$(mktemp -q --tmpdir=/tmp --suffix=.json ${_BOT_SCRIPT_%%.*}-XXXXX) && \
-declare -r _JSON_ || { 
+_JSON2_=$(mktemp -q --tmpdir=/tmp --suffix=.json2 ${_BOT_SCRIPT_%%.*}-XXXXX) && \
+declare -r _JSON_ _JSON2_ || { 
 	echo "ShellBot: erro: não foi possível criar o arquivo JSON em '/tmp'" 1>&2
 	echo "verifique se o diretório existe ou se possui permissões de escrita e tente novamente." 1>&2
 	exit 1
@@ -51,13 +52,13 @@ declare -r _POST_='curl --silent --request POST --url'
 # Funções para extração dos objetos armazenados no arquivo "update.json"
 # 
 # Verifica o retorno após a chamada de um método, se for igual a true (sucesso) retorna 0, caso contrário, retorna 1
-json() { jq -r "$*" $_JSON_ 2>/dev/null; }
-json_status(){ [[ $(json '.ok') != false ]] && return 0 || return 1; }
+json() { jq -r "${*:2}" $1 2>/dev/null; }
+json_status(){ [[ $(json $1 '.ok') != false ]] && return 0 || return 1; }
 # Extrai o comprimento da string removendo o caractere nova-linha (\n)
 str_len(){ echo $(($(wc -c <<< "$*")-1)); return 0; }
 
 # Remove arquivo JSON se o script for interrompido.
-trap "rm -f $_JSON_ &>/dev/null; exit 1" SIGQUIT SIGINT SIGKILL SIGTERM SIGSTOP SIGPWR
+trap "rm -f $_JSON_ $_JSON2_ &>/dev/null; exit 1" SIGQUIT SIGINT SIGKILL SIGTERM SIGSTOP SIGPWR
 
 # Erros registrados da API (Parâmetros/Argumentos)
 declare -r _ERR_TYPE_BOOL_='tipo incompatível. Somente "true" ou "false".'
@@ -87,20 +88,20 @@ message_error()
 	# Lê o tipo de ocorrência do erro.
 	# TG - Erro externo, retornado pelo core do telegram
 	# API - Erro interno, gerado pela API ShellBot.
-	case $1 in
+	case $2 in
 		TG)
 			# Extrai as informações de erro no arquivo "update.json"
-			_ERR_CODE_=$(json '.error_code')
-			_DESCRIPTION_=$(json '.description')
+			_ERR_CODE_=$(json $1 '.error_code')
+			_DESCRIPTION_=$(json $1 '.description')
 			_ERR_MESSAGE_="${_ERR_CODE_:-1}: ${_DESCRIPTION_:-Ocorreu um problema durante a tentativa de atualização.}"
 			;;
 		API)
 			# Define as variáveis com os valores passados na função "error.message"
-			_ERR_PARAM_="$3"
-			_ERR_ARG_VALUE_="$4"
+			_ERR_PARAM_="$4"
+			_ERR_ARG_VALUE_="$5"
 			# Insere um '-', caso o valor de '_ERR_PARAM_' e '_ERR_ARG_VALUE_' for nulo; Se não houver
 			# mensagem de erro, imprime 'Erro desconhecido'
-			_ERR_MESSAGE_="${_ERR_PARAM_:--}: ${_ERR_ARG_VALUE_:--}: ${2:-Erro desconhecido}"
+			_ERR_MESSAGE_="${_ERR_PARAM_:--}: ${_ERR_ARG_VALUE_:--}: ${3:-Erro desconhecido}"
 			_EXIT_=1
 			;;
 	esac
@@ -135,7 +136,7 @@ ShellBot.regHandleFunction()
 			-f|--function)
 				# Verifica se a função especificada existe.
 				if ! declare -fp $2 &>/dev/null; then
-					message_error API "$_ERR_FUNCTION_NOT_FOUND_" "$1" "$2"
+					message_error $_JSON_ API "$_ERR_FUNCTION_NOT_FOUND_" "$1" "$2"
 					return 1
 				fi
 				_FUNCTION_="$2"
@@ -156,8 +157,8 @@ ShellBot.regHandleFunction()
 		esac
 	done
 	
-	[[ $_FUNCTION_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-f, --function]"
-	[[ $_CALLBACK_DATA_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-d, --callback_data]"
+	[[ $_FUNCTION_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-f, --function]"
+	[[ $_CALLBACK_DATA_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-d, --callback_data]"
 
 	# Testa se o indentificador armazenado em _HANDLE_ já existe. Caso já exista, repete
 	# o procedimento até que um handle válido seja gerado; Evitando sobreescrever handle's existentes.
@@ -240,9 +241,9 @@ ShellBot.init()
 	done
 
 	# Parâmetro obrigatório.	
-	[[ $_TOKEN_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-t, --token]"
+	[[ $_TOKEN_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-t, --token]"
 
-	_BOT_INFO_=$(ShellBot.getMe 2>/dev/null) || message_error API "$_ERR_TOKEN_"
+	_BOT_INFO_=$(ShellBot.getMe 2>/dev/null) || message_error $_JSON_ API "$_ERR_TOKEN_"
 	
 	# Define o delimitador entre os campos.
 	IFSbkp=$IFS; IFS='|'
@@ -279,13 +280,13 @@ ShellBot.getMe()
 	local _METHOD_=getMe	# Método
 	
 	# Chama o método getMe passando o endereço da API, seguido do nome do método.
-	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ > $_JSON_
+	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ > $_JSON2_
 	
 	# Verifica o status de retorno do método
-	json_status && {
+	json_status $_JSON2_ && {
 		# Retorna as informações armazenadas em "result".
-		json '.result|.id,.username,.first_name,.last_name' | sed ':a;$!N;s/\n/|/;ta'
-	} || message_error TG
+		json $_JSON2_ '.result|.id,.username,.first_name,.last_name' | sed ':a;$!N;s/\n/|/;ta'
+	} || message_error $_JSON2_ TG
 
 	return $?
 }
@@ -318,7 +319,7 @@ ShellBot.InlineKeyboardButton()
 				shift 2
 				;;
 			-l|--line)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_LINE_="$2"
 				shift 2
 				;;
@@ -349,10 +350,10 @@ ShellBot.InlineKeyboardButton()
 		esac
 	done
 
-	[[ $_BUTTON_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-b, --button"
-	[[ $_TEXT_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-t, --text"
-	[[ $_CALLBACK_DATA_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --callback_data"
-	[[ $_LINE_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-l, --line"
+	[[ $_BUTTON_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "-b, --button"
+	[[ $_TEXT_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "-t, --text"
+	[[ $_CALLBACK_DATA_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "-c, --callback_data"
+	[[ $_LINE_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "-l, --line"
 	
 	# Inicializa a variável armazenada em _BUTTON_, definindo seu
 	# escopo como global, tornando-a visível em todo o projeto (source)
@@ -410,7 +411,7 @@ ShellBot.InlineKeyboardMarkup()
 		esac
 	done
 	
-	[[ $_BUTTON_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-b, --button"
+	[[ $_BUTTON_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "-b, --button"
 	
 	# Ponteiro
 	declare -n _BUTTON_
@@ -472,7 +473,7 @@ ShellBot.answerCallbackQuery()
 				;;
 			-s|--show_alert)
 				# boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error $_JSON_ API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_SHOW_ALERT_="$2"
 				shift 2
 				;;
@@ -482,7 +483,7 @@ ShellBot.answerCallbackQuery()
 				;;
 			-e|--cache_time)
 				# inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_CACHE_TIME_="$2"
 				shift 2
 				;;
@@ -493,7 +494,7 @@ ShellBot.answerCallbackQuery()
 		esac
 	done
 	
-	[[ $_CALLBACK_QUERY_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --callback_query_id"
+	[[ $_CALLBACK_QUERY_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "-c, --callback_query_id"
 	
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CALLBACK_QUERY_ID_:+-d callback_query_id="'$_CALLBACK_QUERY_ID_'"} \
 							${_TEXT_:+-d text="'$_TEXT_'"} \
@@ -501,7 +502,7 @@ ShellBot.answerCallbackQuery()
 							${_URL_:+-d url="'$_URL_'"} \
 							${_CACHE_TIME_:+-d cache_time="'$_CACHE_TIME_'"} > $_JSON_
 
-	json_status || message_error TG
+	json_status $_JSON_ || message_error $_JSON_ TG
 
 	return $?
 }
@@ -540,19 +541,19 @@ ShellBot.ReplyKeyboardMarkup()
 				;;
 			-r|--resize_keyboard)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error $_JSON_ API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_RESIZE_KEYBOARD_="$2"
 				shift 2
 				;;
 			-t|--one_time_keyboard)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error $_JSON_ API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_ON_TIME_KEYBOARD_="$2"
 				shift 2
 				;;
 			-s|--selective)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error $_JSON_ API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_SELECTIVE_="$2"
 				shift 2
 				;;
@@ -564,7 +565,7 @@ ShellBot.ReplyKeyboardMarkup()
 	done
 	
 	# Imprime mensagem de erro se o parâmetro obrigatório for omitido.
-	[[ $_BUTTON_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-b, --button"
+	[[ $_BUTTON_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "-b, --button"
 
 	# Ponteiro	
 	declare -n _BUTTON_
@@ -617,25 +618,25 @@ ShellBot.sendMessage()
 				;;
 			-p|--parse_mode)
 				# Tipo: "markdown" ou "html"
-				[[ "$2" =~ ^(markdown|html)$ ]] || message_error API "$_ERR_TYPE_PARSE_MODE_" "$1" "$2"
+				[[ "$2" =~ ^(markdown|html)$ ]] || message_error $_JSON_ API "$_ERR_TYPE_PARSE_MODE_" "$1" "$2"
 				_PARSE_MODE_="$2"
 				shift 2
 				;;
 			-w|--disable_web_page_preview)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error $_JSON_ API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_WEB_PAGE_PREVIEW_="$2"
 				shift 2
 				;;
 			-n|--disable_notification)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error $_JSON_ API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;
 			-r|--reply_to_message_id)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_REPLY_TO_MESSAGE_ID_="$2"
 				shift 2
 				;;
@@ -651,8 +652,8 @@ ShellBot.sendMessage()
 	done
 
 	# Parâmetros obrigatórios.
-	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_TEXT_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-t, --text]"
+	[[ $_CHAT_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_TEXT_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-t, --text]"
 
 	# Chama o método da API, utilizando o comando request especificado; Os parâmetros 
 	# e valores são passados no form e lidos pelo método. O retorno do método é redirecionado para o arquivo 'update.json'.
@@ -666,7 +667,7 @@ ShellBot.sendMessage()
 						${_REPLY_MARKUP_:+-d reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Testa o retorno do método.
-	json_status || message_error TG
+	json_status $_JSON_ || message_error $_JSON_ TG
 	
 	# Status
 	return $?
@@ -704,13 +705,13 @@ ShellBot.forwardMessage()
 				;;
 			-n|--disable_notification)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error $_JSON_ API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;
 			-m|--message_id)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_MESSAGE_ID_="$2"
 				shift 2
 				;;
@@ -722,9 +723,9 @@ ShellBot.forwardMessage()
 	done
 	
 	# Parâmetros obrigatórios.
-	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_FROM_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-f, --from_chat_id]"
-	[[ $_MESSAGE_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
+	[[ $_CHAT_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_FROM_CHAT_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-f, --from_chat_id]"
+	[[ $_MESSAGE_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
 
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
@@ -733,7 +734,7 @@ ShellBot.forwardMessage()
 							${_MESSAGE_ID_:+-d message_id="'$_MESSAGE_ID_'"} > $_JSON_
 	
 	# Retorno do método
-	json_status || message_error TG
+	json_status $_JSON_ || message_error $_JSON_ TG
 
 	# status
 	return $?
@@ -773,19 +774,19 @@ ShellBot.sendPhoto()
 				;;
 			-t|--caption)
 				# Limite máximo de caracteres: 200
-				[ $(str_len "$2") -gt 200 ] && message_error API "$_ERR_CAPTION_MAX_CHAR_" "$1" 
+				[ $(str_len "$2") -gt 200 ] && message_error $_JSON_ API "$_ERR_CAPTION_MAX_CHAR_" "$1" 
 				_CAPTION_="$2"
 				shift 2
 				;;
 			-n|--disable_notification)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error $_JSON_ API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;
 			-r|--reply_to_message_id)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_REPLY_TO_MESSAGE_ID_="$2"
 				shift 2
 				;;
@@ -801,8 +802,8 @@ ShellBot.sendPhoto()
 	done
 	
 	# Parâmetros obrigatórios
-	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_PHOTO_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-p, --photo]"
+	[[ $_CHAT_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_PHOTO_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-p, --photo]"
 	
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-F chat_id="'$_CHAT_ID_'"} \
@@ -813,7 +814,7 @@ ShellBot.sendPhoto()
 							${_REPLY_MARKUP_:+-F reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 	
 	# Retorno do método
-	json_status || message_error TG
+	json_status $_JSON_ || message_error $_JSON_ TG
 
 	# Status
 	return $?
@@ -859,7 +860,7 @@ ShellBot.sendAudio()
 				;;
 			-d|--duration)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_DURATION_="$2"
 				shift 2
 				;;
@@ -873,13 +874,13 @@ ShellBot.sendAudio()
 				;;
 			-n|--disable_notification)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error $_JSON_ API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;
 			-r|--reply_to_message_id)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_REPLY_TO_MESSAGE_ID_="$2"
 				shift 2
 				;;
@@ -895,8 +896,8 @@ ShellBot.sendAudio()
 	done
 	
 	# Parâmetros obrigatórios
-	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_AUDIO_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-a, --audio]"
+	[[ $_CHAT_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_AUDIO_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-a, --audio]"
 	
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-F chat_id="'$_CHAT_ID_'"} \
@@ -910,7 +911,7 @@ ShellBot.sendAudio()
 							${_REPLY_MARKUP_:+-F reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Retorno do método
-	json_status || message_error TG
+	json_status $_JSON_ || message_error $_JSON_ TG
 
 	# Status
 	return $?
@@ -954,12 +955,12 @@ ShellBot.sendDocument()
 				shift 2
 				;;
 			-n|--disable_notification)
-				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error $_JSON_ API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;
 			-r|--reply_to_message_id)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_REPLY_TO_MESSAGE_ID_="$2"
 				shift 2
 				;;
@@ -975,8 +976,8 @@ ShellBot.sendDocument()
 	done
 	
 	# Parâmetros obrigatórios
-	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_DOCUMENT_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-d, --document]"
+	[[ $_CHAT_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_DOCUMENT_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-d, --document]"
 	
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-F chat_id="'$_CHAT_ID_'"} \
@@ -987,7 +988,7 @@ ShellBot.sendDocument()
 							${_REPLY_MARKUP_:+-F reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Retorno do método
-	json_status || message_error TG
+	json_status $_JSON_ || message_error $_JSON_ TG
 
 	# Status
 	return $?
@@ -1026,13 +1027,13 @@ ShellBot.sendSticker()
 				;;
 			-n|--disable_notification)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error $_JSON_ API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;
 			-r|--reply_to_message_id)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_REPLY_TO_MESSAGE_ID_="$2"
 				shift 2
 				;;
@@ -1048,8 +1049,8 @@ ShellBot.sendSticker()
 	done
 	
 	# Parâmetros obrigatórios
-	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_STICKER_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-s, --sticker]"
+	[[ $_CHAT_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_STICKER_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-s, --sticker]"
 
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-F chat_id="'$_CHAT_ID_'"} \
@@ -1059,7 +1060,7 @@ ShellBot.sendSticker()
 							${_REPLY_MARKUP_:+-F reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Testa o retorno do método
-	json_status || message_error TG
+	json_status $_JSON_ || message_error $_JSON_ TG
 
 	# Status
 	return $?
@@ -1102,19 +1103,19 @@ ShellBot.sendVideo()
 				;;
 			-d|--duration)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_DURATION_="$2"
 				shift 2
 				;;
 			-w|--width)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_WIDTH_="$2"
 				shift 2
 				;;
 			-h|--height)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_HEIGHT_="$2"
 				shift 2
 				;;
@@ -1124,12 +1125,12 @@ ShellBot.sendVideo()
 				;;
 			-n|--disable_notification)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error $_JSON_ API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;
 			-r|--reply_to_message_id)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_REPLY_TO_MESSAGE_ID_="$2"
 				shift 2
 				;;
@@ -1145,8 +1146,8 @@ ShellBot.sendVideo()
 	done
 	
 	# Parâmetros obrigatórios.
-	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_VIDEO_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-v, --video]"
+	[[ $_CHAT_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_VIDEO_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-v, --video]"
 
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-F chat_id="'$_CHAT_ID_'"} \
@@ -1160,7 +1161,7 @@ ShellBot.sendVideo()
 							${_REPLY_MARKUP_:+-F reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Testa o retorno do método
-	json_status || message_error TG
+	json_status $_JSON_ || message_error $_JSON_ TG
 
 	# Status
 	return $?
@@ -1206,19 +1207,19 @@ ShellBot.sendVoice()
 				;;
 			-d|--duration)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_DURATION_="$2"
 				shift 2
 				;;
 			-n|--disable_notification)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error $_JSON_ API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;
 			-r|--reply_to_message_id)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_REPLY_TO_MESSAGE_ID_="$2"
 				shift 2
 				;;
@@ -1233,8 +1234,8 @@ ShellBot.sendVoice()
 	done
 	
 	# Parâmetros obrigatórios.
-	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_VOICE_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-v, --voice]"
+	[[ $_CHAT_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_VOICE_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-v, --voice]"
 	
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-F chat_id="'$_CHAT_ID_'"} \
@@ -1246,7 +1247,7 @@ ShellBot.sendVoice()
 							${_REPLY_MARKUP_:+-F reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Testa o retorno do método
-	json_status || message_error TG
+	json_status $_JSON_ || message_error $_JSON_ TG
 
 	# Status
 	return $?
@@ -1283,25 +1284,25 @@ ShellBot.sendLocation()
 				;;
 			-l|--latitude)
 				# Tipo: float
-				[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error API "$_ERR_TYPE_FLOAT_" "$1" "$2"
+				[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_FLOAT_" "$1" "$2"
 				_LATITUDE_="$2"
 				shift 2
 				;;
 			-g|--longitude)
 				# Tipo: float
-				[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error API "$_ERR_TYPE_FLOAT_" "$1" "$2"
+				[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_FLOAT_" "$1" "$2"
 				_LONGITUDE_="$2"
 				shift 2
 				;;
 			-n|--disable_notification)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error $_JSON_ API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;
 			-r|--reply_to_message_id)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_REPLY_TO_MESSAGE_ID_="$2"
 				shift 2
 				;;
@@ -1316,9 +1317,9 @@ ShellBot.sendLocation()
 	done
 	
 	# Parâmetros obrigatórios
-	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_LATITUDE_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-l, --latitude]"
-	[[ $_LONGITUDE_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-g, --longitude]"
+	[[ $_CHAT_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_LATITUDE_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-l, --latitude]"
+	[[ $_LONGITUDE_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-g, --longitude]"
 			
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-F chat_id="'$_CHAT_ID_'"} \
@@ -1329,7 +1330,7 @@ ShellBot.sendLocation()
 							${_REPLY_MARKUP_:+-F reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Testa o retorno do método
-	json_status || message_error TG
+	json_status $_JSON_ || message_error $_JSON_ TG
 
 	return $?
 	
@@ -1367,13 +1368,13 @@ ShellBot.sendVenue()
 				;;
 			-l|--latitude)
 				# Tipo: float
-				[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error API "$_ERR_TYPE_FLOAT_" "$1" "$2"
+				[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_FLOAT_" "$1" "$2"
 				_LATITUDE_="$2"
 				shift 2
 				;;
 			-g|--longitude)
 				# Tipo: float
-				[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error API "$_ERR_TYPE_FLOAT_" "$1" "$2"
+				[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_FLOAT_" "$1" "$2"
 				_LONGITUDE_="$2"
 				shift 2
 				;;
@@ -1391,13 +1392,13 @@ ShellBot.sendVenue()
 				;;
 			-n|--disable_notification)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error $_JSON_ API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;
 			-r|--reply_to_message_id)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_REPLY_TO_MESSAGE_ID_="$2"
 				shift 2
 				;;
@@ -1412,11 +1413,11 @@ ShellBot.sendVenue()
 	done
 			
 	# Parâmetros obrigatórios.
-	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_LATITUDE_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-l, --latitude]"
-	[[ $_LONGITUDE_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-g, --longitude]"
-	[[ $_TITLE_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-i, --title]"
-	[[ $_ADDRESS_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-a, --address]"
+	[[ $_CHAT_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_LATITUDE_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-l, --latitude]"
+	[[ $_LONGITUDE_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-g, --longitude]"
+	[[ $_TITLE_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-i, --title]"
+	[[ $_ADDRESS_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-a, --address]"
 	
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-F chat_id="'$_CHAT_ID_'"} \
@@ -1430,7 +1431,7 @@ ShellBot.sendVenue()
 							${_REPLY_MARKUP_:+-F reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Testa o retorno do método
-	json_status || message_error TG
+	json_status $_JSON_ || message_error $_JSON_ TG
 
 	# Status
 	return $?
@@ -1479,13 +1480,13 @@ ShellBot.sendContact()
 				;;
 			-n|--disable_notification)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error $_JSON_ API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;
 			-r|--reply_to_message_id)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_REPLY_TO_MESSAGE_ID_="$2"
 				shift 2
 				;;
@@ -1500,9 +1501,9 @@ ShellBot.sendContact()
 	done
 	
 	# Parâmetros obrigatórios.	
-	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_PHONE_NUMBER_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-p, --phone_number]"
-	[[ $_FIRST_NAME_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-f, --first_name]"
+	[[ $_CHAT_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_PHONE_NUMBER_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-p, --phone_number]"
+	[[ $_FIRST_NAME_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-f, --first_name]"
 	
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-F chat_id="'$_CHAT_ID_'"} \
@@ -1514,7 +1515,7 @@ ShellBot.sendContact()
 							${_REPLY_MARKUP_:+-F reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Testa o retorno do método
-	json_status || message_error TG
+	json_status $_JSON_ || message_error $_JSON_ TG
 
 	# Status
 	return $?
@@ -1548,7 +1549,7 @@ ShellBot.sendChatAction()
 							record_audio|upload_audio|upload_document|
 							find_location|record_video_note|upload_video_note)$ ]] || \
 							# erro
-							message_error API "$_ERR_ACTION_MODE_" "$1" "$2"
+							message_error $_JSON_ API "$_ERR_ACTION_MODE_" "$1" "$2"
 				_ACTION_="$2"
 				shift 2
 				;;
@@ -1559,15 +1560,15 @@ ShellBot.sendChatAction()
 	done
 
 	# Parâmetros obrigatórios.		
-	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_ACTION_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-a, --action]"
+	[[ $_CHAT_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_ACTION_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-a, --action]"
 	
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
 													${_ACTION_:+-d action="'$_ACTION_'"} > $_JSON_
 	
 	# Testa o retorno do método
-	json_status || message_error TG
+	json_status $_JSON_ || message_error $_JSON_ TG
 
 	# Status
 	return $?
@@ -1595,17 +1596,17 @@ ShellBot.getUserProfilePhotos()
 	do
 		case $1 in
 			-u|--user_id)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON2_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_USER_ID_="$2"
 				shift 2
 				;;
 			-o|--offset)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON2_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_OFFSET_="$2"
 				shift 2
 				;;
 			-l|--limit)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON2_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_LIMIT_="$2"
 				shift 2
 				;;
@@ -1617,30 +1618,30 @@ ShellBot.getUserProfilePhotos()
 	done
 	
 	# Parâmetros obrigatórios.
-	[[ $_USER_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
+	[[ $_USER_ID_ ]] || message_error $_JSON2_ API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
 	
 	# Chama o método
 	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ ${_USER_ID_:+-d user_id="'$_USER_ID_'"} \
 													${_OFFSET_:+-d offset="'$_OFFSET_'"} \
-													${_LIMIT_:+-d limit="'$_LIMIT_'"} > $_JSON_
+													${_LIMIT_:+-d limit="'$_LIMIT_'"} > $_JSON2_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status && {
+	json_status $_JSON2_ && {
 
-		_TOTAL_=$(json '.result.total_count')
+		_TOTAL_=$(json $_JSON2_ '.result.total_count')
 
 		if [[ $_TOTAL_ -gt 0 ]]; then	
 			for _INDEX_ in $(seq 0 $((_TOTAL_-1)))
 			do
-				_MAX_=$(json ".result.photos[$_INDEX_]|length")
+				_MAX_=$(json $_JSON2_ ".result.photos[$_INDEX_]|length")
 				for _ITEM_ in $(seq 0 $((_MAX_-1)))
 				do
-					json ".result.photos[$_INDEX_][$_ITEM_]|.file_id, .file_size, .width, .height" | sed ':a;$!N;s/\n/|/;ta'
+					json $_JSON2_ ".result.photos[$_INDEX_][$_ITEM_]|.file_id, .file_size, .width, .height" | sed ':a;$!N;s/\n/|/;ta'
 				done
 			done
 		fi	
 
-	} || message_error TG
+	} || message_error $_JSON2_ TG
 
 	# Status
 	return $?
@@ -1677,16 +1678,16 @@ ShellBot.getFile()
 	done
 	
 	# Parâmetros obrigatórios.
-	[[ $_FILE_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-f, --file_id]"
+	[[ $_FILE_ID_ ]] || message_error $_JSON2_ API "$_ERR_PARAM_REQUIRED_" "[-f, --file_id]"
 	
 	# Chama o método.
-	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ ${_FILE_ID_:+-d file_id="'$_FILE_ID_'"} > $_JSON_
+	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ ${_FILE_ID_:+-d file_id="'$_FILE_ID_'"} > $_JSON2_
 
 	# Testa o retorno do método.
-	json_status && {
+	json_status $_JSON2_ && {
 		# Extrai as informações, agrupando-as em uma única linha e insere o delimitador '|' PIPE entre os campos.
-		json '.result|.file_id, .file_size, .file_path' | sed ':a;$!N;s/\n/|/;ta'
-	} || message_error TG
+		json $_JSON2_ '.result|.file_id, .file_size, .file_path' | sed ':a;$!N;s/\n/|/;ta'
+	} || message_error $_JSON2_ TG
 
 	# Status
 	return $?
@@ -1717,7 +1718,7 @@ ShellBot.kickChatMember()
 				shift 2
 				;;
 			-u|--user_id)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_USER_ID_="$2"
 				shift 2
 				;;
@@ -1729,15 +1730,15 @@ ShellBot.kickChatMember()
 	done
 	
 	# Parametros obrigatórios.
-	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_USER_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
+	[[ $_CHAT_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_USER_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
 	
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
 												${_USER_ID_:+-d user_id="'$_USER_ID_'"} > $_JSON_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status || message_error TG
+	json_status $_JSON_ || message_error $_JSON_ TG
 
 	# Status
 	return $?
@@ -1773,12 +1774,12 @@ ShellBot.leaveChat()
 		esac
 	done
 
-	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_CHAT_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
 	
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} > $_JSON_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status || message_error TG
+	json_status $_JSON_ || message_error $_JSON_ TG
 
 	return $?
 	
@@ -1807,7 +1808,7 @@ ShellBot.unbanChatMember()
 				shift 2
 				;;
 			-u|--user_id)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_USER_ID_="$2"
 				shift 2
 				;;
@@ -1818,14 +1819,14 @@ ShellBot.unbanChatMember()
 		esac
 	done
 	
-	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_USER_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
+	[[ $_CHAT_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_USER_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
 	
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
 												${_USER_ID_:+-d user_id="'$_USER_ID_'"} > $_JSON_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status || message_error TG
+	json_status $_JSON_ || message_error $_JSON_ TG
 
 	return $?
 }
@@ -1859,15 +1860,15 @@ ShellBot.getChat()
 		esac
 	done
 
-	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_CHAT_ID_ ]] || message_error $_JSON2_ API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
 	
-	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} > $_JSON_
+	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} > $_JSON2_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status && {
+	json_status $_JSON2_ && {
 		# Imprime os dados.
-		json '.result|.id, .username, .type, .title' |  sed ':a;$!N;s/\n/|/;ta'
-	} || message_error TG
+		json $_JSON2_ '.result|.id, .username, .type, .title' |  sed ':a;$!N;s/\n/|/;ta'
+	} || message_error $_JSON2_ TG
 
 	# Status
 	return $?
@@ -1901,26 +1902,26 @@ ShellBot.getChatAdministrators()
 		esac
 	done
 
-	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_CHAT_ID_ ]] || message_error $_JSON2_ API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
 	
-	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} > $_JSON_
+	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} > $_JSON2_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status && {
+	json_status $_JSON2_ && {
 
 		# Total de administratores
-		declare -i _TOTAL_=$(json '.result|length')
+		declare -i _TOTAL_=$(json $_JSON2_ '.result|length')
 
 		# Lê os administradores do grupo se houver.
 		if [ $_TOTAL_ -gt 0 ]; then
 			for _INDEX_ in $(seq 0 $((_TOTAL_-1)))
 			do
 				# Lê as informações do usuário armazenadas em '_INDEX_'.
-				json ".result[$_INDEX_]|.user.id, .user.username, .user.first_name, .user.last_name, .status" | sed ':a;$!N;s/\n/|/;ta'
+				json $_JSON2_ ".result[$_INDEX_]|.user.id, .user.username, .user.first_name, .user.last_name, .status" | sed ':a;$!N;s/\n/|/;ta'
 			done
 		fi
 
-	} || message_error TG
+	} || message_error $_JSON2_ TG
 
 	# Status	
 	return $?
@@ -1954,12 +1955,12 @@ ShellBot.getChatMembersCount()
 		esac
 	done
 
-	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_CHAT_ID_ ]] || message_error $_JSON2_ API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
 	
-	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} > $_JSON_
+	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} > $_JSON2_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status && json '.result' || message_error TG
+	json_status $_JSON2_ && json $_JSON2_ '.result' || message_error $_JSON2_ TG
 
 	return $?
 }
@@ -1988,7 +1989,7 @@ ShellBot.getChatMember()
 				shift 2
 				;;
 			-u|--user_id)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON2_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_USER_ID_="$2"
 				shift 2
 				;;
@@ -1999,16 +2000,16 @@ ShellBot.getChatMember()
 		esac
 	done
 	
-	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_USER_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
+	[[ $_CHAT_ID_ ]] || message_error $_JSON2_ API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_USER_ID_ ]] || message_error $_JSON2_ API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
 	
 	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
-												${_USER_ID_:+-d user_id="'$_USER_ID_'"} > $_JSON_
+												${_USER_ID_:+-d user_id="'$_USER_ID_'"} > $_JSON2_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status && {
-			json '.result| .user.id, .user.username, .user.first_name, .user.last_name, .status' | sed ':a;$!N;s/\n/|/;ta'
-	} || message_error TG
+	json_status $_JSON2_ && {
+			json $_JSON2_ '.result| .user.id, .user.username, .user.first_name, .user.last_name, .status' | sed ':a;$!N;s/\n/|/;ta'
+	} || message_error $_JSON2_ TG
 
 	return $?
 }
@@ -2038,12 +2039,12 @@ ShellBot.editMessageText()
 					shift 2
 					;;
 				-m|--message_id)
-					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+					[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 					_MESSAGE_ID_="$2"
 					shift 2
 					;;
 				-i|--inline_message_id)
-					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+					[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 					_INLINE_MESSAGE_ID_="$2"
 					shift 2
 					;;
@@ -2052,12 +2053,12 @@ ShellBot.editMessageText()
 					shift 2
 					;;
 				-p|--parse_mode)
-					[[ "$2" =~ ^(markdown|html)$ ]] || message_error API "$_ERR_TYPE_PARSE_MODE_" "$1" "$2"
+					[[ "$2" =~ ^(markdown|html)$ ]] || message_error $_JSON_ API "$_ERR_TYPE_PARSE_MODE_" "$1" "$2"
 					_PARSE_MODE_="$2"
 					shift 2
 					;;
 				-w|--disable_web_page_preview)
-					[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+					[[ "$2" =~ ^(true|false)$ ]] || message_error $_JSON_ API "$_ERR_TYPE_BOOL_" "$1" "$2"
 					_DISABLE_WEB_PAGE_PREVIEW_="$2"
 					shift 2
 					;;
@@ -2072,15 +2073,15 @@ ShellBot.editMessageText()
 	done
 	
 	[[ ! $_CHAT_ID_ && ! $_MESSAGE_ID_ ]] && {
-		[[ $_INLINE_MESSAGE_ID ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-i, --inline_message_id]"
+		[[ $_INLINE_MESSAGE_ID ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-i, --inline_message_id]"
 		unset _CHAT_ID_ _MESSAGE_ID_
 	} || {
-		[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-		[[ $_MESSAGE_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
+		[[ $_CHAT_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+		[[ $_MESSAGE_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
 		unset _INLINE_MESSAGE_ID_
 	} 
 	
-	[[ $_TEXT_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-t, --text]"
+	[[ $_TEXT_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-t, --text]"
 
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
 											${_MESSAGE_ID_:+-d message_id="'$_MESSAGE_ID_'"} \
@@ -2091,7 +2092,7 @@ ShellBot.editMessageText()
 											${_REPLY_MARKUP_:+-d reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status || message_error TG
+	json_status $_JSON_ || message_error $_JSON_ TG
 	
 	return $?
 	
@@ -2120,12 +2121,12 @@ ShellBot.editMessageCaption()
 					shift 2
 					;;
 				-m|--message_id)
-					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+					[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 					_MESSAGE_ID_="$2"
 					shift 2
 					;;
 				-i|--inline_message_id)
-					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+					[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 					_INLINE_MESSAGE_ID_="$2"
 					shift 2
 					;;
@@ -2143,8 +2144,8 @@ ShellBot.editMessageCaption()
 			esac
 	done
 				
-	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_MESSAGE_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
+	[[ $_CHAT_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_MESSAGE_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
 	
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
 													${_MESSAGE_ID_:+-d message_id="'$_MESSAGE_ID_'"} \
@@ -2153,7 +2154,7 @@ ShellBot.editMessageCaption()
 													${_REPLY_MARKUP_:+-d reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status || message_error TG
+	json_status $_JSON_ || message_error $_JSON_ TG
 	
 	return $?
 	
@@ -2181,12 +2182,12 @@ ShellBot.editMessageReplyMarkup()
 					shift 2
 					;;
 				-m|--message_id)
-					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+					[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 					_MESSAGE_ID_="$2"
 					shift 2
 					;;
 				-i|--inline_message_id)
-					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+					[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 					_INLINE_MESSAGE_ID_="$2"
 					shift 2
 					;;
@@ -2201,11 +2202,11 @@ ShellBot.editMessageReplyMarkup()
 	done
 
 	[[ ! $_CHAT_ID_ && ! $_MESSAGE_ID_ ]] && {
-		[[ $_INLINE_MESSAGE_ID ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-i, --inline_message_id]"
+		[[ $_INLINE_MESSAGE_ID ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-i, --inline_message_id]"
 		unset _CHAT_ID_ _MESSAGE_ID_
 	} || {
-		[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-		[[ $_MESSAGE_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
+		[[ $_CHAT_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+		[[ $_MESSAGE_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
 		unset _INLINE_MESSAGE_ID_
 	} 
 	
@@ -2215,7 +2216,7 @@ ShellBot.editMessageReplyMarkup()
 													${_REPLY_MARKUP_:+-d reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status || message_error TG
+	json_status $_JSON_ || message_error $_JSON_ TG
 	
 	return $?
 	
@@ -2241,7 +2242,7 @@ ShellBot.deleteMessage()
 					shift 2
 					;;
 				-m|--message_id)
-					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+					[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 					_MESSAGE_ID_="$2"
 					shift 2
 					;;
@@ -2251,14 +2252,14 @@ ShellBot.deleteMessage()
 			esac
 	done
 	
-	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_MESSAGE_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
+	[[ $_CHAT_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_MESSAGE_ID_ ]] || message_error $_JSON_ API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
 
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
 													${_MESSAGE_ID_:+-d message_id="'$_MESSAGE_ID_'"}  > $_JSON_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status || message_error TG
+	json_status $_JSON_ || message_error $_JSON_ TG
 	
 	return $?
 
@@ -2287,17 +2288,17 @@ ShellBot.getUpdates()
 	do
 		case $1 in
 			-o|--offset)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_OFFSET_="$2"
 				shift 2
 				;;
 			-l|--limit)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_LIMIT_="$2"
 				shift 2
 				;;
 			-t|--timeout)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error $_JSON_ API "$_ERR_TYPE_INT_" "$1" "$2"
 				_TIMEOUT_="$2"
 				shift 2
 				;;
@@ -2324,797 +2325,72 @@ ShellBot.getUpdates()
 	unset update_id ${!message_*} ${!edited_message_*} ${!channel_post_*} ${!edited_channel_post_*} ${!callback_query_*}
 	
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status && {
+	json_status $_JSON_ && {
 
 	# Total de atualizações
-	_TOTAL_KEYS_=$(json '.result|length')
+	_TOTAL_KEYS_=$(json $_JSON_ '.result|length')
 
-	if [ $_TOTAL_KEYS_ -gt 0 ]; then
+	if [[ $_TOTAL_KEYS_ -gt 0 ]]; then
+		
+		# inicializada
+		local key key_list obj obj_cur obj_type var_name i
+			
+		# Salva e fecha o descritor de erro
+		exec 5<&2
+		exec 2<&-
 
 		for _INDEX_ in $(seq 0 $((_TOTAL_KEYS_-1)))
 		do
 			_UPDATE_=".result[$_INDEX_]"
-
-			for _KEY_ in $(json "$_UPDATE_|keys|.[]")
+			
+			# Inicializa.
+			unset key_list
+			key_list[0]=$_UPDATE_
+				
+			# Lê todas as chaves do arquivo json $_JSON_ recursivamente enquanto houver objetos.
+			while [[ ${key_list[@]} ]]
 			do
-				case $_KEY_ in
-					'update_id')
-						# UPDATE_ID
-						update_id[$_INDEX_]=$(json "$_UPDATE_.update_id")
-						;;
-					'message')
-						# MESSAGE
-						for _SUBKEY_ in $(json "$_UPDATE_.$_KEY_|keys|.[]")
-						do
-							case $_SUBKEY_ in
-								'message_id')
-									# MESSAGE_ID
-									message_message_id[$_INDEX_]="$(json $_UPDATE_.message.message_id)"
-									;;
-								'from')
-								# FROM
-									 message_from_id[$_INDEX_]="$(json $_UPDATE_.message.from.id)"
-									 message_from_first_name[$_INDEX_]="$(json $_UPDATE_.message.from.first_name)"
-									 message_from_last_name[$_INDEX_]="$(json $_UPDATE_.message.from.last_name)"
-									 message_from_username[$_INDEX_]="$(json $_UPDATE_.message.from.username)"
-									;;
-								'date')
-									# DATE
-									 message_date[$_INDEX_]="$(json $_UPDATE_.message.date)"
-									;;
-								'chat')
-									# CHAT
-									 message_chat_id[$_INDEX_]="$(json $_UPDATE_.message.chat.id)"
-									 message_chat_type[$_INDEX_]="$(json $_UPDATE_.message.chat.type)"
-									 message_chat_title[$_INDEX_]="$(json $_UPDATE_.message.chat.title)"
-									 message_chat_username[$_INDEX_]="$(json $_UPDATE_.message.chat.username)"
-									 message_chat_first_name[$_INDEX_]="$(json $_UPDATE_.message.chat.first_name)"
-									 message_chat_last_name[$_INDEX_]="$(json $_UPDATE_.message.chat.last_name)"
-									 message_chat_all_members_are_administrators[$_INDEX_]="$(json $_UPDATE_.message.chat.all_members_are_administrators)"
-									;;
-								'forward_from')
-									# FORWARD_FROM
-									 message_forward_from_id[$_INDEX_]="$(json $_UPDATE_.message.forward_from.id)"
-									 message_forward_from_first_name[$_INDEX_]="$(json $_UPDATE_.message.forward_from.first_name)"
-									 message_forward_from_last_name[$_INDEX_]="$(json $_UPDATE_.message.forward_from.last_name)"
-									 message_forward_from_username[$_INDEX_]="$(json $_UPDATE_.message.forward_from.username)"
-						
-									 message_forward_from_chat_id[$_INDEX_]="$(json $_UPDATE_.message.forward_from_chat.id)"
-									 message_forward_from_chat_type[$_INDEX_]="$(json $_UPDATE_.message.forward_from_chat.type)"
-									 message_forward_from_chat_title[$_INDEX_]="$(json $_UPDATE_.message.forward_from_chat.title)"
-									 message_forward_from_chat_username[$_INDEX_]="$(json $_UPDATE_.message.forward_from_chat.username)"
-									 message_forward_from_chat_first_name[$_INDEX_]="$(json $_UPDATE_.message.forward_from_chat.first_name)"
-									 message_forward_from_chat_last_name[$_INDEX_]="$(json $_UPDATE_.message.forward_from_chat.last_name)"
-									 message_forward_from_chat_all_members_are_administrators[$_INDEX_]="$(json $_UPDATE_.message.forward_from_chat.all_members_are_administrators)"
-									 message_forward_from_message_id[$_INDEX_]="$(json $_UPDATE_.message.forward_from_message_id)"
-									;;
-								'forward_date')
-									 message_forward_date[$_INDEX_]="$(json $_UPDATE_.message.forward_date)"
-									;;
-									# REPLY_TO_MESSAGE
-								'reply_to_message')
-									 message_reply_to_message_message_id[$_INDEX_]="$(json $_UPDATE_.message.reply_to_message.message_id)"
-									 message_reply_to_message_from_id[$_INDEX_]="$(json $_UPDATE_.message.reply_to_message.from.id)"
-									 message_reply_to_message_from_username[$_INDEX_]="$(json $_UPDATE_.message.reply_to_message.from.username)"
-									 message_reply_to_message_from_first_name[$_INDEX_]="$(json $_UPDATE_.message.reply_to_message.from.first_name)"
-									 message_reply_to_message_from_last_name[$_INDEX_]="$(json $_UPDATE_.message.reply_to_message.from.last_name)"
-									 message_reply_to_message_date[$_INDEX_]="$(json $_UPDATE_.message.reply_to_message.date)"
-									 message_reply_to_message_chat_id[$_INDEX_]="$(json $_UPDATE_.message.reply_to_message.chat.id)"
-									 message_reply_to_message_chat_type[$_INDEX_]="$(json $_UPDATE_.message.reply_to_message.chat.type)"
-									 message_reply_to_message_chat_title[$_INDEX_]="$(json $_UPDATE_.message.reply_to_message.chat.title)"
-									 message_reply_to_message_chat_username[$_INDEX_]="$(json $_UPDATE_.message.reply_to_message.chat.username)"
-									 message_reply_to_message_chat_first_name[$_INDEX_]="$(json $_UPDATE_.message.reply_to_message.chat.first_name)"
-									 message_reply_to_message_chat_last_name[$_INDEX_]="$(json $_UPDATE_.message.reply_to_message.chat.last_name)"
-									 message_reply_to_message_chat_all_members_are_administrators[$_INDEX_]="$(json $_UPDATE_.message.reply_to_message.chat.all_members_are_administrators)"
-									 message_reply_to_message_forward_from_message_id[$_INDEX_]="$(json $_UPDATE_.message.reply_to_message.forward_from_message_id)"
-									 message_reply_to_message_forward_date[$_INDEX_]="$(json $_UPDATE_.message.reply_to_message.forward_date)"
-									 message_reply_to_message_edit_date[$_INDEX_]="$(json $_UPDATE_.message.reply_to_message.edit_date)"
-									 message_reply_to_message_text[$_INDEX_]="$(json $_UPDATE_.message.reply_to_message.text)"
-									;;
-								'text')
-									# TEXT
-									 message_text[$_INDEX_]="$(json $_UPDATE_.message.text)"
-									;;
-								'entities')
-									# ENTITIES
-									 message_entities_type[$_INDEX_]="$(json $_UPDATE_.message.entities[].type)"
-									 message_entities_offset[$_INDEX_]="$(json $_UPDATE_.message.entities[].offset)"
-									 message_entities_length[$_INDEX_]="$(json $_UPDATE_.message.entities[].length)"
-									 message_entities_url[$_INDEX_]="$(json $_UPDATE_.message.entities[].url)"
-									;;
-								'audio')
-									# AUDIO
-									 message_audio_file_id[$_INDEX_]="$(json $_UPDATE_.message.audio.file_id)"
-									 message_audio_duration[$_INDEX_]="$(json $_UPDATE_.message.audio.duration)"
-									 message_audio_performer[$_INDEX_]="$(json $_UPDATE_.message.audio.performer)"
-									 message_audio_title[$_INDEX_]="$(json $_UPDATE_.message.audio.title)"
-									 message_audio_mime_type[$_INDEX_]="$(json $_UPDATE_.message.audio.mime_type)"
-									 message_audio_file_size[$_INDEX_]="$(json $_UPDATE_.message.audio.file_size)"
-					
-									 message_document_file_id[$_INDEX_]="$(json $_UPDATE_.message.document.file_id)"
-									 message_document_file_name[$_INDEX_]="$(json $_UPDATE_.message.document.file_name)"
-									 message_document_mime_type[$_INDEX_]="$(json $_UPDATE_.message.document.mime_type)"
-									 message_document_file_size[$_INDEX_]="$(json $_UPDATE_.message.document.file_size)"
-									;;
-								'photo')
-									_TOTAL_PHOTO_=$(json "$_UPDATE_.message.photo|length" | head -n1)
-	
-									 message_photo_file_id[$_INDEX_]="$(json $_UPDATE_.message.photo[$((_TOTAL_PHOTO_-1))].file_id)"
-									 message_photo_width[$_INDEX_]="$(json $_UPDATE_.message.photo[$((_TOTAL_PHOTO_-1))].width)"
-									 message_photo_height[$_INDEX_]="$(json $_UPDATE_.message.photo[$((_TOTAL_PHOTO_-1))].height)"
-									 message_photo_file_size[$_INDEX_]="$(json $_UPDATE_.message.photo[$((_TOTAL_PHOTO_-1))].file_size)"
-									;;
-								'sticker')
-									# STICKER
-									 message_sticker_file_id[$_INDEX_]="$(json $_UPDATE_.message.sticker.file_id)"
-									 message_sticker_width[$_INDEX_]="$(json $_UPDATE_.message.sticker.width)"
-									 message_sticker_height[$_INDEX_]="$(json $_UPDATE_.message.sticker.height)"
-									 message_sticker_emoji[$_INDEX_]="$(json $_UPDATE_.message.sticker.emoji)"
-									 message_sticker_file_size[$_INDEX_]="$(json $_UPDATE_.message.sticker.file_size)"
-									;;
-								'video')
-									# VIDEO
-									 message_video_file_id[$_INDEX_]="$(json $_UPDATE_.message.video.file_id)"
-									 message_video_width[$_INDEX_]="$(json $_UPDATE_.message.video.width)"
-									 message_video_height[$_INDEX_]="$(json $_UPDATE_.message.video.height)"
-									 message_video_duration[$_INDEX_]="$(json $_UPDATE_.message.video.duration)"
-									 message_video_mime_type[$_INDEX_]="$(json $_UPDATE_.message.video.mime_type)"
-									 message_video_file_size[$_INDEX_]="$(json $_UPDATE_.message.video.file_size)"
-									;;
-								'voice')
-									# VOICE
-									 message_voice_file_id[$_INDEX_]="$(json $_UPDATE_.message.voice.file_id)"
-									 message_voice_duration[$_INDEX_]="$(json $_UPDATE_.message.voice.duration)"
-									 message_voice_mime_type[$_INDEX_]="$(json $_UPDATE_.message.voice.mime_type)"
-									 message_voice_file_size[$_INDEX_]="$(json $_UPDATE_.message.voice.file_size)"
-									;;
-								'caption')
-									# CAPTION - DOCUMENT, PHOTO ou VIDEO
-									 message_caption[$_INDEX_]="$(json $_UPDATE_.message.caption)"
-									;;
-								'contact')
-									# CONTACT
-									 message_contact_phone_number[$_INDEX_]="$(json $_UPDATE_.message.contact.phone_number)"
-									 message_contact_first_name[$_INDEX_]="$(json $_UPDATE_.message.contact.first_name)"
-									 message_contact_last_name[$_INDEX_]="$(json $_UPDATE_.message.contact.last_name)"
-									 message_contact_user_id[$_INDEX_]="$(json $_UPDATE_.message.contact.user_id)"
-									;;
-								'location')
-									# LOCATION
-									 message_location_longitude[$_INDEX_]="$(json $_UPDATE_.message.location.longitude)"
-									 message_location_latitude[$_INDEX_]="$(json $_UPDATE_.message.location.latitude)"
-									;;
-								'venue')
-									# VENUE
-									 message_venue_location_longitude[$_INDEX_]="$(json $_UPDATE_.message.venue.location[].longitude)"
-									 message_venue_location_latitude[$_INDEX_]="$(json $_UPDATE_.message.venue.location[].latitude)"
-									 message_venue_title[$_INDEX_]="$(json $_UPDATE_.message.venue.title)"
-									 message_venue_address[$_INDEX_]="$(json $_UPDATE_.message.venue.address)"
-									 message_venue_foursquare_id[$_INDEX_]="$(json $_UPDATE_.message.venue.foursquare_id)"
-									;;
-								'new_chat_member')
-									# NEW_MEMBER
-									 message_new_chat_member_id[$_INDEX_]="$(json $_UPDATE_.message.new_chat_member.id)"
-									 message_new_chat_member_first_name[$_INDEX_]="$(json $_UPDATE_.message.new_chat_member.first_name)"
-									 message_new_chat_member_last_name[$_INDEX_]="$(json $_UPDATE_.message.new_chat_member.last_name)"
-									 message_new_chat_member_username[$_INDEX_]="$(json $_UPDATE_.message.new_chat_member.username)"
-									;;
-								'left_chat_member')
-									# LEFT_CHAT_MEMBER
-									 message_left_chat_member_id[$_INDEX_]="$(json $_UPDATE_.message.left_chat_member.id)"
-									 message_left_chat_member_first_name[$_INDEX_]="$(json $_UPDATE_.message.left_chat_member.first_name)"
-									 message_left_chat_member_last_name[$_INDEX_]="$(json $_UPDATE_.message.left_chat_member.last_name)"
-									 message_left_chat_member_username[$_INDEX_]="$(json $_UPDATE_.message.left_chat_member.username)"
-									;;
-								'new_chat_title')
-									# NEW_CHAT_TITLE
-									 message_new_chat_title[$_INDEX_]="$(json $_UPDATE_.message.new_chat_title)"
-									;;
-								'new_chat_photo')
-									# NEW_CHAT_PHOTO
-									_TOTAL_PHOTO_=$(json "$_UPDATE_.message.new_chat_photo|length" | head -n1)
-					
-									 message_new_chat_photo_file_id[$_INDEX_]="$(json $_UPDATE_.message.new_chat_photo[$((_TOTAL_PHOTO_-1))].file_id)"
-									 message_new_chat_photo_width[$_INDEX_]="$(json $_UPDATE_.message.new_chat_photo[$((_TOTAL_PHOTO_-1))].width)"
-									 message_new_chat_photo_height[$_INDEX_]="$(json $_UPDATE_.message.new_chat_photo[$((_TOTAL_PHOTO_-1))].height)"
-									 message_new_chat_photo_file_size[$_INDEX_]="$(json $_UPDATE_.message.new_chat_photo[$((_TOTAL_PHOTO_-1))].file_size)"
-									;;
-								'delete_chat_photo')
-									# DELETE_CHAT_PHOTO
-									 message_delete_chat_photo[$_INDEX_]="$(json $_UPDATE_.message.delete_chat_photo)"
-									;;
-								'group_chat_created')
-									# GROUP_CHAT_CREATED
-									 message_group_chat_created[$_INDEX_]="$(json $_UPDATE_.message.group_chat_created)"
-									;;
-								'supergroup_chat_created')
-									# SUPERGROUP_CHAT_CREATED
-									 message_supergroup_chat_created[$_INDEX_]="$(json $_UPDATE_.message.supergroup_chat_created)"
-									;;
-								'channel_chat_created')
-									# CHANNEL_CHAT_CREATED
-									 message_channel_chat_created[$_INDEX_]="$(json $_UPDATE_.message.channel_chat_created)"
-									;;
-								'migrate_to_chat_id')					
-									# MIGRATE_TO_CHAT_ID
-									 message_migrate_to_chat_id[$_INDEX_]="$(json $_UPDATE_.message.migrate_to_chat_id)"
-									;;
-								'migrate_from_chat_id')
-									# MIGRATE_FROM_CHAT_ID
-									 message_migrate_from_chat_id[$_INDEX_]="$(json $_UPDATE_.message.migrate_from_chat_id)"
-									;;
-							esac
-						done
-						;;
-					'edited_message')	
-						# EDITED_MESSAGE
-						for _SUBKEY_ in $(json "$_UPDATE_.$_KEY_|keys|.[]")
-						do
-							case $_SUBKEY_ in
-								'message_id')
-									 edited_message_message_id[$_INDEX_]="$(json $_UPDATE_.edited_message.message_id)"
-									;;
-								'from')
-									 edited_message_from_id[$_INDEX_]="$(json $_UPDATE_.edited_message.from.id)"
-									 edited_message_from_first_name[$_INDEX_]="$(json $_UPDATE_.edited_message.from.first_name)"
-									 edited_message_from_last_name[$_INDEX_]="$(json $_UPDATE_.edited_message.from.last_name)"
-									 edited_message_from_username[$_INDEX_]="$(json $_UPDATE_.edited_message.from.username)"
-									;;
-								'date')
-									 edited_message_date[$_INDEX_]="$(json $_UPDATE_.edited_message.date)"
-									;;
-								'chat')
-									 edited_message_chat_id[$_INDEX_]="$(json $_UPDATE_.edited_message.chat.id)"
-									 edited_message_chat_type[$_INDEX_]="$(json $_UPDATE_.edited_message.chat.type)"
-									 edited_message_chat_title[$_INDEX_]="$(json $_UPDATE_.edited_message.chat.title)"
-									 edited_message_chat_username[$_INDEX_]="$(json $_UPDATE_.edited_message.chat.username)"
-									 edited_message_chat_first_name[$_INDEX_]="$(json $_UPDATE_.edited_message.chat.first_name)"
-									 edited_message_chat_last_name[$_INDEX_]="$(json $_UPDATE_.edited_message.chat.last_name)"
-									 edited_message_chat_all_members_are_administrators[$_INDEX_]="$(json $_UPDATE_.edited_message.chat.all_members_are_administrators)"
-									;;
-								'forward_from')
-									 edited_message_forward_from_id[$_INDEX_]="$(json $_UPDATE_.edited_message.forward_from.id)"
-									 edited_message_forward_from_first_name[$_INDEX_]="$(json $_UPDATE_.edited_message.forward_from.first_name)"
-									 edited_message_forward_from_last_name[$_INDEX_]="$(json $_UPDATE_.edited_message.forward_from.last_name)"
-									 edited_message_forward_from_username[$_INDEX_]="$(json $_UPDATE_.edited_message.forward_from.username)"
-									 edited_message_forward_from_chat_id[$_INDEX_]="$(json $_UPDATE_.edited_message.forward_from_chat.id)"
-									 edited_message_forward_from_chat_type[$_INDEX_]="$(json $_UPDATE_.edited_message.forward_from_chat.type)"
-									 edited_message_forward_from_chat_title[$_INDEX_]="$(json $_UPDATE_.edited_message.forward_from_chat.title)"
-									 edited_message_forward_from_chat_username[$_INDEX_]="$(json $_UPDATE_.edited_message.forward_from_chat.username)"
-									 edited_message_forward_from_chat_first_name[$_INDEX_]="$(json $_UPDATE_.edited_message.forward_from_chat.first_name)"
-									 edited_message_forward_from_chat_last_name[$_INDEX_]="$(json $_UPDATE_.edited_message.forward_from_chat.last_name)"
-									 edited_message_forward_from_chat_all_members_are_administrators[$_INDEX_]="$(json $_UPDATE_.edited_message.forward_from_chat.all_members_are_administrators)"
-									 edited_message_forward_from_message_id[$_INDEX_]="$(json $_UPDATE_.edited_message.forward_from_message_id)"
-									;;
-								'forward_date')
-									 edited_message_forward_date[$_INDEX_]="$(json $_UPDATE_.edited_message.forward_date)"
-									;;
-								'reply_to_message')
-									 edited_message_reply_to_message_message_id[$_INDEX_]="$(json $_UPDATE_.edited_message.reply_to_message.message_id)"
-									 edited_message_reply_to_message_from_id[$_INDEX_]="$(json $_UPDATE_.edited_message.reply_to_message.from.id)"
-									 edited_message_reply_to_message_from_username[$_INDEX_]="$(json $_UPDATE_.edited_message.reply_to_message.from.username)"
-									 edited_message_reply_to_message_from_first_name[$_INDEX_]="$(json $_UPDATE_.edited_message.reply_to_message.from.first_name)"
-									 edited_message_reply_to_message_from_last_name[$_INDEX_]="$(json $_UPDATE_.edited_message.reply_to_message.from.last_name)"
-									 edited_message_reply_to_message_date[$_INDEX_]="$(json $_UPDATE_.edited_message.reply_to_message.date)"
-									 edited_message_reply_to_message_chat_id[$_INDEX_]="$(json $_UPDATE_.edited_message.reply_to_message.chat.id)"
-									 edited_message_reply_to_message_chat_type[$_INDEX_]="$(json $_UPDATE_.edited_message.reply_to_message.chat.type)"
-									 edited_message_reply_to_message_chat_title[$_INDEX_]="$(json $_UPDATE_.edited_message.reply_to_message.chat.title)"
-									 edited_message_reply_to_message_chat_username[$_INDEX_]="$(json $_UPDATE_.edited_message.reply_to_message.chat.username)"
-									 edited_message_reply_to_message_chat_first_name[$_INDEX_]="$(json $_UPDATE_.edited_message.reply_to_message.chat.first_name)"
-									 edited_message_reply_to_message_chat_last_name[$_INDEX_]="$(json $_UPDATE_.edited_message.reply_to_message.chat.last_name)"
-									 edited_message_reply_to_message_chat_all_members_are_administrators[$_INDEX_]="$(json $_UPDATE_.edited_message.reply_to_message.chat.all_members_are_administrators)"
-									 edited_message_reply_to_message_forward_from_message_id[$_INDEX_]="$(json $_UPDATE_.edited_message.reply_to_message.forward_from_message_id)"
-									 edited_message_reply_to_message_forward_date[$_INDEX_]="$(json $_UPDATE_.edited_message.reply_to_message.forward_date)"
-									 edited_message_reply_to_message_edit_date[$_INDEX_]="$(json $_UPDATE_.edited_message.reply_to_message.edit_date)"
-									 edited_message_reply_to_message_text[$_INDEX_]="$(json $_UPDATE_.edited_message.reply_to_message.text)"
-									;;
-								'text')
-									 edited_message_text[$_INDEX_]="$(json $_UPDATE_.edited_message.text)"
-									;;
-								'entities')
-									 edited_message_entities_type[$_INDEX_]="$(json $_UPDATE_.edited_message.entities[].type)"
-									 edited_message_entities_offset[$_INDEX_]="$(json $_UPDATE_.edited_message.entities[].offset)"
-									 edited_message_entities_length[$_INDEX_]="$(json $_UPDATE_.edited_message.entities[].length)"
-									 edited_message_entities_url[$_INDEX_]="$(json $_UPDATE_.edited_message.entities[].url)"
-									;;
-								'audio')
-									 edited_message_audio_file_id[$_INDEX_]="$(json $_UPDATE_.edited_message.audio.file_id)"
-									 edited_message_audio_duration[$_INDEX_]="$(json $_UPDATE_.edited_message.audio.duration)"
-									 edited_message_audio_performer[$_INDEX_]="$(json $_UPDATE_.edited_message.audio.performer)"
-									 edited_message_audio_title[$_INDEX_]="$(json $_UPDATE_.edited_message.audio.title)"
-									 edited_message_audio_mime_type[$_INDEX_]="$(json $_UPDATE_.edited_message.audio.mime_type)"
-									 edited_message_audio_file_size[$_INDEX_]="$(json $_UPDATE_.edited_message.audio.file_size)"
-									;;
-								'document')
-									 edited_message_document_file_id[$_INDEX_]="$(json $_UPDATE_.edited_message.document.file_id)"
-									 edited_message_document_file_name[$_INDEX_]="$(json $_UPDATE_.edited_message.document.file_name)"
-									 edited_message_document_mime_type[$_INDEX_]="$(json $_UPDATE_.edited_message.document.mime_type)"
-									 edited_message_document_file_size[$_INDEX_]="$(json $_UPDATE_.edited_message.document.file_size)"
-									;;
-								'photo')
-					
-									_TOTAL_PHOTO_=$(json "$_UPDATE_.edited_message.photo|length" | head -n1)
-					
-									 edited_message_photo_file_id[$_INDEX_]="$(json $_UPDATE_.edited_message.photo[$((_TOTAL_PHOTO_-1))].file_id)"
-									 edited_message_photo_width[$_INDEX_]="$(json $_UPDATE_.edited_message.photo[$((_TOTAL_PHOTO_-1))].width)"
-									 edited_message_photo_height[$_INDEX_]="$(json $_UPDATE_.edited_message.photo[$((_TOTAL_PHOTO_-1))].height)"
-									 edited_message_photo_file_size[$_INDEX_]="$(json $_UPDATE_.edited_message.photo[$((_TOTAL_PHOTO_-1))].file_size)"
-									;;
-								'sticker')
-									 edited_message_sticker_file_id[$_INDEX_]="$(json $_UPDATE_.edited_message.sticker.file_id)"
-									 edited_message_sticker_width[$_INDEX_]="$(json $_UPDATE_.edited_message.sticker.width)"
-									 edited_message_sticker_height[$_INDEX_]="$(json $_UPDATE_.edited_message.sticker.height)"
-									 edited_message_sticker_emoji[$_INDEX_]="$(json $_UPDATE_.edited_message.sticker.emoji)"
-									 edited_message_sticker_file_size[$_INDEX_]="$(json $_UPDATE_.edited_message.sticker.file_size)"
-									;;
-								'video')
-									 edited_message_video_file_id[$_INDEX_]="$(json $_UPDATE_.edited_message.video.file_id)"
-									 edited_message_video_width[$_INDEX_]="$(json $_UPDATE_.edited_message.video.width)"
-									 edited_message_video_height[$_INDEX_]="$(json $_UPDATE_.edited_message.video.height)"
-									 edited_message_video_duration[$_INDEX_]="$(json $_UPDATE_.edited_message.video.duration)"
-									 edited_message_video_mime_type[$_INDEX_]="$(json $_UPDATE_.edited_message.video.mime_type)"
-									 edited_message_video_file_size[$_INDEX_]="$(json $_UPDATE_.edited_message.video.file_size)"
-									;;
-								'voice')
-									 edited_message_voice_file_id[$_INDEX_]="$(json $_UPDATE_.edited_message.voice.file_id)"
-									 edited_message_voice_duration[$_INDEX_]="$(json $_UPDATE_.edited_message.voice.duration)"
-									 edited_message_voice_mime_type[$_INDEX_]="$(json $_UPDATE_.edited_message.voice.mime_type)"
-									 edited_message_voice_file_size[$_INDEX_]="$(json $_UPDATE_.edited_message.voice.file_size)"
-									;;
-								'caption')
-									 edited_message_caption[$_INDEX_]="$(json $_UPDATE_.edited_message.caption)"
-									;;
-								'contact')
-									 edited_message_contact_phone_number[$_INDEX_]="$(json $_UPDATE_.edited_message.contact.phone_number)"
-									 edited_message_contact_first_name[$_INDEX_]="$(json $_UPDATE_.edited_message.contact.first_name)"
-									 edited_message_contact_last_name[$_INDEX_]="$(json $_UPDATE_.edited_message.contact.last_name)"
-									 edited_message_contact_user_id[$_INDEX_]="$(json $_UPDATE_.edited_message.contact.user_id)"
-									;;
-								'location')
-									 edited_message_location_longitude[$_INDEX_]="$(json $_UPDATE_.edited_message.location.longitude)"
-									 edited_message_location_latitude[$_INDEX_]="$(json $_UPDATE_.edited_message.location.latitude)"
-									;;
-								'venue')
-									 edited_message_venue_location_longitude[$_INDEX_]="$(json $_UPDATE_.edited_message.venue.location[].longitude)"
-									 edited_message_venue_location_latitude[$_INDEX_]="$(json $_UPDATE_.edited_message.venue.location[].latitude)"
-									 edited_message_venue_title[$_INDEX_]="$(json $_UPDATE_.edited_message.venue.title)"
-									 edited_message_venue_address[$_INDEX_]="$(json $_UPDATE_.edited_message.venue.address)"
-									 edited_message_venue_foursquare_id[$_INDEX_]="$(json $_UPDATE_.edited_message.venue.foursquare_id)"
-									;;
-								'new_chat_member')
-									 edited_message_new_chat_member_id[$_INDEX_]="$(json $_UPDATE_.edited_message.new_chat_member.id)"
-									 edited_message_new_chat_member_first_name[$_INDEX_]="$(json $_UPDATE_.edited_message.new_chat_member.first_name)"
-									 edited_message_new_chat_member_last_name[$_INDEX_]="$(json $_UPDATE_.edited_message.new_chat_member.last_name)"
-									 edited_message_new_chat_member_username[$_INDEX_]="$(json $_UPDATE_.edited_message.new_chat_member.username)"
-									;;
-								'left_chat_member')
-									 edited_message_left_chat_member_id[$_INDEX_]="$(json $_UPDATE_.edited_message.left_chat_member.id)"
-									 edited_message_left_chat_member_first_name[$_INDEX_]="$(json $_UPDATE_.edited_message.left_chat_member.first_name)"
-									 edited_message_left_chat_member_last_name[$_INDEX_]="$(json $_UPDATE_.edited_message.left_chat_member.last_name)"
-									 edited_message_left_chat_member_username[$_INDEX_]="$(json $_UPDATE_.edited_message.left_chat_member.username)"
-									;;
-								'new_chat_title')
-									 edited_message_new_chat_title[$_INDEX_]="$(json $_UPDATE_.edited_message.new_chat_title)"
-									;;
-								'new_chat_photo')
-									_TOTAL_PHOTO_=$(json "$_UPDATE_.edited_message.new_chat_photo|length" | head -n1)
-	
-									 edited_message_new_chat_photo_file_id[$_INDEX_]="$(json $_UPDATE_.edited_message.new_chat_photo[$((_TOTAL_PHOTO_-1))].file_id)"
-									 edited_message_new_chat_photo_width[$_INDEX_]="$(json $_UPDATE_.edited_message.new_chat_photo[$((_TOTAL_PHOTO_-1))].width)"
-									 edited_message_new_chat_photo_height[$_INDEX_]="$(json $_UPDATE_.edited_message.new_chat_photo[$((_TOTAL_PHOTO_-1))].height)"
-									 edited_message_new_chat_photo_file_size[$_INDEX_]="$(json $_UPDATE_.edited_message.new_chat_photo[$((_TOTAL_PHOTO_-1))].file_size)"
-									;;
-								'delete_chat_photo')
-									 edited_message_delete_chat_photo[$_INDEX_]="$(json $_UPDATE_.edited_message.delete_chat_photo)"
-									;;
-								'group_chat_created')
-									 edited_message_group_chat_created[$_INDEX_]="$(json $_UPDATE_.edited_message.group_chat_created)"
-									;;
-								'supergroup_chat_created')
-									 edited_message_supergroup_chat_created[$_INDEX_]="$(json $_UPDATE_.edited_message.supergroup_chat_created)"
-									;;
-								'channel_chat_created')
-									 edited_message_channel_chat_created[$_INDEX_]="$(json $_UPDATE_.edited_message.channel_chat_created)"
-									;;
-								'migrate_to_chat_id')
-									 edited_message_migrate_to_chat_id[$_INDEX_]="$(json $_UPDATE_.edited_message.migrate_to_chat_id)"
-									;;
-								'migrate_from_chat_id')
-									 edited_message_migrate_from_chat_id[$_INDEX_]="$(json $_UPDATE_.edited_message.migrate_from_chat_id)"
-									;;
-							esac
-						done
-						;;
-					'channel_post')
-						for _SUBKEY_ in $(json "$_UPDATE_.$_KEY_|keys|.[]")
-						do
-							case $_SUBKEY_ in
-								'message_id')
-									# XXX CHANNEL_POST XXX
-									 channel_post_message_id[$_INDEX_]="$(json $_UPDATE_.channel_post.message_id)"
-									;;
-								'from')
-									 channel_post_from_id[$_INDEX_]="$(json $_UPDATE_.channel_post.from.id)"
-									 channel_post_from_first_name[$_INDEX_]="$(json $_UPDATE_.channel_post.from.first_name)"
-									 channel_post_from_last_name[$_INDEX_]="$(json $_UPDATE_.channel_post.from.last_name)"
-									 channel_post_from_username[$_INDEX_]="$(json $_UPDATE_.channel_post.from.username)"
-									;;
-								'date')
-									 channel_post_date[$_INDEX_]="$(json $_UPDATE_.channel_post.date)"
-									;;
-								'chat')
-									 channel_post_chat_id[$_INDEX_]="$(json $_UPDATE_.channel_post.chat.id)"
-									 channel_post_chat_type[$_INDEX_]="$(json $_UPDATE_.channel_post.chat.type)"
-									 channel_post_chat_title[$_INDEX_]="$(json $_UPDATE_.channel_post.chat.title)"
-									 channel_post_chat_username[$_INDEX_]="$(json $_UPDATE_.channel_post.chat.username)"
-									 channel_post_chat_first_name[$_INDEX_]="$(json $_UPDATE_.channel_post.chat.first_name)"
-									 channel_post_chat_last_name[$_INDEX_]="$(json $_UPDATE_.channel_post.chat.last_name)"
-									 channel_post_chat_all_members_are_administrators[$_INDEX_]="$(json $_UPDATE_.channel_post.chat.all_members_are_administrators)"
-									;;
-								'forward_from')
-									 channel_post_forward_from_id[$_INDEX_]="$(json $_UPDATE_.channel_post.forward_from.id)"
-									 channel_post_forward_from_first_name[$_INDEX_]="$(json $_UPDATE_.channel_post.forward_from.first_name)"
-									 channel_post_forward_from_last_name[$_INDEX_]="$(json $_UPDATE_.channel_post.forward_from.last_name)"
-									 channel_post_forward_from_username[$_INDEX_]="$(json $_UPDATE_.channel_post.forward_from.username)"
-									 channel_post_forward_from_chat_id[$_INDEX_]="$(json $_UPDATE_.channel_post.forward_from_chat.id)"
-									 channel_post_forward_from_chat_type[$_INDEX_]="$(json $_UPDATE_.channel_post.forward_from_chat.type)"
-									 channel_post_forward_from_chat_title[$_INDEX_]="$(json $_UPDATE_.channel_post.forward_from_chat.title)"
-									 channel_post_forward_from_chat_username[$_INDEX_]="$(json $_UPDATE_.channel_post.forward_from_chat.username)"
-									 channel_post_forward_from_chat_first_name[$_INDEX_]="$(json $_UPDATE_.channel_post.forward_from_chat.first_name)"
-									 channel_post_forward_from_chat_last_name[$_INDEX_]="$(json $_UPDATE_.channel_post.forward_from_chat.last_name)"
-									 channel_post_forward_from_chat_all_members_are_administrators[$_INDEX_]="$(json $_UPDATE_.channel_post.forward_from_chat.all_members_are_administrators)"
-									 channel_post_forward_from_message_id[$_INDEX_]="$(json $_UPDATE_.channel_post.forward_from_message_id)"
-									;;
-								'forward_date')
-									 channel_post_forward_date[$_INDEX_]="$(json $_UPDATE_.channel_post.forward_date)"
-									;;
-								'reply_to_message')
-									 channel_post_reply_to_message_message_id[$_INDEX_]="$(json $_UPDATE_.channel_post.reply_to_message.message_id)"
-									 channel_post_reply_to_message_from_id[$_INDEX_]="$(json $_UPDATE_.channel_post.reply_to_message.from.id)"
-									 channel_post_reply_to_message_from_username[$_INDEX_]="$(json $_UPDATE_.channel_post.reply_to_message.from.username)"
-									 channel_post_reply_to_message_from_first_name[$_INDEX_]="$(json $_UPDATE_.channel_post.reply_to_message.from.first_name)"
-									 channel_post_reply_to_message_from_last_name[$_INDEX_]="$(json $_UPDATE_.channel_post.reply_to_message.from.last_name)"
-									 channel_post_reply_to_message_date[$_INDEX_]="$(json $_UPDATE_.channel_post.reply_to_message.date)"
-									 channel_post_reply_to_message_chat_id[$_INDEX_]="$(json $_UPDATE_.channel_post.reply_to_message.chat.id)"
-									 channel_post_reply_to_message_chat_type[$_INDEX_]="$(json $_UPDATE_.channel_post.reply_to_message.chat.type)"
-									 channel_post_reply_to_message_chat_title[$_INDEX_]="$(json $_UPDATE_.channel_post.reply_to_message.chat.title)"
-									 channel_post_reply_to_message_chat_username[$_INDEX_]="$(json $_UPDATE_.channel_post.reply_to_message.chat.username)"
-									 channel_post_reply_to_message_chat_first_name[$_INDEX_]="$(json $_UPDATE_.channel_post.reply_to_message.chat.first_name)"
-									 channel_post_reply_to_message_chat_last_name[$_INDEX_]="$(json $_UPDATE_.channel_post.reply_to_message.chat.last_name)"
-									 channel_post_reply_to_message_chat_all_members_are_administrators[$_INDEX_]="$(json $_UPDATE_.channel_post.reply_to_message.chat.all_members_are_administrators)"
-									 channel_post_reply_to_message_forward_from_message_id[$_INDEX_]="$(json $_UPDATE_.channel_post.reply_to_message.forward_from_message_id)"
-									 channel_post_reply_to_message_forward_date[$_INDEX_]="$(json $_UPDATE_.channel_post.reply_to_message.forward_date)"
-									 channel_post_reply_to_message_edit_date[$_INDEX_]="$(json $_UPDATE_.channel_post.reply_to_message.edit_date)"
-									 channel_post_reply_to_message_text[$_INDEX_]="$(json $_UPDATE_.channel_post.reply_to_message.text)"
-									;;
-								'text')
-									 channel_post_text[$_INDEX_]="$(json $_UPDATE_.channel_post.text)"
-									;;
-								'entities')
-									 channel_post_entities_type[$_INDEX_]="$(json $_UPDATE_.channel_post.entities[].type)"
-									 channel_post_entities_offset[$_INDEX_]="$(json $_UPDATE_.channel_post.entities[].offset)"
-									 channel_post_entities_length[$_INDEX_]="$(json $_UPDATE_.channel_post.entities[].length)"
-									 channel_post_entities_url[$_INDEX_]="$(json $_UPDATE_.channel_post.entities[].url)"
-									;;
-								'audio')
-									 channel_post_audio_file_id[$_INDEX_]="$(json $_UPDATE_.channel_post.audio.file_id)"
-									 channel_post_audio_duration[$_INDEX_]="$(json $_UPDATE_.channel_post.audio.duration)"
-									 channel_post_audio_performer[$_INDEX_]="$(json $_UPDATE_.channel_post.audio.performer)"
-									 channel_post_audio_title[$_INDEX_]="$(json $_UPDATE_.channel_post.audio.title)"
-									 channel_post_audio_mime_type[$_INDEX_]="$(json $_UPDATE_.channel_post.audio.mime_type)"
-									 channel_post_audio_file_size[$_INDEX_]="$(json $_UPDATE_.channel_post.audio.file_size)"
-									;;
-								'document')
-									 channel_post_document_file_id[$_INDEX_]="$(json $_UPDATE_.channel_post.document.file_id)"
-									 channel_post_document_file_name[$_INDEX_]="$(json $_UPDATE_.channel_post.document.file_name)"
-									 channel_post_document_mime_type[$_INDEX_]="$(json $_UPDATE_.channel_post.document.mime_type)"
-									 channel_post_document_file_size[$_INDEX_]="$(json $_UPDATE_.channel_post.document.file_size)"
-									;;
-								'photo')
-									_TOTAL_PHOTO_=$(json "$_UPDATE_.channel_post.photo|length" | head -n1)
-		
-									 channel_post_photo_file_id[$_INDEX_]="$(json $_UPDATE_.channel_post.photo[$((_TOTAL_PHOTO_-1))].file_id)"
-									 channel_post_photo_width[$_INDEX_]="$(json $_UPDATE_.channel_post.photo[$((_TOTAL_PHOTO_-1))].width)"
-									 channel_post_photo_height[$_INDEX_]="$(json $_UPDATE_.channel_post.photo[$((_TOTAL_PHOTO_-1))].height)"
-									 channel_post_photo_file_size[$_INDEX_]="$(json $_UPDATE_.channel_post.photo[$((_TOTAL_PHOTO_-1))].file_size)"
-									;;
-								'sticker')
-									 channel_post_sticker_file_id[$_INDEX_]="$(json $_UPDATE_.channel_post.sticker.file_id)"
-									 channel_post_sticker_width[$_INDEX_]="$(json $_UPDATE_.channel_post.sticker.width)"
-									 channel_post_sticker_height[$_INDEX_]="$(json $_UPDATE_.channel_post.sticker.height)"
-									 channel_post_sticker_emoji[$_INDEX_]="$(json $_UPDATE_.channel_post.sticker.emoji)"
-									 channel_post_sticker_file_size[$_INDEX_]="$(json $_UPDATE_.channel_post.sticker.file_size)"
-									;;
-								'video')
-									 channel_post_video_file_id[$_INDEX_]="$(json $_UPDATE_.channel_post.video.file_id)"
-									 channel_post_video_width[$_INDEX_]="$(json $_UPDATE_.channel_post.video.width)"
-									 channel_post_video_height[$_INDEX_]="$(json $_UPDATE_.channel_post.video.height)"
-									 channel_post_video_duration[$_INDEX_]="$(json $_UPDATE_.channel_post.video.duration)"
-									 channel_post_video_mime_type[$_INDEX_]="$(json $_UPDATE_.channel_post.video.mime_type)"
-									 channel_post_video_file_size[$_INDEX_]="$(json $_UPDATE_.channel_post.video.file_size)"
-									;;
-								'voice')
-									 channel_post_voice_file_id[$_INDEX_]="$(json $_UPDATE_.channel_post.voice.file_id)"
-									 channel_post_voice_duration[$_INDEX_]="$(json $_UPDATE_.channel_post.voice.duration)"
-									 channel_post_voice_mime_type[$_INDEX_]="$(json $_UPDATE_.channel_post.voice.mime_type)"
-									 channel_post_voice_file_size[$_INDEX_]="$(json $_UPDATE_.channel_post.voice.file_size)"
-									;;
-								'caption')
-									 channel_post_caption[$_INDEX_]="$(json $_UPDATE_.channel_post.caption)"
-									;;
-								'contact')
-									 channel_post_contact_phone_number[$_INDEX_]="$(json $_UPDATE_.channel_post.contact.phone_number)"
-									 channel_post_contact_first_name[$_INDEX_]="$(json $_UPDATE_.channel_post.contact.first_name)"
-									 channel_post_contact_last_name[$_INDEX_]="$(json $_UPDATE_.channel_post.contact.last_name)"
-									 channel_post_contact_user_id[$_INDEX_]="$(json $_UPDATE_.channel_post.contact.user_id)"
-									;;
-								'location')
-									 channel_post_location_longitude[$_INDEX_]="$(json $_UPDATE_.channel_post.location.longitude)"
-									 channel_post_location_latitude[$_INDEX_]="$(json $_UPDATE_.channel_post.location.latitude)"
-									;;
-								'venue')
-									 channel_post_venue_location_longitude[$_INDEX_]="$(json $_UPDATE_.channel_post.venue.location[].longitude)"
-									 channel_post_venue_location_latitude[$_INDEX_]="$(json $_UPDATE_.channel_post.venue.location[].latitude)"
-									 channel_post_venue_title[$_INDEX_]="$(json $_UPDATE_.channel_post.venue.title)"
-									 channel_post_venue_address[$_INDEX_]="$(json $_UPDATE_.channel_post.venue.address)"
-									 channel_post_venue_foursquare_id[$_INDEX_]="$(json $_UPDATE_.channel_post.venue.foursquare_id)"
-									;;
-								'new_chat_member')
-									 channel_post_new_chat_member_id[$_INDEX_]="$(json $_UPDATE_.channel_post.new_chat_member.id)"
-									 channel_post_new_chat_member_first_name[$_INDEX_]="$(json $_UPDATE_.channel_post.new_chat_member.first_name)"
-									 channel_post_new_chat_member_last_name[$_INDEX_]="$(json $_UPDATE_.channel_post.new_chat_member.last_name)"
-									 channel_post_new_chat_member_username[$_INDEX_]="$(json $_UPDATE_.channel_post.new_chat_member.username)"
-									;;
-								'left_chat_member')
-									 channel_post_left_chat_member_id[$_INDEX_]="$(json $_UPDATE_.channel_post.left_chat_member.id)"
-									 channel_post_left_chat_member_first_name[$_INDEX_]="$(json $_UPDATE_.channel_post.left_chat_member.first_name)"
-									 channel_post_left_chat_member_last_name[$_INDEX_]="$(json $_UPDATE_.channel_post.left_chat_member.last_name)"
-									 channel_post_left_chat_member_username[$_INDEX_]="$(json $_UPDATE_.channel_post.left_chat_member.username)"
-									;;
-								'new_chat_title')
-									 channel_post_new_chat_title[$_INDEX_]="$(json $_UPDATE_.channel_post.new_chat_title)"
-									;;
-								'photo')
-						
-									_TOTAL_PHOTO_=$(json "$_UPDATE_.channel_post.new_chat_photo|length" | head -n1)
-						
-									 channel_post_new_chat_photo_file_id[$_INDEX_]="$(json $_UPDATE_.channel_post.new_chat_photo[$((_TOTAL_PHOTO_-1))].file_id)"
-									 channel_post_new_chat_photo_width[$_INDEX_]="$(json $_UPDATE_.channel_post.new_chat_photo[$((_TOTAL_PHOTO_-1))].width)"
-									 channel_post_new_chat_photo_height[$_INDEX_]="$(json $_UPDATE_.channel_post.new_chat_photo[$((_TOTAL_PHOTO_-1))].height)"
-									 channel_post_new_chat_photo_file_size[$_INDEX_]="$(json $_UPDATE_.channel_post.new_chat_photo[$((_TOTAL_PHOTO_-1))].file_size)"
-									 channel_post_delete_chat_photo[$_INDEX_]="$(json $_UPDATE_.channel_post.delete_chat_photo)"
-									;;
-								'group_chat_created')
-									 channel_post_group_chat_created[$_INDEX_]="$(json $_UPDATE_.channel_post.group_chat_created)"
-									 channel_post_supergroup_chat_created[$_INDEX_]="$(json $_UPDATE_.channel_post.supergroup_chat_created)"
-									 channel_post_channel_chat_created[$_INDEX_]="$(json $_UPDATE_.channel_post.channel_chat_created)"
-									;;
-								'migrate_to_chat_id')
-									 channel_post_migrate_to_chat_id[$_INDEX_]="$(json $_UPDATE_.channel_post.migrate_to_chat_id)"
-									;;
-								'migrate_from_chat_id')
-									 channel_post_migrate_from_chat_id[$_INDEX_]="$(json $_UPDATE_.channel_post.migrate_from_chat_id)"
-									;;
-								esac
-							done
-						;;
-					'edited_channel_post')
-						for _SUBKEY_ in $(json "$_UPDATE_.$_KEY_|keys|.[]")
-						do
-							case $_SUBKEY_ in
-								'message_id')			
-									# EDITED_CHANNEL_POST
-									 edited_channel_post_message_id[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.message_id)"
-									;;
-								'from')
-									 edited_channel_post_from_id[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.from.id)"
-									 edited_channel_post_from_first_name[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.from.first_name)"
-									 edited_channel_post_from_last_name[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.from.last_name)"
-									 edited_channel_post_from_username[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.from.username)"
-									;;
-								'date')
-									 edited_channel_post_date[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.date)"
-									;;
-								'chat')
-									 edited_channel_post_chat_id[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.chat.id)"
-									 edited_channel_post_chat_type[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.chat.type)"
-									 edited_channel_post_chat_title[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.chat.title)"
-									 edited_channel_post_chat_username[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.chat.username)"
-									 edited_channel_post_chat_first_name[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.chat.first_name)"
-									 edited_channel_post_chat_last_name[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.chat.last_name)"
-									 edited_channel_post_chat_all_members_are_administrators[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.chat.all_members_are_administrators)"
-									;;
-								'forward_from')
-									 edited_channel_post_forward_from_id[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.forward_from.id)"
-									 edited_channel_post_forward_from_first_name[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.forward_from.first_name)"
-									 edited_channel_post_forward_from_last_name[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.forward_from.last_name)"
-									 edited_channel_post_forward_from_username[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.forward_from.username)"
-									 edited_channel_post_forward_from_chat_id[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.forward_from_chat.id)"
-									 edited_channel_post_forward_from_chat_type[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.forward_from_chat.type)"
-									 edited_channel_post_forward_from_chat_title[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.forward_from_chat.title)"
-									 edited_channel_post_forward_from_chat_username[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.forward_from_chat.username)"
-									 edited_channel_post_forward_from_chat_first_name[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.forward_from_chat.first_name)"
-									 edited_channel_post_forward_from_chat_last_name[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.forward_from_chat.last_name)"
-									 edited_channel_post_forward_from_chat_all_members_are_administrators[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.forward_from_chat.all_members_are_administrators)"
-									 edited_channel_post_forward_from_message_id[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.forward_from_message_id)"
-									;;
-								'forward_date')
-									 edited_channel_post_forward_date[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.forward_date)"
-									;;
-								'reply_to_message')
-									 edited_channel_post_reply_to_message_message_id[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.reply_to_message.message_id)"
-									 edited_channel_post_reply_to_message_from_id[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.reply_to_message.from.id)"
-									 edited_channel_post_reply_to_message_from_username[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.reply_to_message.from.username)"
-									 edited_channel_post_reply_to_message_from_first_name[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.reply_to_message.from.first_name)"
-									 edited_channel_post_reply_to_message_from_last_name[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.reply_to_message.from.last_name)"
-									 edited_channel_post_reply_to_message_date[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.reply_to_message.date)"
-									 edited_channel_post_reply_to_message_chat_id[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.reply_to_message.chat.id)"
-									 edited_channel_post_reply_to_message_chat_type[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.reply_to_message.chat.type)"
-									 edited_channel_post_reply_to_message_chat_title[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.reply_to_message.chat.title)"
-									 edited_channel_post_reply_to_message_chat_username[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.reply_to_message.chat.username)"
-									 edited_channel_post_reply_to_message_chat_first_name[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.reply_to_message.chat.first_name)"
-									 edited_channel_post_reply_to_message_chat_last_name[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.reply_to_message.chat.last_name)"
-									 edited_channel_post_reply_to_message_chat_all_members_are_administrators[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.reply_to_message.chat.all_members_are_administrators)"
-									 edited_channel_post_reply_to_message_forward_from_message_id[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.reply_to_message.forward_from_message_id)"
-									 edited_channel_post_reply_to_message_forward_date[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.reply_to_message.forward_date)"
-									 edited_channel_post_reply_to_message_edit_date[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.reply_to_message.edit_date)"
-									 edited_channel_post_reply_to_message_text[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.reply_to_message.text)"
-									;;
-								'text')
-									 edited_channel_post_text[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.text)"
-									;;
-								'entities')
-									 edited_channel_post_entities_type[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.entities[].type)"
-									 edited_channel_post_entities_offset[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.entities[].offset)"
-									 edited_channel_post_entities_length[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.entities[].length)"
-									 edited_channel_post_entities_url[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.entities[].url)"
-									;;
-								'audio')
-									 edited_channel_post_audio_file_id[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.audio.file_id)"
-									 edited_channel_post_audio_duration[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.audio.duration)"
-									 edited_channel_post_audio_performer[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.audio.performer)"
-									 edited_channel_post_audio_title[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.audio.title)"
-									 edited_channel_post_audio_mime_type[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.audio.mime_type)"
-									 edited_channel_post_audio_file_size[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.audio.file_size)"
-									;;
-								'document')
-									 edited_channel_post_document_file_id[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.document.file_id)"
-									 edited_channel_post_document_file_name[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.document.file_name)"
-									 edited_channel_post_document_mime_type[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.document.mime_type)"
-									 edited_channel_post_document_file_size[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.document.file_size)"
-									;;
-								'photo')
-						
-									_TOTAL_PHOTO_=$(json "$_UPDATE_.edited_channel_post.photo|length" | head -n1)
-		
-									 edited_channel_post_photo_file_id[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.photo[$((_TOTAL_PHOTO_-1))].file_id)"
-									 edited_channel_post_photo_width[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.photo[$((_TOTAL_PHOTO_-1))].width)"
-									 edited_channel_post_photo_height[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.photo[$((_TOTAL_PHOTO_-1))].height)"
-									 edited_channel_post_photo_file_size[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.photo[$((_TOTAL_PHOTO_-1))].file_size)"
-									;;
-								'sticker')
-									 edited_channel_post_sticker_file_id[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.sticker.file_id)"
-									 edited_channel_post_sticker_width[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.sticker.width)"
-									 edited_channel_post_sticker_height[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.sticker.height)"
-									 edited_channel_post_sticker_emoji[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.sticker.emoji)"
-									 edited_channel_post_sticker_file_size[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.sticker.file_size)"
-									;;
-								'video')
-									 edited_channel_post_video_file_id[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.video.file_id)"
-									 edited_channel_post_video_width[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.video.width)"
-									 edited_channel_post_video_height[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.video.height)"
-									 edited_channel_post_video_duration[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.video.duration)"
-									 edited_channel_post_video_mime_type[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.video.mime_type)"
-									 edited_channel_post_video_file_size[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.video.file_size)"
-									;;
-								'voice')
-									 edited_channel_post_voice_file_id[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.voice.file_id)"
-									 edited_channel_post_voice_duration[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.voice.duration)"
-									 edited_channel_post_voice_mime_type[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.voice.mime_type)"
-									 edited_channel_post_voice_file_size[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.voice.file_size)"
-									;;
-								'caption')
-									 edited_channel_post_caption[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.caption)"
-									;;
-								'contact')
-									 edited_channel_post_contact_phone_number[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.contact.phone_number)"
-									 edited_channel_post_contact_first_name[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.contact.first_name)"
-									 edited_channel_post_contact_last_name[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.contact.last_name)"
-									 edited_channel_post_contact_user_id[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.contact.user_id)"
-									;;
-								'location')
-									 edited_channel_post_location_longitude[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.location.longitude)"
-									 edited_channel_post_location_latitude[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.location.latitude)"
-									;;
-								'venue')
-									 edited_channel_post_venue_location_longitude[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.venue.location[].longitude)"
-									 edited_channel_post_venue_location_latitude[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.venue.location[].latitude)"
-									 edited_channel_post_venue_title[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.venue.title)"
-									 edited_channel_post_venue_address[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.venue.address)"
-									 edited_channel_post_venue_foursquare_id[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.venue.foursquare_id)"
-									;;
-								'new_chat_member')
-									 edited_channel_post_new_chat_member_id[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.new_chat_member.id)"
-									 edited_channel_post_new_chat_member_first_name[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.new_chat_member.first_name)"
-									 edited_channel_post_new_chat_member_last_name[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.new_chat_member.last_name)"
-									 edited_channel_post_new_chat_member_username[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.new_chat_member.username)"
-									;;
-								'left_chat_member')
-									 edited_channel_post_left_chat_member_id[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.left_chat_member.id)"
-									 edited_channel_post_left_chat_member_first_name[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.left_chat_member.first_name)"
-									 edited_channel_post_left_chat_member_last_name[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.left_chat_member.last_name)"
-									 edited_channel_post_left_chat_member_username[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.left_chat_member.username)"
-									;;
-								'new_chat_title')
-									 edited_channel_post_new_chat_title[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.new_chat_title)"
-									;;
-								'photo')
-						
-									_TOTAL_PHOTO_=$(json "$_UPDATE_.edited_channel_post.new_chat_photo|length" | head -n1)
-		
-									 edited_channel_post_new_chat_photo_file_id[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.new_chat_photo[$((_TOTAL_PHOTO_-1))].file_id)"
-									 edited_channel_post_new_chat_photo_width[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.new_chat_photo[$((_TOTAL_PHOTO_-1))].width)"
-									 edited_channel_post_new_chat_photo_height[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.new_chat_photo[$((_TOTAL_PHOTO_-1))].height)"
-									 edited_channel_post_new_chat_photo_file_size[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.new_chat_photo[$((_TOTAL_PHOTO_-1))].file_size)"
-									 edited_channel_post_delete_chat_photo[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.delete_chat_photo)"
-									;;
-								'group_chat_created')
-									 edited_channel_post_group_chat_created[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.group_chat_created)"
-									;;
-								'supergroup_chat_created')
-									 edited_channel_post_supergroup_chat_created[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.supergroup_chat_created)"
-									;;
-								'channel_chat_created')
-									 edited_channel_post_channel_chat_created[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.channel_chat_created)"
-									;;
-								'migrate_to_chat_id')
-									 edited_channel_post_migrate_to_chat_id[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.migrate_to_chat_id)"
-									;;
-								'migrate_from_chat_id')
-									 edited_channel_post_migrate_from_chat_id[$_INDEX_]="$(json $_UPDATE_.edited_channel_post.migrate_from_chat_id)"
-									;;
-							esac
-						done
-						;;
-					'callback_query')
-						for _SUBKEY_ in $(json "$_UPDATE_.$_KEY_|keys|.[]")
-						do
-							case $_SUBKEY_ in
-								'id')
-									callback_query_id[$_INDEX_]="$(json $_UPDATE_.callback_query.id)"
-									;;
-								'chat_instance')
-									callback_query_chat_instance[$_INDEX_]="$(json $_UPDATE_.callback_query.chat_instance)"
-									;;
-								'data')
-									callback_query_data[$_INDEX_]="$(json $_UPDATE_.callback_query.data)"
-									;;
-								'from')
-									callback_query_from_id[$_INDEX_]="$(json $_UPDATE_.callback_query.from.id)"
-									callback_query_from_first_name[$_INDEX_]="$(json $_UPDATE_.callback_query.from.first_name)"
-									callback_query_from_username[$_INDEX_]="$(json $_UPDATE_.callback_query.from.username)"
-									callback_query_from_language_code[$_INDEX_]="$(json $_UPDATE_.callback_query.from.language_code)"
-									;;
-								'message')
-									callback_query_message_message_id[$_INDEX_]="$(json $_UPDATE_.callback_query.message.message_id)"
-									callback_query_message_from_id[$_INDEX_]="$(json $_UPDATE_.callback_query.message.from.id)"
-									callback_query_message_from_first_name[$_INDEX_]="$(json $_UPDATE_.callback_query.message.from.first_name)"
-									callback_query_message_from_username[$_INDEX_]="$(json $_UPDATE_.callback_query.message.from.username)"
-									callback_query_message_chat_id[$_INDEX_]="$(json $_UPDATE_.callback_query.message.chat.id)"
-									callback_query_message_chat_title[$_INDEX_]="$(json $_UPDATE_.callback_query.message.chat.title)"
-									callback_query_message_chat_type[$_INDEX_]="$(json $_UPDATE_.callback_query.message.chat.type)"
-									callback_query_message_date[$_INDEX_]="$(json $_UPDATE_.callback_query.message.date)"
-									callback_query_message_text[$_INDEX_]="$(json $_UPDATE_.callback_query.message.text)"
-									callback_query_message_edit_date[$_INDEX_]="$(json $_UPDATE_.callback_query.message.edit_date)"
-									;;
-							esac
-						done			
-					esac
-				done
+			    i=0
+				
+			    # Lista objetos.
+				for key in ${key_list[@]}
+			    do
+					# Limpa o buffer
+			        unset key_list
+
+					# Lê as chaves do atual objeto
+			        for obj in $(json $_JSON_ "$key|keys[]")
+			        do
+						# Se o tipo da chave for string, number ou boolean, imprime o valor armazenado.
+						# Se for object salva o nível atual em key_list. Caso contrário, lê o próximo
+						# elemento da lista.
+            			obj_cur="$key.$obj"
+			            obj_type=$(json $_JSON_ "$obj_cur|type")
+
+            			if [[ $obj_type =~ (string|number|boolean) ]]; then
+							# Define a nomenclatura válida para a variável que irá armazenar o valor da chave.
+            				var_name=${obj_cur#.result\[$_INDEX_\].}
+		            	    var_name=${var_name//./_}
+							
+							# Salva o valor.
+							eval $var_name[$_INDEX_]="'$(json $_JSON_ "$obj_cur")'"
+				
+			            elif [[ $obj_type = object ]]; then
+			                key_list[$((i++))]=$obj_cur
+            			else
+							# lê o próximo elemento.
+			                continue
+            			fi
+			        done
+			    done
 			done
-		fi
-	
-	} || message_error TG
+		done
+	fi
+
+	# restaura o descritor de erro
+	exec 2<&5
+
+	} || message_error $_JSON_ TG
 
 	# Status
 	return $?
@@ -3168,4 +2444,3 @@ declare -rf ShellBot.answerCallbackQuery
 declare -rf ShellBot.deleteMessage
 declare -rf ShellBot.getUpdates
 #FIM
-
