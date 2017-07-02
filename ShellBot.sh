@@ -1,9 +1,9 @@
 #!/bin/bash
 
 #-----------------------------------------------------------------------------------------------------------
-#	Data:				30 de Junho de 2017
+#	Data:				02 de Julho de 2017
 #	Script:				ShellBot.sh
-#	Versão:				3.9
+#	Versão:				4.2 
 #	Desenvolvido por:	Juliano Santos [SHAMAN]
 #	Página:				http://www.shellscriptx.blogspot.com.br
 #	Fanpage:			https://www.facebook.com/shellscriptx
@@ -52,7 +52,7 @@ declare -r _POST_='curl --silent --request POST --url'
 # Verifica o retorno após a chamada de um método, se for igual a true (sucesso) retorna 0, caso contrário, retorna 1
 json() { jq -r "${*:2}" $1 2>/dev/null; }
 json_status(){ [[ $(json $1 '.ok') != false ]] && return 0 || return 1; }
-getTMP(){ echo $_TMP_DIR_/${1#*.}.json; return 0; } # Gera nomenclatura dos arquivos json.
+getFileJQ(){ echo $_TMP_DIR_/${1#*.}.json; return 0; } # Gera nomenclatura dos arquivos json.
 
 # Remove diretório JSON se o script for interrompido.
 trap "rm -rf $_TMP_DIR_ &>/dev/null; exit 1" SIGQUIT SIGINT SIGKILL SIGTERM SIGSTOP SIGPWR
@@ -212,7 +212,7 @@ ShellBot.getWebhookInfo()
 {
 	# Variável local
 	local _METHOD_=getWebhookInfo	# Método
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 		
 	# Chama o método getMe passando o endereço da API, seguido do nome do método.
 	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ > $_JSON_
@@ -220,13 +220,14 @@ ShellBot.getWebhookInfo()
 	# Verifica o status de retorno do método
 	json_status $_JSON_ && {
 		# Retorna as informações armazenadas em "result".
-		json $_JSON_ '.result| .url,
-								.has_custom_certificate,
-								.pending_update_count,
-								.last_error_date,
-								.last_error_message,
-								.max_connections,
-								.allowed_updates' | sed ':a;$!N;s/\n/|/;ta'
+		json $_JSON_ '.result|
+						.url,
+						.has_custom_certificate,
+						.pending_update_count,
+						.last_error_date,
+						.last_error_message,
+						.max_connections,
+						.allowed_updates' | sed ':a;$!N;s/\n/|/;ta'
 
 	} || message_error $_JSON_ TG
 	
@@ -237,7 +238,7 @@ ShellBot.deleteWebhook()
 {
 	# Variável local
 	local _METHOD_=deleteWebhook	# Método
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 		
 	# Chama o método getMe passando o endereço da API, seguido do nome do método.
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ > $_JSON_
@@ -252,7 +253,7 @@ ShellBot.setWebhook()
 {
 	local _URL_ _CERTIFICATE_ _MAX_CONNECTIONS_ _ALLOWED_UPDATES_
 	local _METHOD_=setWebhook
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 	
 	local _PARAM_=$(getopt --name $FUNCNAME --options 'u:c:m:a' \
 												--longoptions 'url:, 
@@ -364,13 +365,557 @@ ShellBot.init()
 	return 0
 }
 
+ShellBot.setChatPhoto()
+{
+	local _CHAT_ID_ _PHOTO_
+	local _METHOD_=setChatPhoto
+	local _JSON_=$(getFileJQ $FUNCNAME)
+	
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:p:' --longoptions 'chat_id:,photo:' -- "$@")
+	
+	eval set -- "$_PARAM_"
+	
+	while :
+	do
+		case $1 in
+			-c|--chat_id)
+				_CHAT_ID_="$2"
+				shift 2
+				;;
+			-p|--photo)
+				_PHOTO_="$2"
+				shift 2
+				;;
+			--)
+				shift
+				break
+				;;
+		esac
+	done
+	
+	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
+	[[ $_PHOTO_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-p, --photo"
+	
+	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-F chat_id="'$_CHAT_ID_'"} \
+											${_PHOTO_:+-F photo="'$_PHOTO_'"} > $_JSON_
+
+	json_status $_JSON_ || message_error $_JSON_ TG
+		
+	# Status
+	return $?
+}
+
+ShellBot.deleteChatPhoto()
+{
+	local _CHAT_ID_
+	local _METHOD_=deleteChatPhoto
+	local _JSON_=$(getFileJQ $FUNCNAME)
+	
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:' --longoptions 'chat_id:' -- "$@")
+	
+	eval set -- "$_PARAM_"
+	
+	while :
+	do
+		case $1 in
+			-c|--chat_id)
+				_CHAT_ID_="$2"
+				shift 2
+				;;
+			--)
+				shift
+				break
+				;;
+		esac
+	done
+	
+	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
+	
+	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} > $_JSON_
+
+	json_status $_JSON_ || message_error $_JSON_ TG
+		
+	# Status
+	return $?
+
+}
+
+ShellBot.setChatTitle()
+{
+	
+	local _CHAT_ID_ _TITLE_
+	local _METHOD_=setChatTitle
+	local _JSON_=$(getFileJQ $FUNCNAME)
+	
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:t:' --longoptions 'chat_id:,title:' -- "$@")
+	
+	eval set -- "$_PARAM_"
+	
+	while :
+	do
+		case $1 in
+			-c|--chat_id)
+				_CHAT_ID_="$2"
+				shift 2
+				;;
+			-t|--title)
+				_TITLE_="$2"
+				shift 2
+				;;
+			--)
+				shift
+				break
+				;;
+		esac
+	done
+	
+	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
+	[[ $_TITLE_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-t, --title"
+	
+	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
+											${_TITLE_:+-d title="'$_TITLE_'"} > $_JSON_
+
+	json_status $_JSON_ || message_error $_JSON_ TG
+		
+	# Status
+	return $?
+}
+
+
+ShellBot.setChatDescription()
+{
+	
+	local _CHAT_ID_ _DESCRIPTION_
+	local _METHOD_=setChatDescription
+	local _JSON_=$(getFileJQ $FUNCNAME)
+	
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:d:' --longoptions 'chat_id:,description:' -- "$@")
+	
+	eval set -- "$_PARAM_"
+	
+	while :
+	do
+		case $1 in
+			-c|--chat_id)
+				_CHAT_ID_="$2"
+				shift 2
+				;;
+			-d|--description)
+				_DESCRIPTION_="$2"
+				shift 2
+				;;
+			--)
+				shift
+				break
+				;;
+		esac
+	done
+	
+	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
+	[[ $_DESCRIPTION_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-d, --description"
+	
+	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
+											${_DESCRIPTION_:+-d description="'$_DESCRIPTION_'"} > $_JSON_
+
+	json_status $_JSON_ || message_error $_JSON_ TG
+		
+	# Status
+	return $?
+}
+
+ShellBot.pinChatMessage()
+{
+	
+	local _CHAT_ID_ _MESSAGE_ID_ _DISABLE_NOTIFICATION_
+	local _METHOD_=pinChatMessage
+	local _JSON_=$(getFileJQ $FUNCNAME)
+	
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:m:n:' --longoptions 'chat_id:,
+																				message_id:,
+																				disable_notification:' \
+																				-- "$@")
+	
+	eval set -- "$_PARAM_"
+	
+	while :
+	do
+		case $1 in
+			-c|--chat_id)
+				_CHAT_ID_="$2"
+				shift 2
+				;;
+			-m|--message_id)
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				_MESSAGE_ID_="$2"
+				shift 2
+				;;
+			-n|--disable_notification)
+				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				_DISABLE_NOTIFICATION_="$2"
+				shift 2
+				;;	
+			--)
+				shift
+				break
+				;;
+		esac
+	done
+	
+	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
+	[[ $_MESSAGE_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-m, --message_id"
+	
+	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
+											${_MESSAGE_ID_:+-d message_id="'$_MESSAGE_ID_'"} \
+											${_DISABLE_NOTIFICATION_:+-d disable_notification="'$_DISABLE_NOTIFICATION_'"} > $_JSON_
+
+	json_status $_JSON_ || message_error $_JSON_ TG
+		
+	# Status
+	return $?
+}
+
+ShellBot.unpinChatMessage()
+{
+	local _CHAT_ID_
+	local _METHOD_=unpinChatMessage
+	local _JSON_=$(getFileJQ $FUNCNAME)
+	
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:' --longoptions 'chat_id:' -- "$@")
+	
+	eval set -- "$_PARAM_"
+	
+	while :
+	do
+		case $1 in
+			-c|--chat_id)
+				_CHAT_ID_="$2"
+				shift 2
+				;;
+			--)
+				shift
+				break
+				;;
+		esac
+	done
+	
+	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
+	
+	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} > $_JSON_
+
+	json_status $_JSON_ || message_error $_JSON_ TG
+		
+	# Status
+	return $?
+}
+
+ShellBot.restrictChatMember()
+{
+	local	_CHAT_ID_ _USER_ID_ _UNTIL_DATE_ _CAN_SEND_MESSAGES_ \
+			_CAN_SEND_MEDIA_MESSAGES_ _CAN_SEND_OTHER_MESSAGES_ \
+			_CAN_ADD_WEB_PAGE_PREVIEWS_
+
+	local _METHOD_=restrictChatMember
+	local _JSON_=$(getFileJQ $FUNCNAME)
+	
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:u:d:s:m:o:w:' \
+												--longoptions 'chat_id:,
+																user_id:,
+																until_date:,
+																can_send_messages:,
+																can_send_media_messages:,
+																can_send_other_messages:,
+																can_add_web_page_previews:' -- "$@")
+	
+	eval set -- "$_PARAM_"
+	
+	while :
+	do
+		case $1 in
+			-c|--chat_id)
+				_CHAT_ID_="$2"
+				shift 2
+				;;
+			-u|--user_id)
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				_USER_ID_="$2"
+				shift 2
+				;;
+			-d|--until_date)
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				_UNTIL_DATE_="$2"
+				shift 2
+				;;
+			-s|--can_send_messages)
+				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				_CAN_SEND_MESSAGES_="$2"
+				shift 2
+				;;
+			-m|--can_send_media_messages)
+				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				_CAN_SEND_MEDIA_MESSAGES_="$2"
+				shift 2
+				;;
+			-o|--can_send_other_messages)
+				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				_CAN_SEND_OTHER_MESSAGES_="$2"
+				shift 2
+				;;
+			-w|--can_add_web_page_previews)
+				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				_CAN_ADD_WEB_PAGE_PREVIEWS_="$2"
+				shift 2
+				;;				
+			--)
+				shift
+				break
+				;;
+		esac
+	done
+	
+	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
+	[[ $_USER_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --user_id"
+	
+	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
+											${_USER_ID_:+-d user_id="'$_USER_ID_'"} \
+											${_UNTIL_DATE__:+-d until_date="'$_UNTIL_DATE_'"} \
+											${_CAN_SEND_MESSAGES_:+-d can_send_messages="'$_CAN_SEND_MESSAGES_'"} \
+											${_CAN_SEND_MEDIA_MESSAGES_:+-d can_send_media_messages="'$_CAN_SEND_MEDIA_MESSAGES_'"} \
+											${_CAN_SEND_OTHER_MESSAGES_:+-d can_send_other_messages="'$_CAN_SEND_OTHER_MESSAGES_'"} \
+											${_CAN_ADD_WEB_PAGE_PREVIEWS_:+-d can_add_web_page_previews="'$_CAN_ADD_WEB_PAGE_PREVIEWS_'"} > $_JSON_
+
+	json_status $_JSON_ || message_error $_JSON_ TG
+		
+	# Status
+	return $?
+	
+}
+
+
+ShellBot.promoteChatMember()
+{
+	local	_CHAT_ID_ _USER_ID_ _CAN_CHANGE_INFO_ _CAN_POST_MESSAGES_ \
+			_CAN_EDIT_MESSAGES_ _CAN_DELETE_MESSAGES_ _CAN_INVITE_USERS_ \
+			_CAN_RESTRICT_MEMBERS_ _CAN_PIN_MESSAGES_ _CAN_PROMOTE_MEMBERS_
+
+	local _METHOD_=promoteChatMember
+	local _JSON_=$(getFileJQ $FUNCNAME)
+	
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:u:i:p:e:d:v:r:f:m:' \
+												--longoptions 'chat_id:,
+																user_id:,
+																can_change_info:,
+																can_post_messages:,
+																can_edit_messages:,
+																can_delete_messages:,
+																can_invite_users:,
+																can_restrict_members:,
+																can_pin_messages:,
+																can_promote_members:' -- "$@")
+	
+	eval set -- "$_PARAM_"
+	
+	while :
+	do
+		case $1 in
+			-c|--chat_id)
+				_CHAT_ID_="$2"
+				shift 2
+				;;
+			-u|--user_id)
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				_USER_ID_="$2"
+				shift 2
+				;;
+			-i|--can_change_info)
+				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				_CAN_CHANGE_INFO_="$2"
+				shift 2
+				;;
+			-p|--can_post_messages)
+				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				_CAN_POST_MESSAGES_="$2"
+				shift 2
+				;;
+			-e|--can_edit_messages)
+				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				_CAN_EDIT_MESSAGES_="$2"
+				shift 2
+				;;
+			-d|--can_delete_messages)
+				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				_CAN_DELETE_MESSAGES_="$2"
+				shift 2
+				;;
+			-v|--can_invite_users)
+				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				_CAN_INVITE_USERS_="$2"
+				shift 2
+				;;
+			-r|--can_restrict_members)
+				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				_CAN_RESTRICT_MEMBERS_="$2"
+				shift 2
+				;;
+			-f|--can_pin_messages)
+				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				_CAN_PIN_MESSAGES_="$2"
+				shift 2
+				;;	
+			-m|--can_promote_members)
+				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				_CAN_PROMOTE_MEMBERS_="$2"
+				shift 2
+				;;
+			--)
+				shift
+				break
+				;;
+		esac
+	done
+	
+	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
+	[[ $_USER_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --user_id"
+	
+	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
+											${_USER_ID_:+-d user_id="'$_USER_ID_'"} \
+											${_CAN_CHANGE_INFO_:+-d can_change_info="'$_CAN_CHANGE_INFO_'"} \
+											${_CAN_POST_MESSAGES_:+-d can_post_messages="'$_CAN_POST_MESSAGES_'"} \
+											${_CAN_EDIT_MESSAGES_:+-d can_edit_messages="'$_CAN_EDIT_MESSAGES_'"} \
+											${_CAN_DELETE_MESSAGES_:+-d can_delete_messages="'$_CAN_DELETE_MESSAGES_'"} \
+											${_CAN_INVITE_USERS_:+-d can_invite_users="'$_CAN_INVITE_USERS_'"} \
+											${_CAN_RESTRICT_MEMBERS_:+-d can_restrict_members="'$_CAN_RESTRICT_MEMBERS_'"} \
+											${_CAN_PIN_MESSAGES_:+-d can_pin_messages="'$_CAN_PIN_MESSAGES_'"} \
+											${_CAN_PROMOTE_MEMBERS_:+-d can_promote_members="'$_CAN_PROMOTE_MEMBERS_'"} > $_JSON_
+
+	json_status $_JSON_ || message_error $_JSON_ TG
+		
+	# Status
+	return $?
+}
+
+ShellBot.exportChatInviteLink()
+{
+	local _CHAT_ID_
+	local _METHOD_=exportChatInviteLink
+	local _JSON_=$(getFileJQ $FUNCNAME)
+
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:' --longoptions 'chat_id:' -- "$@")
+	
+	eval set -- "$_PARAM_"
+
+	while :
+	do
+		case $1 in
+			-c|--chat_id)
+				_CHAT_ID_="$2"
+				shift 2
+				;;
+			--)
+				shift
+				break
+				;;
+		esac
+	done
+
+	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
+	
+	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} > $_JSON_
+	
+	# Testa o retorno do método.
+	json_status $_JSON_ && json $_JSON_ '.result' || message_error $_JSON_ TG
+		
+	# Status
+	return $?
+}
+
+ShellBot.sendVideoNote()
+{
+	local _CHAT_ID_ _VIDEO_NOTE_ _DURATION_ _LENGTH_ _DISABLE_NOTIFICATION_ \
+			_REPLY_TO_MESSAGE_ID_ _REPLY_MARKUP_
+
+	local _METHOD_=sendVideoNote
+	local _JSON_=$(getFileJQ $FUNCNAME)
+	
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:v:t:l:n:r:m:' \
+										--longoptions 'chat_id:,
+														video_note:,
+														duration:,
+														length:,
+														disable_notification:,
+														reply_to_message_id:,
+														reply_markup:' \
+														-- "$@")
+	
+	# Define os parâmetros posicionais
+	eval set -- "$_PARAM_"
+	
+	while :
+	do
+		case $1 in
+			-c|--chat_id)
+				_CHAT_ID_="$2"
+				shift 2
+				;;
+			-v|--video_note)
+				_VIDEO_NOTE_="$2"
+				shift 2
+				;;
+			-t|--duration)
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				_DURATION_="$2"
+				shift 2
+				;;
+			-l|--length)
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				_LENGTH_="$2"
+				shift 2
+				;;
+			-n|--disable_notification)
+				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				_DISABLE_NOTIFICATION_="$2"
+				shift 2
+				;;
+			-r|--reply_to_message_id)
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				_REPLY_TO_MESSAGE_ID_="$2"
+				shift 2
+				;;
+			-m|--reply_markup)
+				_REPLY_MARKUP_="$2"
+				shift 2
+				;;
+			--)
+				shift
+				break
+				;;
+		esac
+	done
+	
+	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
+	[[ $_VIDEO_NOTE_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-v, --video_note"
+	
+	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-F chat_id="'$_CHAT_ID_'"} \
+						${_VIDEO_NOTE_:+-F video_note="'$_VIDEO_NOTE_'"} \
+						${_DURATION_:+-F duration="'$_DURATION_'"} \
+						${_LENGTH_:+-F length="'$_LENGTH_'"} \
+						${_DISABLE_NOTIFICATION_:+-F disable_notification="'$_DISABLE_NOTIFICATION_'"} \
+						${_REPLY_TO_MESSAGE_ID_:+-F reply_to_message_id="'$_REPLY_TO_MESSAGE_ID_'"} \
+						${_REPLY_MARKUP_:+-F reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
+
+	# Testa o retorno do método.
+	json_status $_JSON_ || message_error $_JSON_ TG
+	
+	# Status
+	return $?
+}
+
 # Um método simples para testar o token de autenticação do seu bot. 
 # Não requer parâmetros. Retorna informações básicas sobre o bot em forma de um objeto Usuário.
 ShellBot.getMe()
 {
 	# Variável local
 	local _METHOD_=getMe	# Método
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 
 	# Chama o método getMe passando o endereço da API, seguido do nome do método.
 	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ > $_JSON_
@@ -542,7 +1087,7 @@ ShellBot.answerCallbackQuery()
 {
 	local _CALLBACK_QUERY_ID_ _TEXT_ _SHOW_ALERT_ _URL_ _CACHE_TIME_
 	local _METHOD_=answerCallbackQuery # Método
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 	
 	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:t:s:u:e:' \
 										--longoptions 'callback_query_id:,
@@ -684,7 +1229,7 @@ ShellBot.sendMessage()
 	# Variáveis locais 
 	local _CHAT_ID_ _TEXT_ _PARSE_MODE_ _DISABLE_WEB_PAGE_PREVIEW_ _DISABLE_NOTIFICATION_ _REPLY_TO_MESSAGE_ID_ _REPLY_MARKUP_
 	local _METHOD_=sendMessage # Método
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 	
 	# Lê os parâmetros da função
 	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:t:p:w:n:r:k:' \
@@ -774,7 +1319,7 @@ ShellBot.forwardMessage()
 {
 	# Variáveis locais
 	local _CHAT_ID_ _FORM_CHAT_ID_ _DISABLE_NOTIFICATION_ _MESSAGE_ID_
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 	local _METHOD_=forwardMessage # Método
 	
 	# Lê os parâmetros da função
@@ -842,7 +1387,7 @@ ShellBot.sendPhoto()
 {
 	# Variáveis locais
 	local _CHAT_ID_ _PHOTO_ _CAPTION_ _DISABLE_NOTIFICATION_ _REPLY_TO_MESSAGE_ID_ _REPLY_MARKUP_
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 	local _METHOD_=sendPhoto	# Método
 
 	# Lê os parâmetros da função
@@ -922,7 +1467,7 @@ ShellBot.sendAudio()
 {
 	# Variáveis locais
 	local _CHAT_ID_ _AUDIO_ _CAPTION_ _DURATION_ _PERFORMER_ _TITLE_ _DISABLE_NOTIFICATION_ _REPLY_TO_MESSAGE_ID_ _REPLY_MARKUP_	
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 	local _METHOD_=sendAudio	# Método
 	
 	# Lê os parâmetros da função
@@ -1021,7 +1566,7 @@ ShellBot.sendDocument()
 {
 	# Variáveis locais
 	local _CHAT_ID_ _DOCUMENT_ _CAPTION_ _DISABLE_NOTIFICATION_ _REPLY_TO_MESSAGE_ID_ _REPLY_MARKUP_
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 	local _METHOD_=sendDocument	# Método
 	
 	# Lê os parâmetros da função
@@ -1099,7 +1644,7 @@ ShellBot.sendSticker()
 {
 	# Variáveis locais
 	local _CHAT_ID_ _STICKER_ _DISABLE_NOTIFICATION_ _REPLY_TO_MESSAGE_ID_ _REPLY_MARKUP_
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 	local _METHOD_=sendSticker	# Método
 
 	# Lê os parâmetros da função
@@ -1171,7 +1716,7 @@ ShellBot.sendVideo()
 {
 	# Variáveis locais
 	local _CHAT_ID_ _VIDEO_ _DURATION_ _WIDTH_ _HEIGHT_ _CAPTION_ _DISABLE_NOTIFICATION_ _REPLY_TO_MESSAGE_ID_ _REPLY_MARKUP_
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 	local _METHOD_=sendVideo	# Método
 
 	# Lê os parâmetros da função
@@ -1274,7 +1819,7 @@ ShellBot.sendVoice()
 {
 	# Variáveis locais
 	local _CHAT_ID_ _VOICE_ _CAPTION_ _DURATION_ _DISABLE_NOTIFICATION_ _REPLY_TO_MESSAGE_ID_ _REPLY_MARKUP_
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 	local _METHOD_=sendVoice	# Método
 
 	# Lê os parâmetros da função
@@ -1361,7 +1906,7 @@ ShellBot.sendLocation()
 {
 	# Variáveis locais
 	local _CHAT_ID_ _LATITUDE_ _LONGITUDE_ _DISABLE_NOTIFICATION_ _REPLY_TO_MESSAGE_ID_ _REPLY_MARKUP_
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 	local _METHOD_=sendLocation	# Método
 
 	# Lê os parâmetros da função
@@ -1444,7 +1989,7 @@ ShellBot.sendVenue()
 {
 	# Variáveis locais
 	local _CHAT_ID_ _LATITUDE_ _LONGITUDE_ _TITLE_ _ADDRESS_ _FOURSQUARE_ID_ _DISABLE_NOTIFICATION_ _REPLY_TO_MESSAGE_ID_ _REPLY_MARKUP_
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 	local _METHOD_=sendVenue	# Método
 	
 	# Lê os parâmetros da função
@@ -1546,7 +2091,7 @@ ShellBot.sendContact()
 {
 	# Variáveis locais
 	local _CHAT_ID_ _PHONE_NUMBER_ _FIRST_NAME_ _LAST_NAME_ _DISABLE_NOTIFICATION_ _REPLY_TO_MESSAGE_ID_ _REPLY_MARKUP_
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 	local _METHOD_=sendContact	# Método
 	
 	# Lê os parâmetros da função
@@ -1631,7 +2176,7 @@ ShellBot.sendChatAction()
 {
 	# Variáveis locais
 	local _CHAT_ID_ _ACTION_
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 	local _METHOD_=sendChatAction		# Método
 	
 	# Lê os parâmetros da função
@@ -1686,7 +2231,7 @@ ShellBot.getUserProfilePhotos()
 	# Variáveis locais 
 	local _USER_ID_ _OFFSET_ _LIMIT_ _IND_ _LAST_ _INDEX_ _MAX_ _ITEM_ _TOTAL_
 	local _METHOD_=getUserProfilePhotos # Método
-    local _JSON_=$(getTMP $FUNCNAME)
+    local _JSON_=$(getFileJQ $FUNCNAME)
 
 	# Lê os parâmetros da função
 	local _PARAM_=$(getopt --name $FUNCNAME --options 'u:o:l:' \
@@ -1760,7 +2305,7 @@ ShellBot.getFile()
 	# Variáveis locais
 	local _FILE_ID_
 	local _METHOD_=getFile # Método
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 
 	# Lê os parâmetros da função
 	local _PARAM_=$(getopt --name $FUNCNAME --options 'f:' \
@@ -1805,14 +2350,15 @@ ShellBot.getFile()
 ShellBot.kickChatMember()
 {
 	# Variáveis locais
-	local _CHAT_ID_ _USER_ID_
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _CHAT_ID_ _USER_ID_ _UNTIL_DATE_
+	local _JSON_=$(getFileJQ $FUNCNAME)
 	local _METHOD_=kickChatMember		# Método
 
 	# Lê os parâmetros da função
-	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:u:' \
+	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:u:d:' \
 										--longoptions 'chat_id:,
-														user_id:' \
+														user_id:,
+														until_date:' \
 														-- "$@")
 
 	# Define os parâmetros posicionais
@@ -1831,6 +2377,11 @@ ShellBot.kickChatMember()
 				_USER_ID_="$2"
 				shift 2
 				;;
+			-d|--until_date)
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				_UNTIL_DATE_="$2"
+				shift 2
+				;;
 			--)
 				shift
 				break
@@ -1844,7 +2395,8 @@ ShellBot.kickChatMember()
 	
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
-												${_USER_ID_:+-d user_id="'$_USER_ID_'"} > $_JSON_
+												${_USER_ID_:+-d user_id="'$_USER_ID_'"} \
+												${_UNTIL_DATE_:+-d until_date="'$_UNTIL_DATE_'"} > $_JSON_
 
 	# Verifica se ocorreu erros durante a chamada do método	
 	json_status $_JSON_ || message_error $_JSON_ TG
@@ -1858,7 +2410,7 @@ ShellBot.leaveChat()
 {
 	# Variáveis locais
 	local _CHAT_ID_
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 	local _METHOD_=leaveChat	# Método
 
 	# Lê os parâmetros da função
@@ -1898,7 +2450,7 @@ ShellBot.leaveChat()
 ShellBot.unbanChatMember()
 {
 	local _CHAT_ID_ _USER_ID_
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 
 	# Lê os parâmetros da função
 	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:u:' \
@@ -1947,7 +2499,7 @@ ShellBot.getChat()
 	# Variáveis locais
 	local _CHAT_ID_
 	local _METHOD_=getChat	# Método
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 
 	# Lê os parâmetros da função
 	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:' \
@@ -1979,7 +2531,19 @@ ShellBot.getChat()
 	# Verifica se ocorreu erros durante a chamada do método	
 	json_status $_JSON_ && {
 		# Imprime os dados.
-		json $_JSON_ '.result|.id, .username, .type, .title' |  sed ':a;$!N;s/\n/|/;ta'
+		json $_JSON_ '.result|
+						.id, 
+						.username,
+						.type,
+						.title,
+						.username,
+						.first_name,
+						.last_name,
+						.all_members_are_administrators,
+						.photo[],
+						.description,
+						.invite_link' | sed ':a;$!N;s/\n/|/;ta'
+
 	} || message_error $_JSON_ TG
 
 	# Status
@@ -1989,7 +2553,7 @@ ShellBot.getChat()
 ShellBot.getChatAdministrators()
 {
 	local _CHAT_ID_ _TOTAL_ _KEY_ _INDEX_
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 
 	# Lê os parâmetros da função
 	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:' \
@@ -2030,7 +2594,26 @@ ShellBot.getChatAdministrators()
 			for _INDEX_ in $(seq 0 $((_TOTAL_-1)))
 			do
 				# Lê as informações do usuário armazenadas em '_INDEX_'.
-				json $_JSON_ ".result[$_INDEX_]|.user.id, .user.username, .user.first_name, .user.last_name, .status" | sed ':a;$!N;s/\n/|/;ta'
+				json $_JSON_ ".result[$_INDEX_]|[.user|
+								.id,
+								.username,
+								.first_name,
+								.last_name][], 
+								.status,
+								.until_date,
+								.can_be_edited,
+								.can_change_info,
+								.can_post_messages,
+								.can_edit_messages,
+								.can_delete_messages,
+								.can_invite_users,
+								.can_restrict_members,
+								.can_pin_messages,
+								.can_promote_members,
+								.can_send_messages,
+								.can_send_media_messages,
+								.can_send_other_messages,
+								.can_add_web_page_previews" | sed ':a;$!N;s/\n/|/;ta'
 			done
 		fi
 
@@ -2043,7 +2626,7 @@ ShellBot.getChatAdministrators()
 ShellBot.getChatMembersCount()
 {
 	local _CHAT_ID_
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 
 	# Lê os parâmetros da função
 	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:' \
@@ -2084,7 +2667,7 @@ ShellBot.getChatMember()
 	# Variáveis locais
 	local _CHAT_ID_ _USER_ID_
 	local _METHOD_=getChatMember	# Método
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 
 	# Lê os parâmetros da função
 	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:u:' \
@@ -2123,7 +2706,27 @@ ShellBot.getChatMember()
 
 	# Verifica se ocorreu erros durante a chamada do método	
 	json_status $_JSON_ && {
-			json $_JSON_ '.result| .user.id, .user.username, .user.first_name, .user.last_name, .status' | sed ':a;$!N;s/\n/|/;ta'
+		json $_JSON_ ".result|[.user|
+							.id,
+							.username,
+							.first_name,
+							.last_name][], 
+							.status,
+							.until_date,
+							.can_be_edited,
+							.can_change_info,
+							.can_post_messages,
+							.can_edit_messages,
+							.can_delete_messages,
+							.can_invite_users,
+							.can_restrict_members,
+							.can_pin_messages,
+							.can_promote_members,
+							.can_send_messages,
+							.can_send_media_messages,
+							.can_send_other_messages,
+							.can_add_web_page_previews" | sed ':a;$!N;s/\n/|/;ta'
+
 	} || message_error $_JSON_ TG
 
 	return $?
@@ -2132,7 +2735,7 @@ ShellBot.getChatMember()
 ShellBot.editMessageText()
 {
 	local _CHAT_ID_ _MESSAGE_ID_ _INLINE_MESSAGE_ID_ _TEXT_ _PARSE_MODE_ _DISABLE_WEB_PAGE_PREVIEW_ _REPLY_MARKUP_
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 	local _METHOD_=editMessageText
 	
 	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:m:i:t:p:w:r:' \
@@ -2217,7 +2820,7 @@ ShellBot.editMessageText()
 ShellBot.editMessageCaption()
 {
 	local _CHAT_ID_ _MESSAGE_ID_ _INLINE_MESSAGE_ID_ _CAPTION_ _REPLY_MARKUP_
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 	local _METHOD_=editMessageCaption
 	
 	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:m:i:t:r:' \
@@ -2280,7 +2883,7 @@ ShellBot.editMessageCaption()
 ShellBot.editMessageReplyMarkup()
 {
 	local _CHAT_ID_ _MESSAGE_ID_ _INLINE_MESSAGE_ID_ _REPLY_MARKUP_
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 	local _METHOD_=editMessageReplyMarkup
 	
 	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:m:i:r:' \
@@ -2343,7 +2946,7 @@ ShellBot.editMessageReplyMarkup()
 ShellBot.deleteMessage()
 {
 	local _CHAT_ID_ _MESSAGE_ID_
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 	local _METHOD_=deleteMessage
 	
 	local _PARAM_=$(getopt --name $FUNCNAME --options 'c:m:' \
@@ -2391,7 +2994,7 @@ ShellBot.getUpdates()
 	local _KEY_ _SUBKEY_ _UPDATE_
 
 	local _METHOD_=getUpdates	# Mètodo
-	local _JSON_=$(getTMP $FUNCNAME)
+	local _JSON_=$(getFileJQ $FUNCNAME)
 
 	# Define os parâmetros da função
 	local _PARAM_=$(getopt  --name $FUNCNAME --options 'o:l:t:a:' \
@@ -2491,6 +3094,7 @@ ShellBot.getUpdates()
             			if [[ $obj_type =~ (string|number|boolean) ]]; then
 							# Define a nomenclatura válida para a variável que irá armazenar o valor da chave.
             				var_name=${obj_cur#.result\[$_INDEX_\].}
+							var_name=${var_name//[]/}
 		            	    var_name=${var_name//./_}
 							
 							# Salva o valor.
@@ -2498,18 +3102,17 @@ ShellBot.getUpdates()
 				
 			            elif [[ $obj_type = object ]]; then
 			                key_list[$((i++))]=$obj_cur
-            			else
-							# lê o próximo elemento.
-			                continue
+						elif [[ $obj_type = array ]]; then
+							key_list[$((++i))]=$obj_cur[]
             			fi
 			        done
 			    done
 			done
 		done
+	
+		# restaura o descritor de erro
+		exec 2<&5
 	fi
-
-	# restaura o descritor de erro
-	exec 2<&5
 
 	} || message_error $_JSON_ TG
 
@@ -2520,7 +3123,7 @@ ShellBot.getUpdates()
 # Funções somente leitura
 declare -rf json_status \
 			message_error \
-			getTMP \
+			getFileJQ \
 			ShellBot.regHandleFunction \
 			ShellBot.watchHandle \
 			ShellBot.ListUpdates \
@@ -2540,6 +3143,7 @@ declare -rf json_status \
 			ShellBot.sendDocument \
 			ShellBot.sendSticker \
 			ShellBot.sendVideo \
+			ShellBot.sendVideoNote \
 			ShellBot.sendVoice \
 			ShellBot.sendLocation \
 			ShellBot.sendVenue \
@@ -2561,5 +3165,14 @@ declare -rf json_status \
 			ShellBot.InlineKeyboardButton \
 			ShellBot.answerCallbackQuery \
 			ShellBot.deleteMessage \
+			ShellBot.exportChatInviteLink \
+			ShellBot.setChatPhoto \
+			ShellBot.deleteChatPhoto \
+			ShellBot.setChatTitle \
+			ShellBot.setChatDescription \
+			ShellBot.pinChatMessage \
+			ShellBot.unpinChatMessage \
+			ShellBot.promoteChatMember \
+			ShellBot.restrictChatMember \
 			ShellBot.getUpdates
 #FIM
