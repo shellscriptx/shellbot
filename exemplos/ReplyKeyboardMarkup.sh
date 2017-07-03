@@ -1,4 +1,5 @@
 #!/bin/bash
+#
 # script: ReplyKeyboardMarkup.sh
 #
 # Para melhor compreensão foram utilizados parâmetros longos nas funções; Podendo
