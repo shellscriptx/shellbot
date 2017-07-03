@@ -89,25 +89,21 @@ do
 	do
 	# Inicio thread
 	(
-		# Lê a atualização armazenada em 'id'
-    	if [ "${update_id[$id]}" ]; then
-
-			# Monitora as funções registradas por 'regHandleFunction'.
-			# Se o valor de 'callback_query_data' for igual a um valor
-			# associado a uma função, a mesma é chamada.
-			ShellBot.watchHandle --callback_data ${callback_query_data[$id]} 
-
-			# Verifica se a mensagem enviada pelo usuário é um comando válido.
-			case ${message_text[$id]} in
-				"/bot")	# bot comando
-					# Envia a mensagem anexando o teclado "$keyboard1"
-					ShellBot.sendMessage --chat_id ${message_chat_id[$id]} --text '*Inicio*' \
-																			--reply_markup "$keyboard1" \
-																			--parse_mode markdown 
-				;;
-			esac
-    	fi
-		) & # Utilize a thread se deseja que o bot responda a várias requisições simultâneas.
+		# Monitora as funções registradas por 'regHandleFunction'.
+		# Se o valor de 'callback_query_data' for igual a um valor
+		# associado a uma função, a mesma é chamada.
+		ShellBot.watchHandle --callback_data ${callback_query_data[$id]} 
+	
+		# Verifica se a mensagem enviada pelo usuário é um comando válido.
+		case ${message_text[$id]} in
+			"/bot")	# bot comando
+				# Envia a mensagem anexando o teclado "$keyboard1"
+				ShellBot.sendMessage --chat_id ${message_chat_id[$id]} --text '*Inicio*' \
+																		--reply_markup "$keyboard1" \
+																		--parse_mode markdown 
+			;;
+		esac
+    ) & # Utilize a thread se deseja que o bot responda a várias requisições simultâneas.
 	done
 done
 #FIM
