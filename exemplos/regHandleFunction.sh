@@ -15,9 +15,6 @@ bot_token='<TOKEN_AQUI>'
 ShellBot.init --token "$bot_token"
 ShellBot.username
 
-# Limpa o array que irá receber a estrutura inline_button e suas configurações.
-unset botao1
-
 # Mensagem de ajuda
 exibir_ajuda()
 {
