@@ -1,5 +1,5 @@
 #!/bin/bash
-# script: inlinekeyboard.sh
+# script: InlineKeyboard.sh
 #
 # Para melhor compreensão foram utilizados parâmetros longos nas funções; Podendo
 # ser substituidos pelos parâmetros curtos respectivos.
