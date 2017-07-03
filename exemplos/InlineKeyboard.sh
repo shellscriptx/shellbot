@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # script: InlineKeyboard.sh
 #
 # Para melhor compreensão foram utilizados parâmetros longos nas funções; Podendo
