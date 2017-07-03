@@ -44,21 +44,17 @@ do
 	do
 	# Inicio thread
 	(
-		# Lê a atualização armazenada em 'id'
-    	if [ "${update_id[$id]}" ]; then
-			
-			# Chama a função 'msg_bem_vindo' se o valor de 'message_new_chat_member_id' não for nulo.
-			[[ ${message_new_chat_member_id[$id]} ]] && msg_bem_vindo
+		# Chama a função 'msg_bem_vindo' se o valor de 'message_new_chat_member_id' não for nulo.
+		[[ ${message_new_chat_member_id[$id]} ]] && msg_bem_vindo
 
-			# Verifica se a mensagem enviada pelo usuário é um comando válido.
-			case ${message_text[$id]} in
-				*)
-					:
-					# <BOT COMANDOS> ...
-				;;
-			esac
-    	fi
-		) & # Utilize a thread se deseja que o bot responda a várias requisições simultâneas.
+		# Verifica se a mensagem enviada pelo usuário é um comando válido.
+		case ${message_text[$id]} in
+			*)
+				:
+				# <BOT COMANDOS> ...
+			;;
+		esac
+	) & # Utilize a thread se deseja que o bot responda a várias requisições simultâneas.
 	done
 done
 #FIM
