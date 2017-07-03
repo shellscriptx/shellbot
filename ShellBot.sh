@@ -66,6 +66,7 @@ declare -r _ERR_ACTION_MODE_='tipo da ação inválida.'
 declare -r _ERR_PARAM_INVALID_='parâmetro inválido.'
 declare -r _ERR_PARAM_REQUIRED_='parâmetro/argumento requerido.'
 declare -r _ERR_TOKEN_='não autorizado. Verifique o número do TOKEN ou se possui privilégios.'
+declare -r _ERR_INVALID_TOKEN_='número do TOKEN inválido.'
 declare -r _ERR_FUNCTION_NOT_FOUND_='nome da função inválida ou não existe.'
 
 # Trata os erros
@@ -321,6 +322,7 @@ ShellBot.init()
 	do
 		case $1 in
 			-t|--token)
+				[[ $2 =~ ^[0-9]+:[a-zA-Z0-9-]+$ ]] || message_error '' API "$_ERR_INVALID_TOKEN_" "$1" "$2"
 				declare -gr _TOKEN_="$2"											# TOKEN
 				# Visível em todo shell/subshell
 				declare -gr _API_TELEGRAM_=https://api.telegram.org/bot$_TOKEN_		# API
