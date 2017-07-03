@@ -54,20 +54,16 @@ do
 	do
 	# Inicio thread
 	(
-		# Lê a atualização armazenada em 'id'
-    	if [ "${update_id[$id]}" ]; then
-
-			# Verifica se a mensagem enviada pelo usuário é um comando válido.
-			case ${message_text[$id]} in
-				"/key")	# bot comando
-					# Envia a mensagem anexando o teclado "$keyboard1"
-					ShellBot.sendMessage --chat_id ${message_chat_id[$id]} --text '*Teclado numérico*' \
-																			--reply_markup "$keyboard1" \
-																			--parse_mode markdown 
-				;;
-			esac
-    	fi
-		) & # Utilize a thread se deseja que o bot responda a várias requisições simultâneas.
+		# Verifica se a mensagem enviada pelo usuário é um comando válido.
+		case ${message_text[$id]} in
+			"/key")	# bot comando
+				# Envia a mensagem anexando o teclado "$keyboard1"
+				ShellBot.sendMessage --chat_id ${message_chat_id[$id]} --text '*Teclado numérico*' \
+																		--reply_markup "$keyboard1" \
+																		--parse_mode markdown 
+			;;
+		esac
+	) & # Utilize a thread se deseja que o bot responda a várias requisições simultâneas.
 	done
 done
 #FIM
