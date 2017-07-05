@@ -3105,7 +3105,7 @@ ShellBot.getUpdates()
 			            elif [[ $obj_type = object ]]; then
 			                key_list[$((i++))]=$obj_cur
 						elif [[ $obj_type = array ]]; then
-							key_list[$((++i))]=$obj_cur[]
+							key_list[$((i++))]=$obj_cur[]
             			fi
 			        done
 			    done
