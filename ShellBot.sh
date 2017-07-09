@@ -17,7 +17,7 @@
 #-----------------------------------------------------------------------------------------------------------
 
 # Verifica se a API já foi instanciada.
-[[ $_INIT_ ]] && return 1
+[[ $_SHELLBOT_SH_ ]] && return 1
 
 # Verifica se os pacotes necessários estão instalados.
 for _PKG_ in curl jq; do
@@ -31,7 +31,7 @@ done
 # Desabilitar globbing
 set -f
 
-declare -r _INIT_=1		# API inicializada.
+declare -r _SHELLBOT_SH_=1		# API inicializada.
 declare -r _BOT_SCRIPT_=$(basename "$0")
 
 # Diretório temporário onde são gerados os arquivos json (JavaSCript Object Notation) sempre que um método é chamado. 
