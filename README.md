@@ -18,7 +18,12 @@ Para informações, sugestões ou reporte de falhas, envie e-mail para <shellscr
 **Páginas:**
 
 Blog: http://www.shellscriptx.blogspot.com.br
+
 Fanpage: https://www.facebook.com/shellscriptx
+
+Telegram (contato): https://t.me/x_SHAMAN_x
+
+Telegram (grupo): https://t.me/shellscript_x
 
 ## Agradecimentos
 
@@ -52,4 +57,4 @@ $ cp ShellBot.sh /projeto/meu_bot/
 
 ## Documentação
 
-Para mais informações sobre o **ShellBot**, consulte a documentação do projeto na sua página [wiki](https://github.com/shellscriptx/ShellBot/wiki).
+Para mais informações sobre o **ShellBot**, consulte a documentação do projeto na página [wiki](https://github.com/shellscriptx/ShellBot/wiki).
