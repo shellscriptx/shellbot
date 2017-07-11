@@ -15,8 +15,6 @@ Linguagem: **Shell Script**
 
 Para informações, sugestões ou reporte de falhas, envie e-mail para <shellscriptx@gmail.com>
 
-**Páginas:**
-
 Blog: http://www.shellscriptx.blogspot.com.br
 
 Fanpage: https://www.facebook.com/shellscriptx
