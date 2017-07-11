@@ -50,6 +50,6 @@ Exemplo:
 $ cp ShellBot.sh /projeto/meu_bot/
 ```
 
-## Wiki
+## Documentação
 
-Para mais informações consulte a documentação do projeto na [wiki](https://github.com/shellscriptx/ShellBot/wiki). 
+Para mais informações sobre o **ShellBot**, consulte a documentação do projeto na sua página [wiki](https://github.com/shellscriptx/ShellBot/wiki).
