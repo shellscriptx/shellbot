@@ -15,6 +15,7 @@
 #						As funções instanciadas requerem parâmetros e argumentos para a chamada
 #						do respectivo método.
 #-----------------------------------------------------------------------------------------------------------
+#
 
 # Verifica se a API já foi instanciada.
 [[ $_SHELLBOT_SH_ ]] && return 1
@@ -73,41 +74,40 @@ declare -r _ERR_FUNCTION_NOT_FOUND_='nome da função inválida ou não existe.'
 message_error()
 {
 	# Variáveis locais
-	local _ERR_MESSAGE_ _ERR_ARG_VALUE_ _ERR_PARAM_ _ERR_CODE_ _DESCRIPTION_ _EXIT_
-	
+	local err_message err_code err_description assert jq_file
+
 	# A variável 'BASH_LINENO' é dinâmica e armazena o número da linha onde foi expandida.
 	# Quando chamada dentro de um subshell, passa ser instanciada como um array, armazenando diversos
 	# valores onde cada índice refere-se a um shell/subshell. As mesmas caracteristicas se aplicam a variável
 	# 'FUNCNAME', onde é armazenado o nome da função onde foi chamada.
-	local _LINE=${BASH_LINENO[1]}	# Obtem o número da linha no shell pai.
-	local _FUNC=${FUNCNAME[1]}		# Obtem o nome da função no shell pai.
+	local err_line=${BASH_LINENO[1]}	# Obtem o número da linha no shell pai.
+	local err_func=${FUNCNAME[1]}		# Obtem o nome da função no shell pai.
 	
 	# Lê o tipo de ocorrência do erro.
 	# TG - Erro externo, retornado pelo core do telegram
 	# API - Erro interno, gerado pela API ShellBot.
-	case $2 in
+	case $1 in
 		TG)
-			# Extrai as informações de erro no arquivo "update.json"
-			_ERR_CODE_=$(json $1 '.error_code')
-			_DESCRIPTION_=$(json $1 '.description')
-			_ERR_MESSAGE_="${_ERR_CODE_:-1}: ${_DESCRIPTION_:-Ocorreu um problema durante a tentativa de atualização.}"
+			# arquivo json
+			jq_file=${*: -1}
+			
+			err_code=$(json $jq_file '.error_code')
+			err_description=$(json $jq_file '.description')
+			err_message="${err_code:-1}: ${err_description:-ocorreu um problema durante a tentativa de atualização.}"
 			;;
 		API)
-			# Define as variáveis com os valores passados na função "error.message"
-			_ERR_PARAM_="$4"
-			_ERR_ARG_VALUE_="$5"
 			# Insere um '-', caso o valor de '_ERR_PARAM_' e '_ERR_ARG_VALUE_' for nulo; Se não houver
 			# mensagem de erro, imprime 'Erro desconhecido'
-			_ERR_MESSAGE_="${_ERR_PARAM_:--}: ${_ERR_ARG_VALUE_:--}: ${3:-Erro desconhecido}"
-			_EXIT_=1
+			err_message="${3:--}: ${4:--}: ${2:-erro desconhecido}"
+			assert=1
 			;;
 	esac
 
 	# Imprime mensagem de erro
-	echo "$_BOT_SCRIPT_: linha ${_LINE:--}: ${_FUNC:-NULL}: ${_ERR_MESSAGE_}" 1>&2
+	echo "$_BOT_SCRIPT_: linha ${err_line:--}: ${err_func:--}: $err_message" 1>&2
 
-	# Finaliza script em caso de erro interno, caso contrário retorna o valor $_STATUS_
-	[[ $_EXIT_ ]] && exit 1 || return 1
+	# Finaliza script em caso de erro interno, caso contrário retorna 1
+	[[ $assert ]] && exit 1 || return 1
 }
 
 ShellBot.ListUpdates(){ echo ${!update_id[@]}; }
@@ -133,7 +133,7 @@ ShellBot.regHandleFunction()
 			-f|--function)
 				# Verifica se a função especificada existe.
 				if ! declare -fp $2 &>/dev/null; then
-					message_error '' API "$_ERR_FUNCTION_NOT_FOUND_" "$1" "$2"
+					message_error API "$_ERR_FUNCTION_NOT_FOUND_" "$1" "$2"
 					return 1
 				fi
 				_FUNCTION_="$2"
@@ -154,8 +154,8 @@ ShellBot.regHandleFunction()
 		esac
 	done
 	
-	[[ $_FUNCTION_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-f, --function]"
-	[[ $_CALLBACK_DATA_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-d, --callback_data]"
+	[[ $_FUNCTION_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-f, --function]"
+	[[ $_CALLBACK_DATA_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-d, --callback_data]"
 
 	# Testa se o indentificador armazenado em _HANDLE_ já existe. Caso já exista, repete
 	# o procedimento até que um handle válido seja gerado; Evitando sobreescrever handle's existentes.
@@ -165,7 +165,8 @@ ShellBot.regHandleFunction()
 
 	# Cria a função com o nome gerado e adiciona a chamada com os argumentos especificados.
 	# Anexa o novo handle a lista no índice associativo definindo em _CALLBACK_DATA_	
-	eval "$_HANDLE_(){ $_FUNCTION_ $_ARGS_; }"
+	_FUNCTION_="$_HANDLE_(){ $_FUNCTION_ $_ARGS_; }"
+	eval "$_FUNCTION_"
 	
 	declare -Ag _LIST_REG_FUNC_HANDLE_
 	_LIST_REG_FUNC_HANDLE_[$_CALLBACK_DATA_]+="$_HANDLE_ "
@@ -230,7 +231,7 @@ ShellBot.getWebhookInfo()
 						.max_connections,
 						.allowed_updates' | sed ':a;$!N;s/\n/|/;ta'
 
-	} || message_error $_JSON_ TG
+	} || message_error TG $_JSON_
 	
 	return $?
 }
@@ -245,7 +246,7 @@ ShellBot.deleteWebhook()
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ > $_JSON_
 	
 	# Verifica o status de retorno do método
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 	
 	return $?
 }
@@ -277,7 +278,7 @@ ShellBot.setWebhook()
 				shift 2
 				;;
 			-m|--max_connections)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_MAX_CONNECTIONS_="$2"
 				shift 2
 				;;
@@ -292,7 +293,7 @@ ShellBot.setWebhook()
 		esac
 	done
 	
-	[[ $_URL_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-u, --url]"
+	[[ $_URL_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-u, --url]"
 
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_URL_:+-d url="'$_URL_'"} \
 						${_CERTIFICATE_:+-d certificate="'$_CERTIFICATE_'"} \
@@ -300,7 +301,7 @@ ShellBot.setWebhook()
 						${_ALLOWED_UPDATES_:+-d allowed_updates="'$_ALLOWED_UPDATES_'"} > $_JSON_
 
 	# Testa o retorno do método.
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 	
 	# Status
 	return $?
@@ -322,7 +323,7 @@ ShellBot.init()
 	do
 		case $1 in
 			-t|--token)
-				[[ $2 =~ ^[0-9]+:[a-zA-Z0-9-]+$ ]] || message_error '' API "$_ERR_INVALID_TOKEN_" "$1" "$2"
+				[[ $2 =~ ^[0-9]+:[a-zA-Z0-9-]+$ ]] || message_error API "$_ERR_INVALID_TOKEN_" "$1" "$2"
 				declare -gr _TOKEN_="$2"											# TOKEN
 				# Visível em todo shell/subshell
 				declare -gr _API_TELEGRAM_=https://api.telegram.org/bot$_TOKEN_		# API
@@ -336,9 +337,9 @@ ShellBot.init()
 	done
 
 	# Parâmetro obrigatório.	
-	[[ $_TOKEN_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-t, --token]"
+	[[ $_TOKEN_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-t, --token]"
 
-	_BOT_INFO_=$(ShellBot.getMe 2>/dev/null) || message_error '' API "$_ERR_TOKEN_"
+	_BOT_INFO_=$(ShellBot.getMe 2>/dev/null) || message_error API "$_ERR_TOKEN_"
 	
 	# Define o delimitador entre os campos.
 	IFSbkp=$IFS; IFS='|'
@@ -395,13 +396,13 @@ ShellBot.setChatPhoto()
 		esac
 	done
 	
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
-	[[ $_PHOTO_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-p, --photo"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
+	[[ $_PHOTO_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-p, --photo"
 	
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-F chat_id="'$_CHAT_ID_'"} \
 											${_PHOTO_:+-F photo="'$_PHOTO_'"} > $_JSON_
 
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 		
 	# Status
 	return $?
@@ -431,11 +432,11 @@ ShellBot.deleteChatPhoto()
 		esac
 	done
 	
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
 	
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} > $_JSON_
 
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 		
 	# Status
 	return $?
@@ -471,13 +472,13 @@ ShellBot.setChatTitle()
 		esac
 	done
 	
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
-	[[ $_TITLE_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-t, --title"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
+	[[ $_TITLE_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-t, --title"
 	
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
 											${_TITLE_:+-d title="'$_TITLE_'"} > $_JSON_
 
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 		
 	# Status
 	return $?
@@ -513,13 +514,13 @@ ShellBot.setChatDescription()
 		esac
 	done
 	
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
-	[[ $_DESCRIPTION_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-d, --description"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
+	[[ $_DESCRIPTION_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-d, --description"
 	
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
 											${_DESCRIPTION_:+-d description="'$_DESCRIPTION_'"} > $_JSON_
 
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 		
 	# Status
 	return $?
@@ -547,12 +548,12 @@ ShellBot.pinChatMessage()
 				shift 2
 				;;
 			-m|--message_id)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_MESSAGE_ID_="$2"
 				shift 2
 				;;
 			-n|--disable_notification)
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;	
@@ -563,14 +564,14 @@ ShellBot.pinChatMessage()
 		esac
 	done
 	
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
-	[[ $_MESSAGE_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-m, --message_id"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
+	[[ $_MESSAGE_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-m, --message_id"
 	
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
 											${_MESSAGE_ID_:+-d message_id="'$_MESSAGE_ID_'"} \
 											${_DISABLE_NOTIFICATION_:+-d disable_notification="'$_DISABLE_NOTIFICATION_'"} > $_JSON_
 
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 		
 	# Status
 	return $?
@@ -600,11 +601,11 @@ ShellBot.unpinChatMessage()
 		esac
 	done
 	
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
 	
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} > $_JSON_
 
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 		
 	# Status
 	return $?
@@ -638,32 +639,32 @@ ShellBot.restrictChatMember()
 				shift 2
 				;;
 			-u|--user_id)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_USER_ID_="$2"
 				shift 2
 				;;
 			-d|--until_date)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_UNTIL_DATE_="$2"
 				shift 2
 				;;
 			-s|--can_send_messages)
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_CAN_SEND_MESSAGES_="$2"
 				shift 2
 				;;
 			-m|--can_send_media_messages)
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_CAN_SEND_MEDIA_MESSAGES_="$2"
 				shift 2
 				;;
 			-o|--can_send_other_messages)
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_CAN_SEND_OTHER_MESSAGES_="$2"
 				shift 2
 				;;
 			-w|--can_add_web_page_previews)
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_CAN_ADD_WEB_PAGE_PREVIEWS_="$2"
 				shift 2
 				;;				
@@ -674,8 +675,8 @@ ShellBot.restrictChatMember()
 		esac
 	done
 	
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
-	[[ $_USER_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --user_id"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
+	[[ $_USER_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --user_id"
 	
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
 											${_USER_ID_:+-d user_id="'$_USER_ID_'"} \
@@ -685,7 +686,7 @@ ShellBot.restrictChatMember()
 											${_CAN_SEND_OTHER_MESSAGES_:+-d can_send_other_messages="'$_CAN_SEND_OTHER_MESSAGES_'"} \
 											${_CAN_ADD_WEB_PAGE_PREVIEWS_:+-d can_add_web_page_previews="'$_CAN_ADD_WEB_PAGE_PREVIEWS_'"} > $_JSON_
 
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 		
 	# Status
 	return $?
@@ -724,47 +725,47 @@ ShellBot.promoteChatMember()
 				shift 2
 				;;
 			-u|--user_id)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_USER_ID_="$2"
 				shift 2
 				;;
 			-i|--can_change_info)
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_CAN_CHANGE_INFO_="$2"
 				shift 2
 				;;
 			-p|--can_post_messages)
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_CAN_POST_MESSAGES_="$2"
 				shift 2
 				;;
 			-e|--can_edit_messages)
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_CAN_EDIT_MESSAGES_="$2"
 				shift 2
 				;;
 			-d|--can_delete_messages)
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_CAN_DELETE_MESSAGES_="$2"
 				shift 2
 				;;
 			-v|--can_invite_users)
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_CAN_INVITE_USERS_="$2"
 				shift 2
 				;;
 			-r|--can_restrict_members)
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_CAN_RESTRICT_MEMBERS_="$2"
 				shift 2
 				;;
 			-f|--can_pin_messages)
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_CAN_PIN_MESSAGES_="$2"
 				shift 2
 				;;	
 			-m|--can_promote_members)
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_CAN_PROMOTE_MEMBERS_="$2"
 				shift 2
 				;;
@@ -775,8 +776,8 @@ ShellBot.promoteChatMember()
 		esac
 	done
 	
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
-	[[ $_USER_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --user_id"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
+	[[ $_USER_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --user_id"
 	
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
 											${_USER_ID_:+-d user_id="'$_USER_ID_'"} \
@@ -789,7 +790,7 @@ ShellBot.promoteChatMember()
 											${_CAN_PIN_MESSAGES_:+-d can_pin_messages="'$_CAN_PIN_MESSAGES_'"} \
 											${_CAN_PROMOTE_MEMBERS_:+-d can_promote_members="'$_CAN_PROMOTE_MEMBERS_'"} > $_JSON_
 
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 		
 	# Status
 	return $?
@@ -819,12 +820,12 @@ ShellBot.exportChatInviteLink()
 		esac
 	done
 
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
 	
 	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} > $_JSON_
 	
 	# Testa o retorno do método.
-	json_status $_JSON_ && json $_JSON_ '.result' || message_error $_JSON_ TG
+	json_status $_JSON_ && json $_JSON_ '.result' || message_error TG $_JSON_
 		
 	# Status
 	return $?
@@ -863,22 +864,22 @@ ShellBot.sendVideoNote()
 				shift 2
 				;;
 			-t|--duration)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_DURATION_="$2"
 				shift 2
 				;;
 			-l|--length)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_LENGTH_="$2"
 				shift 2
 				;;
 			-n|--disable_notification)
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;
 			-r|--reply_to_message_id)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_REPLY_TO_MESSAGE_ID_="$2"
 				shift 2
 				;;
@@ -893,8 +894,8 @@ ShellBot.sendVideoNote()
 		esac
 	done
 	
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
-	[[ $_VIDEO_NOTE_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-v, --video_note"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
+	[[ $_VIDEO_NOTE_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-v, --video_note"
 	
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-F chat_id="'$_CHAT_ID_'"} \
 						${_VIDEO_NOTE_:+-F video_note="'$_VIDEO_NOTE_'"} \
@@ -905,7 +906,7 @@ ShellBot.sendVideoNote()
 						${_REPLY_MARKUP_:+-F reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Testa o retorno do método.
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 	
 	# Status
 	return $?
@@ -926,7 +927,7 @@ ShellBot.getMe()
 	json_status $_JSON_ && {
 		# Retorna as informações armazenadas em "result".
 		json $_JSON_ '.result|.id,.username,.first_name,.last_name' | sed ':a;$!N;s/\n/|/;ta'
-	} || message_error $_JSON_ TG
+	} || message_error TG $_JSON_
 
 	return $?
 }
@@ -959,7 +960,7 @@ ShellBot.InlineKeyboardButton()
 				shift 2
 				;;
 			-l|--line)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_LINE_="$2"
 				shift 2
 				;;
@@ -990,10 +991,10 @@ ShellBot.InlineKeyboardButton()
 		esac
 	done
 
-	[[ $_BUTTON_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-b, --button"
-	[[ $_TEXT_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-t, --text"
-	[[ $_CALLBACK_DATA_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --callback_data"
-	[[ $_LINE_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-l, --line"
+	[[ $_BUTTON_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-b, --button"
+	[[ $_TEXT_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-t, --text"
+	[[ $_CALLBACK_DATA_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --callback_data"
+	[[ $_LINE_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-l, --line"
 	
 	# Inicializa a variável armazenada em _BUTTON_, definindo seu
 	# escopo como global, tornando-a visível em todo o projeto (source)
@@ -1051,7 +1052,7 @@ ShellBot.InlineKeyboardMarkup()
 		esac
 	done
 	
-	[[ $_BUTTON_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-b, --button"
+	[[ $_BUTTON_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-b, --button"
 	
 	# Ponteiro
 	declare -n _BUTTON_
@@ -1115,7 +1116,7 @@ ShellBot.answerCallbackQuery()
 				;;
 			-s|--show_alert)
 				# boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_SHOW_ALERT_="$2"
 				shift 2
 				;;
@@ -1125,7 +1126,7 @@ ShellBot.answerCallbackQuery()
 				;;
 			-e|--cache_time)
 				# inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_CACHE_TIME_="$2"
 				shift 2
 				;;
@@ -1136,7 +1137,7 @@ ShellBot.answerCallbackQuery()
 		esac
 	done
 	
-	[[ $_CALLBACK_QUERY_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-c, --callback_query_id"
+	[[ $_CALLBACK_QUERY_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --callback_query_id"
 	
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CALLBACK_QUERY_ID_:+-d callback_query_id="'$_CALLBACK_QUERY_ID_'"} \
 							${_TEXT_:+-d text="'$_TEXT_'"} \
@@ -1144,7 +1145,7 @@ ShellBot.answerCallbackQuery()
 							${_URL_:+-d url="'$_URL_'"} \
 							${_CACHE_TIME_:+-d cache_time="'$_CACHE_TIME_'"} > $_JSON_
 
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 
 	return $?
 }
@@ -1183,19 +1184,19 @@ ShellBot.ReplyKeyboardMarkup()
 				;;
 			-r|--resize_keyboard)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_RESIZE_KEYBOARD_="$2"
 				shift 2
 				;;
 			-t|--one_time_keyboard)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_ON_TIME_KEYBOARD_="$2"
 				shift 2
 				;;
 			-s|--selective)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_SELECTIVE_="$2"
 				shift 2
 				;;
@@ -1207,7 +1208,7 @@ ShellBot.ReplyKeyboardMarkup()
 	done
 	
 	# Imprime mensagem de erro se o parâmetro obrigatório for omitido.
-	[[ $_BUTTON_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "-b, --button"
+	[[ $_BUTTON_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-b, --button"
 
 	# Ponteiro	
 	declare -n _BUTTON_
@@ -1261,25 +1262,25 @@ ShellBot.sendMessage()
 				;;
 			-p|--parse_mode)
 				# Tipo: "markdown" ou "html"
-				[[ "$2" =~ ^(markdown|html)$ ]] || message_error '' API "$_ERR_TYPE_PARSE_MODE_" "$1" "$2"
+				[[ "$2" =~ ^(markdown|html)$ ]] || message_error API "$_ERR_TYPE_PARSE_MODE_" "$1" "$2"
 				_PARSE_MODE_="$2"
 				shift 2
 				;;
 			-w|--disable_web_page_preview)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_WEB_PAGE_PREVIEW_="$2"
 				shift 2
 				;;
 			-n|--disable_notification)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;
 			-r|--reply_to_message_id)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_REPLY_TO_MESSAGE_ID_="$2"
 				shift 2
 				;;
@@ -1295,8 +1296,8 @@ ShellBot.sendMessage()
 	done
 
 	# Parâmetros obrigatórios.
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_TEXT_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-t, --text]"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_TEXT_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-t, --text]"
 
 	# Chama o método da API, utilizando o comando request especificado; Os parâmetros 
 	# e valores são passados no form e lidos pelo método. O retorno do método é redirecionado para o arquivo 'update.json'.
@@ -1310,7 +1311,7 @@ ShellBot.sendMessage()
 						${_REPLY_MARKUP_:+-d reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Testa o retorno do método.
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 	
 	# Status
 	return $?
@@ -1349,13 +1350,13 @@ ShellBot.forwardMessage()
 				;;
 			-n|--disable_notification)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;
 			-m|--message_id)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_MESSAGE_ID_="$2"
 				shift 2
 				;;
@@ -1367,9 +1368,9 @@ ShellBot.forwardMessage()
 	done
 	
 	# Parâmetros obrigatórios.
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_FROM_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-f, --from_chat_id]"
-	[[ $_MESSAGE_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_FROM_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-f, --from_chat_id]"
+	[[ $_MESSAGE_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
 
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
@@ -1378,7 +1379,7 @@ ShellBot.forwardMessage()
 							${_MESSAGE_ID_:+-d message_id="'$_MESSAGE_ID_'"} > $_JSON_
 	
 	# Retorno do método
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 
 	# status
 	return $?
@@ -1424,13 +1425,13 @@ ShellBot.sendPhoto()
 				;;
 			-n|--disable_notification)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;
 			-r|--reply_to_message_id)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_REPLY_TO_MESSAGE_ID_="$2"
 				shift 2
 				;;
@@ -1446,8 +1447,8 @@ ShellBot.sendPhoto()
 	done
 	
 	# Parâmetros obrigatórios
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_PHOTO_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-p, --photo]"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_PHOTO_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-p, --photo]"
 	
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-F chat_id="'$_CHAT_ID_'"} \
@@ -1458,7 +1459,7 @@ ShellBot.sendPhoto()
 							${_REPLY_MARKUP_:+-F reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 	
 	# Retorno do método
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 
 	# Status
 	return $?
@@ -1505,7 +1506,7 @@ ShellBot.sendAudio()
 				;;
 			-d|--duration)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_DURATION_="$2"
 				shift 2
 				;;
@@ -1519,13 +1520,13 @@ ShellBot.sendAudio()
 				;;
 			-n|--disable_notification)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;
 			-r|--reply_to_message_id)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_REPLY_TO_MESSAGE_ID_="$2"
 				shift 2
 				;;
@@ -1541,8 +1542,8 @@ ShellBot.sendAudio()
 	done
 	
 	# Parâmetros obrigatórios
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_AUDIO_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-a, --audio]"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_AUDIO_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-a, --audio]"
 	
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-F chat_id="'$_CHAT_ID_'"} \
@@ -1556,7 +1557,7 @@ ShellBot.sendAudio()
 							${_REPLY_MARKUP_:+-F reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Retorno do método
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 
 	# Status
 	return $?
@@ -1601,12 +1602,12 @@ ShellBot.sendDocument()
 				shift 2
 				;;
 			-n|--disable_notification)
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;
 			-r|--reply_to_message_id)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_REPLY_TO_MESSAGE_ID_="$2"
 				shift 2
 				;;
@@ -1622,8 +1623,8 @@ ShellBot.sendDocument()
 	done
 	
 	# Parâmetros obrigatórios
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_DOCUMENT_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-d, --document]"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_DOCUMENT_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-d, --document]"
 	
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-F chat_id="'$_CHAT_ID_'"} \
@@ -1634,7 +1635,7 @@ ShellBot.sendDocument()
 							${_REPLY_MARKUP_:+-F reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Retorno do método
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 
 	# Status
 	return $?
@@ -1674,13 +1675,13 @@ ShellBot.sendSticker()
 				;;
 			-n|--disable_notification)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;
 			-r|--reply_to_message_id)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_REPLY_TO_MESSAGE_ID_="$2"
 				shift 2
 				;;
@@ -1696,8 +1697,8 @@ ShellBot.sendSticker()
 	done
 	
 	# Parâmetros obrigatórios
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_STICKER_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-s, --sticker]"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_STICKER_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-s, --sticker]"
 
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-F chat_id="'$_CHAT_ID_'"} \
@@ -1707,7 +1708,7 @@ ShellBot.sendSticker()
 							${_REPLY_MARKUP_:+-F reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Testa o retorno do método
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 
 	# Status
 	return $?
@@ -1751,19 +1752,19 @@ ShellBot.sendVideo()
 				;;
 			-d|--duration)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_DURATION_="$2"
 				shift 2
 				;;
 			-w|--width)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_WIDTH_="$2"
 				shift 2
 				;;
 			-h|--height)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_HEIGHT_="$2"
 				shift 2
 				;;
@@ -1773,12 +1774,12 @@ ShellBot.sendVideo()
 				;;
 			-n|--disable_notification)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;
 			-r|--reply_to_message_id)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_REPLY_TO_MESSAGE_ID_="$2"
 				shift 2
 				;;
@@ -1794,8 +1795,8 @@ ShellBot.sendVideo()
 	done
 	
 	# Parâmetros obrigatórios.
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_VIDEO_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-v, --video]"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_VIDEO_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-v, --video]"
 
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-F chat_id="'$_CHAT_ID_'"} \
@@ -1809,7 +1810,7 @@ ShellBot.sendVideo()
 							${_REPLY_MARKUP_:+-F reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Testa o retorno do método
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 
 	# Status
 	return $?
@@ -1856,19 +1857,19 @@ ShellBot.sendVoice()
 				;;
 			-d|--duration)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_DURATION_="$2"
 				shift 2
 				;;
 			-n|--disable_notification)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;
 			-r|--reply_to_message_id)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_REPLY_TO_MESSAGE_ID_="$2"
 				shift 2
 				;;
@@ -1883,8 +1884,8 @@ ShellBot.sendVoice()
 	done
 	
 	# Parâmetros obrigatórios.
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_VOICE_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-v, --voice]"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_VOICE_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-v, --voice]"
 	
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-F chat_id="'$_CHAT_ID_'"} \
@@ -1896,7 +1897,7 @@ ShellBot.sendVoice()
 							${_REPLY_MARKUP_:+-F reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Testa o retorno do método
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 
 	# Status
 	return $?
@@ -1934,25 +1935,25 @@ ShellBot.sendLocation()
 				;;
 			-l|--latitude)
 				# Tipo: float
-				[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_FLOAT_" "$1" "$2"
+				[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error API "$_ERR_TYPE_FLOAT_" "$1" "$2"
 				_LATITUDE_="$2"
 				shift 2
 				;;
 			-g|--longitude)
 				# Tipo: float
-				[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_FLOAT_" "$1" "$2"
+				[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error API "$_ERR_TYPE_FLOAT_" "$1" "$2"
 				_LONGITUDE_="$2"
 				shift 2
 				;;
 			-n|--disable_notification)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;
 			-r|--reply_to_message_id)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_REPLY_TO_MESSAGE_ID_="$2"
 				shift 2
 				;;
@@ -1967,9 +1968,9 @@ ShellBot.sendLocation()
 	done
 	
 	# Parâmetros obrigatórios
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_LATITUDE_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-l, --latitude]"
-	[[ $_LONGITUDE_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-g, --longitude]"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_LATITUDE_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-l, --latitude]"
+	[[ $_LONGITUDE_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-g, --longitude]"
 			
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-F chat_id="'$_CHAT_ID_'"} \
@@ -1980,7 +1981,7 @@ ShellBot.sendLocation()
 							${_REPLY_MARKUP_:+-F reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Testa o retorno do método
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 
 	return $?
 	
@@ -2019,13 +2020,13 @@ ShellBot.sendVenue()
 				;;
 			-l|--latitude)
 				# Tipo: float
-				[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_FLOAT_" "$1" "$2"
+				[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error API "$_ERR_TYPE_FLOAT_" "$1" "$2"
 				_LATITUDE_="$2"
 				shift 2
 				;;
 			-g|--longitude)
 				# Tipo: float
-				[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_FLOAT_" "$1" "$2"
+				[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error API "$_ERR_TYPE_FLOAT_" "$1" "$2"
 				_LONGITUDE_="$2"
 				shift 2
 				;;
@@ -2043,13 +2044,13 @@ ShellBot.sendVenue()
 				;;
 			-n|--disable_notification)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;
 			-r|--reply_to_message_id)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_REPLY_TO_MESSAGE_ID_="$2"
 				shift 2
 				;;
@@ -2064,11 +2065,11 @@ ShellBot.sendVenue()
 	done
 			
 	# Parâmetros obrigatórios.
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_LATITUDE_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-l, --latitude]"
-	[[ $_LONGITUDE_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-g, --longitude]"
-	[[ $_TITLE_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-i, --title]"
-	[[ $_ADDRESS_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-a, --address]"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_LATITUDE_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-l, --latitude]"
+	[[ $_LONGITUDE_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-g, --longitude]"
+	[[ $_TITLE_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-i, --title]"
+	[[ $_ADDRESS_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-a, --address]"
 	
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-F chat_id="'$_CHAT_ID_'"} \
@@ -2082,7 +2083,7 @@ ShellBot.sendVenue()
 							${_REPLY_MARKUP_:+-F reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Testa o retorno do método
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 
 	# Status
 	return $?
@@ -2132,13 +2133,13 @@ ShellBot.sendContact()
 				;;
 			-n|--disable_notification)
 				# Tipo: boolean
-				[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 				_DISABLE_NOTIFICATION_="$2"
 				shift 2
 				;;
 			-r|--reply_to_message_id)
 				# Tipo: inteiro
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_REPLY_TO_MESSAGE_ID_="$2"
 				shift 2
 				;;
@@ -2153,9 +2154,9 @@ ShellBot.sendContact()
 	done
 	
 	# Parâmetros obrigatórios.	
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_PHONE_NUMBER_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-p, --phone_number]"
-	[[ $_FIRST_NAME_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-f, --first_name]"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_PHONE_NUMBER_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-p, --phone_number]"
+	[[ $_FIRST_NAME_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-f, --first_name]"
 	
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-F chat_id="'$_CHAT_ID_'"} \
@@ -2167,7 +2168,7 @@ ShellBot.sendContact()
 							${_REPLY_MARKUP_:+-F reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Testa o retorno do método
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 
 	# Status
 	return $?
@@ -2202,7 +2203,7 @@ ShellBot.sendChatAction()
 							record_audio|upload_audio|upload_document|
 							find_location|record_video_note|upload_video_note)$ ]] || \
 							# erro
-							message_error '' API "$_ERR_ACTION_MODE_" "$1" "$2"
+							message_error API "$_ERR_ACTION_MODE_" "$1" "$2"
 				_ACTION_="$2"
 				shift 2
 				;;
@@ -2213,15 +2214,15 @@ ShellBot.sendChatAction()
 	done
 
 	# Parâmetros obrigatórios.		
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_ACTION_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-a, --action]"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_ACTION_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-a, --action]"
 	
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
 													${_ACTION_:+-d action="'$_ACTION_'"} > $_JSON_
 	
 	# Testa o retorno do método
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 
 	# Status
 	return $?
@@ -2250,17 +2251,17 @@ ShellBot.getUserProfilePhotos()
 	do
 		case $1 in
 			-u|--user_id)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_USER_ID_="$2"
 				shift 2
 				;;
 			-o|--offset)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_OFFSET_="$2"
 				shift 2
 				;;
 			-l|--limit)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_LIMIT_="$2"
 				shift 2
 				;;
@@ -2272,7 +2273,7 @@ ShellBot.getUserProfilePhotos()
 	done
 	
 	# Parâmetros obrigatórios.
-	[[ $_USER_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
+	[[ $_USER_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
 	
 	# Chama o método
 	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ ${_USER_ID_:+-d user_id="'$_USER_ID_'"} \
@@ -2295,7 +2296,7 @@ ShellBot.getUserProfilePhotos()
 			done
 		fi	
 
-	} || message_error $_JSON_ TG
+	} || message_error TG $_JSON_
 
 	# Status
 	return $?
@@ -2333,7 +2334,7 @@ ShellBot.getFile()
 	done
 	
 	# Parâmetros obrigatórios.
-	[[ $_FILE_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-f, --file_id]"
+	[[ $_FILE_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-f, --file_id]"
 	
 	# Chama o método.
 	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ ${_FILE_ID_:+-d file_id="'$_FILE_ID_'"} > $_JSON_
@@ -2342,7 +2343,7 @@ ShellBot.getFile()
 	json_status $_JSON_ && {
 		# Extrai as informações, agrupando-as em uma única linha e insere o delimitador '|' PIPE entre os campos.
 		json $_JSON_ '.result|.file_id, .file_size, .file_path' | sed ':a;$!N;s/\n/|/;ta'
-	} || message_error $_JSON_ TG
+	} || message_error TG $_JSON_
 
 	# Status
 	return $?
@@ -2375,12 +2376,12 @@ ShellBot.kickChatMember()
 				shift 2
 				;;
 			-u|--user_id)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_USER_ID_="$2"
 				shift 2
 				;;
 			-d|--until_date)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_UNTIL_DATE_="$2"
 				shift 2
 				;;
@@ -2392,8 +2393,8 @@ ShellBot.kickChatMember()
 	done
 	
 	# Parametros obrigatórios.
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_USER_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_USER_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
 	
 	# Chama o método
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
@@ -2401,7 +2402,7 @@ ShellBot.kickChatMember()
 												${_UNTIL_DATE_:+-d until_date="'$_UNTIL_DATE_'"} > $_JSON_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 
 	# Status
 	return $?
@@ -2438,12 +2439,12 @@ ShellBot.leaveChat()
 		esac
 	done
 
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
 	
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} > $_JSON_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 
 	return $?
 	
@@ -2473,7 +2474,7 @@ ShellBot.unbanChatMember()
 				shift 2
 				;;
 			-u|--user_id)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_USER_ID_="$2"
 				shift 2
 				;;
@@ -2484,14 +2485,14 @@ ShellBot.unbanChatMember()
 		esac
 	done
 	
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_USER_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_USER_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
 	
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
 												${_USER_ID_:+-d user_id="'$_USER_ID_'"} > $_JSON_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 
 	return $?
 }
@@ -2526,7 +2527,7 @@ ShellBot.getChat()
 		esac
 	done
 
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
 	
 	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} > $_JSON_
 
@@ -2546,7 +2547,7 @@ ShellBot.getChat()
 						.description,
 						.invite_link' | sed ':a;$!N;s/\n/|/;ta'
 
-	} || message_error $_JSON_ TG
+	} || message_error TG $_JSON_
 
 	# Status
 	return $?
@@ -2581,7 +2582,7 @@ ShellBot.getChatAdministrators()
 		esac
 	done
 
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
 	
 	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} > $_JSON_
 
@@ -2619,7 +2620,7 @@ ShellBot.getChatAdministrators()
 			done
 		fi
 
-	} || message_error $_JSON_ TG
+	} || message_error TG $_JSON_
 
 	# Status	
 	return $?
@@ -2654,12 +2655,12 @@ ShellBot.getChatMembersCount()
 		esac
 	done
 
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
 	
 	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} > $_JSON_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status $_JSON_ && json $_JSON_ '.result' || message_error $_JSON_ TG
+	json_status $_JSON_ && json $_JSON_ '.result' || message_error TG $_JSON_
 
 	return $?
 }
@@ -2689,7 +2690,7 @@ ShellBot.getChatMember()
 				shift 2
 				;;
 			-u|--user_id)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_USER_ID_="$2"
 				shift 2
 				;;
@@ -2700,8 +2701,8 @@ ShellBot.getChatMember()
 		esac
 	done
 	
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_USER_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_USER_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
 	
 	eval $_GET_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
 												${_USER_ID_:+-d user_id="'$_USER_ID_'"} > $_JSON_
@@ -2729,7 +2730,7 @@ ShellBot.getChatMember()
 							.can_send_other_messages,
 							.can_add_web_page_previews" | sed ':a;$!N;s/\n/|/;ta'
 
-	} || message_error $_JSON_ TG
+	} || message_error TG $_JSON_
 
 	return $?
 }
@@ -2760,12 +2761,12 @@ ShellBot.editMessageText()
 					shift 2
 					;;
 				-m|--message_id)
-					[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 					_MESSAGE_ID_="$2"
 					shift 2
 					;;
 				-i|--inline_message_id)
-					[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 					_INLINE_MESSAGE_ID_="$2"
 					shift 2
 					;;
@@ -2774,12 +2775,12 @@ ShellBot.editMessageText()
 					shift 2
 					;;
 				-p|--parse_mode)
-					[[ "$2" =~ ^(markdown|html)$ ]] || message_error '' API "$_ERR_TYPE_PARSE_MODE_" "$1" "$2"
+					[[ "$2" =~ ^(markdown|html)$ ]] || message_error API "$_ERR_TYPE_PARSE_MODE_" "$1" "$2"
 					_PARSE_MODE_="$2"
 					shift 2
 					;;
 				-w|--disable_web_page_preview)
-					[[ "$2" =~ ^(true|false)$ ]] || message_error '' API "$_ERR_TYPE_BOOL_" "$1" "$2"
+					[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
 					_DISABLE_WEB_PAGE_PREVIEW_="$2"
 					shift 2
 					;;
@@ -2794,15 +2795,15 @@ ShellBot.editMessageText()
 	done
 	
 	[[ ! $_CHAT_ID_ && ! $_MESSAGE_ID_ ]] && {
-		[[ $_INLINE_MESSAGE_ID ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-i, --inline_message_id]"
+		[[ $_INLINE_MESSAGE_ID ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-i, --inline_message_id]"
 		unset _CHAT_ID_ _MESSAGE_ID_
 	} || {
-		[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-		[[ $_MESSAGE_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
+		[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+		[[ $_MESSAGE_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
 		unset _INLINE_MESSAGE_ID_
 	} 
 	
-	[[ $_TEXT_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-t, --text]"
+	[[ $_TEXT_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-t, --text]"
 
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
 											${_MESSAGE_ID_:+-d message_id="'$_MESSAGE_ID_'"} \
@@ -2813,7 +2814,7 @@ ShellBot.editMessageText()
 											${_REPLY_MARKUP_:+-d reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 	
 	return $?
 	
@@ -2843,12 +2844,12 @@ ShellBot.editMessageCaption()
 					shift 2
 					;;
 				-m|--message_id)
-					[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 					_MESSAGE_ID_="$2"
 					shift 2
 					;;
 				-i|--inline_message_id)
-					[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 					_INLINE_MESSAGE_ID_="$2"
 					shift 2
 					;;
@@ -2866,8 +2867,8 @@ ShellBot.editMessageCaption()
 			esac
 	done
 				
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_MESSAGE_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_MESSAGE_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
 	
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
 													${_MESSAGE_ID_:+-d message_id="'$_MESSAGE_ID_'"} \
@@ -2876,7 +2877,7 @@ ShellBot.editMessageCaption()
 													${_REPLY_MARKUP_:+-d reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 	
 	return $?
 	
@@ -2905,12 +2906,12 @@ ShellBot.editMessageReplyMarkup()
 					shift 2
 					;;
 				-m|--message_id)
-					[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 					_MESSAGE_ID_="$2"
 					shift 2
 					;;
 				-i|--inline_message_id)
-					[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 					_INLINE_MESSAGE_ID_="$2"
 					shift 2
 					;;
@@ -2925,11 +2926,11 @@ ShellBot.editMessageReplyMarkup()
 	done
 
 	[[ ! $_CHAT_ID_ && ! $_MESSAGE_ID_ ]] && {
-		[[ $_INLINE_MESSAGE_ID ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-i, --inline_message_id]"
+		[[ $_INLINE_MESSAGE_ID ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-i, --inline_message_id]"
 		unset _CHAT_ID_ _MESSAGE_ID_
 	} || {
-		[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-		[[ $_MESSAGE_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
+		[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+		[[ $_MESSAGE_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
 		unset _INLINE_MESSAGE_ID_
 	} 
 	
@@ -2939,7 +2940,7 @@ ShellBot.editMessageReplyMarkup()
 													${_REPLY_MARKUP_:+-d reply_markup="'$_REPLY_MARKUP_'"} > $_JSON_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 	
 	return $?
 	
@@ -2966,7 +2967,7 @@ ShellBot.deleteMessage()
 					shift 2
 					;;
 				-m|--message_id)
-					[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 					_MESSAGE_ID_="$2"
 					shift 2
 					;;
@@ -2976,14 +2977,14 @@ ShellBot.deleteMessage()
 			esac
 	done
 	
-	[[ $_CHAT_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-	[[ $_MESSAGE_ID_ ]] || message_error '' API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
+	[[ $_CHAT_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+	[[ $_MESSAGE_ID_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
 
 	eval $_POST_ $_API_TELEGRAM_/$_METHOD_ ${_CHAT_ID_:+-d chat_id="'$_CHAT_ID_'"} \
 													${_MESSAGE_ID_:+-d message_id="'$_MESSAGE_ID_'"}  > $_JSON_
 
 	# Verifica se ocorreu erros durante a chamada do método	
-	json_status $_JSON_ || message_error $_JSON_ TG
+	json_status $_JSON_ || message_error TG $_JSON_
 	
 	return $?
 
@@ -3013,17 +3014,17 @@ ShellBot.getUpdates()
 	do
 		case $1 in
 			-o|--offset)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_OFFSET_="$2"
 				shift 2
 				;;
 			-l|--limit)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_LIMIT_="$2"
 				shift 2
 				;;
 			-t|--timeout)
-				[[ "$2" =~ ^[0-9]+$ ]] || message_error '' API "$_ERR_TYPE_INT_" "$1" "$2"
+				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
 				_TIMEOUT_="$2"
 				shift 2
 				;;
@@ -3116,7 +3117,7 @@ ShellBot.getUpdates()
 		exec 2<&5
 	fi
 
-	} || message_error $_JSON_ TG
+	} || message_error TG $_JSON_
 
 	# Status
 	return $?
