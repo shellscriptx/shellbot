@@ -15,6 +15,7 @@
 #						As funções instanciadas requerem parâmetros e argumentos para a chamada
 #						do respectivo método.
 #-----------------------------------------------------------------------------------------------------------
+#
 
 # Verifica se a API já foi instanciada.
 [[ $_SHELLBOT_SH_ ]] && return 1
