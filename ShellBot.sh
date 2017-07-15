@@ -3091,8 +3091,8 @@ _EOF
     			message_error \
     			getFileJQ \
     			getObjVal \
-   				ShellBot.token \
-   				ShellBot.id \
+				ShellBot.token \
+				ShellBot.id \
 				ShellBot.username \
 				ShellBot.first_name \
     			ShellBot.regHandleFunction \
