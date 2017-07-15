@@ -189,24 +189,24 @@ ShellBot.init()
     # SHELLBOT (FUNÇÕES)
 	# Inicializa as funções para chamadas aos métodos da API do telegram.
 	ShellBot.ListUpdates(){ echo ${!update_id[@]}; }
-    ShellBot.TotalUpdates(){ echo ${#update_id[@]}; }
-    ShellBot.OffsetEnd(){ local -i offset=${update_id[@]: -1}; echo $offset; }
-    ShellBot.OffsetNext(){ echo $(($(ShellBot.OffsetEnd)+1)); }
+	ShellBot.TotalUpdates(){ echo ${#update_id[@]}; }
+	ShellBot.OffsetEnd(){ local -i offset=${update_id[@]: -1}; echo $offset; }
+	ShellBot.OffsetNext(){ echo $(($(ShellBot.OffsetEnd)+1)); }
    	
-   	ShellBot.token() { echo "${_TOKEN_}"; }
-   	ShellBot.id() { echo "${_BOT_INFO_[0]}"; }
-   	ShellBot.first_name() { echo "${_BOT_INFO_[1]}"; }
-   	ShellBot.username() { echo "${_BOT_INFO_[2]}"; }
+	ShellBot.token() { echo "${_TOKEN_}"; }
+	ShellBot.id() { echo "${_BOT_INFO_[0]}"; }
+	ShellBot.first_name() { echo "${_BOT_INFO_[1]}"; }
+	ShellBot.username() { echo "${_BOT_INFO_[2]}"; }
     
     ShellBot.regHandleFunction()
     {
     	local function callback_data handle args
     
     	local param=$(getopt --quiet --options 'f:a:d:' \
-    									--longoptions 'function:,
-    													args:,
-    													callback_data:' \
-    													-- "$@")
+										--longoptions 'function:,
+														args:,
+														callback_data:' \
+														-- "$@")
     
     	eval set -- "$param"
     		
