@@ -45,7 +45,7 @@ Realizando o download do projeto.
 $ git clone https://github.com/shellscriptx/ShellBot.git && cd ShellBot
 ```
 
-Copie o arquivo **ShellBot.sh** para a pasta de projeto do seu bot.
+Copie o arquivo **ShellBot.sh** para a pasta do projeto do bot.
 
 Exemplo:
 
@@ -55,4 +55,4 @@ $ cp ShellBot.sh /projeto/meu_bot/
 
 ## Documentação
 
-Para mais informações sobre o **ShellBot**, consulte a documentação do projeto na página [wiki](https://github.com/shellscriptx/ShellBot/wiki).
+Para mais informações consulte a documentação do projeto na página [wiki](https://github.com/shellscriptx/ShellBot/wiki).
