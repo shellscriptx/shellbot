@@ -3086,66 +3086,69 @@ _EOF
     	return $?
     }
     
-    # Funções somente leitura
-    declare -rf json_status \
-    			message_error \
-    			getFileJQ \
-    			getObjVal \
-				ShellBot.token \
+	# somente leitura
+	declare -rf ShellBot.token \
 				ShellBot.id \
 				ShellBot.username \
 				ShellBot.first_name \
-    			ShellBot.regHandleFunction \
-    			ShellBot.watchHandle \
-    			ShellBot.ListUpdates \
-    			ShellBot.TotalUpdates \
-    			ShellBot.OffsetEnd \
-    			ShellBot.OffsetNext \
-    			ShellBot.getMe \
-    			ShellBot.getWebhookInfo \
-    			ShellBot.deleteWebhook \
-    			ShellBot.setWebhook \
-    			ShellBot.init \
-    			ShellBot.ReplyKeyboardMarkup \
-    			ShellBot.sendMessage \
-    			ShellBot.forwardMessage \
-    			ShellBot.sendPhoto \
-    			ShellBot.sendAudio \
-    			ShellBot.sendDocument \
-    			ShellBot.sendSticker \
-    			ShellBot.sendVideo \
-    			ShellBot.sendVideoNote \
-    			ShellBot.sendVoice \
-    			ShellBot.sendLocation \
-    			ShellBot.sendVenue \
-    			ShellBot.sendContact \
-    			ShellBot.sendChatAction \
-    			ShellBot.getUserProfilePhotos \
-    			ShellBot.getFile \
-    			ShellBot.kickChatMember \
-    			ShellBot.leaveChat \
-    			ShellBot.unbanChatMember \
-    			ShellBot.getChat \
-    			ShellBot.getChatAdministrators \
-    			ShellBot.getChatMembersCount \
-    			ShellBot.getChatMember \
-    			ShellBot.editMessageText \
-    			ShellBot.editMessageCaption \
-    			ShellBot.editMessageReplyMarkup \
-    			ShellBot.InlineKeyboardMarkup \
-    			ShellBot.InlineKeyboardButton \
-    			ShellBot.answerCallbackQuery \
-    			ShellBot.deleteMessage \
-    			ShellBot.exportChatInviteLink \
-    			ShellBot.setChatPhoto \
-    			ShellBot.deleteChatPhoto \
-    			ShellBot.setChatTitle \
-    			ShellBot.setChatDescription \
-    			ShellBot.pinChatMessage \
-    			ShellBot.unpinChatMessage \
-    			ShellBot.promoteChatMember \
-    			ShellBot.restrictChatMember \
-    			ShellBot.getUpdates
+				ShellBot.regHandleFunction \
+				ShellBot.watchHandle \
+				ShellBot.ListUpdates \
+				ShellBot.TotalUpdates \
+				ShellBot.OffsetEnd \
+				ShellBot.OffsetNext \
+				ShellBot.getMe \
+				ShellBot.getWebhookInfo \
+				ShellBot.deleteWebhook \
+				ShellBot.setWebhook \
+				ShellBot.init \
+				ShellBot.ReplyKeyboardMarkup \
+				ShellBot.sendMessage \
+				ShellBot.forwardMessage \
+				ShellBot.sendPhoto \
+				ShellBot.sendAudio \
+				ShellBot.sendDocument \
+				ShellBot.sendSticker \
+				ShellBot.sendVideo \
+				ShellBot.sendVideoNote \
+				ShellBot.sendVoice \
+				ShellBot.sendLocation \
+				ShellBot.sendVenue \
+				ShellBot.sendContact \
+				ShellBot.sendChatAction \
+				ShellBot.getUserProfilePhotos \
+				ShellBot.getFile \
+				ShellBot.kickChatMember \
+				ShellBot.leaveChat \
+				ShellBot.unbanChatMember \
+				ShellBot.getChat \
+				ShellBot.getChatAdministrators \
+				ShellBot.getChatMembersCount \
+				ShellBot.getChatMember \
+				ShellBot.editMessageText \
+				ShellBot.editMessageCaption \
+				ShellBot.editMessageReplyMarkup \
+				ShellBot.InlineKeyboardMarkup \
+				ShellBot.InlineKeyboardButton \
+				ShellBot.answerCallbackQuery \
+				ShellBot.deleteMessage \
+				ShellBot.exportChatInviteLink \
+				ShellBot.setChatPhoto \
+				ShellBot.deleteChatPhoto \
+				ShellBot.setChatTitle \
+				ShellBot.setChatDescription \
+				ShellBot.pinChatMessage \
+				ShellBot.unpinChatMessage \
+				ShellBot.promoteChatMember \
+				ShellBot.restrictChatMember \
+				ShellBot.getUpdates
    	# status
    	return 0
 }
+
+declare -rf message_error \
+            json \
+            json_status \
+            getFileJQ \
+            getObjVal
+# FIM
