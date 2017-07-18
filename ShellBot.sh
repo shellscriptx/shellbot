@@ -3055,7 +3055,6 @@ _EOF
     									
 										# Atribui o valor de 'var_name', se a mesma não foi inicializada.
     									byref[$index]="$(json $jq_file "$obj_cur")"
-										declare +n byref
     								
     									# Exibe a inicialização dos objetos da mensagem.	
     									[[ $_BOT_MONITOR_ ]] && {
@@ -3063,7 +3062,11 @@ _EOF
     											sed ':a;N;s/\n/ /;ta')'${_C_WHITE_}"
     									}
     								}
-    							
+									
+									# remove ponteiro
+									declare +n byref
+    								unset byref
+	
     								# Anexa a variável a lista caso não exista.
     								if ! echo "$_var_init_list_" | grep -qw "$var_name"; then
     									declare -g _var_init_list_+="$var_name "; fi
