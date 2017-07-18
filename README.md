@@ -33,7 +33,7 @@ A **Najane Lopes (Jane)** por escolher o nome da **API** e batizá-la de **Shell
 |---------|--------------|
 |bash |Interpretador de comandos Bourne-Again Shell|
 |jq|Processador de comandos JSON|
-|curl|Ferramenta para transferir dados de url|
+|curl|Ferramenta para transferir dados de ou para um servidor.|
 
 > Certifique-se que todos os pacotes estão instalados.
 
