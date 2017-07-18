@@ -3047,13 +3047,15 @@ _EOF
     								var_name=${var_name//[]/}
     								var_name=${var_name//./_}
     								
-    								# Cria um ponteiro que aponta para o índice do elemento da variável armazenada em 'var_name'.
-    								declare -n byref=$var_name[$index]	
+    								# Cria um ponteiro que aponta para a variável armazenada em 'var_name'.
+									declare -g $var_name
+    								declare -n byref=$var_name
     								
-    								[[ $byref ]] || {
+    								[[ ${byref[$index]} ]] || {
     									
 										# Atribui o valor de 'var_name', se a mesma não foi inicializada.
-    									eval $var_name[$index]="'$(json $jq_file "$obj_cur")'"
+    									byref[$index]="$(json $jq_file "$obj_cur")"
+										declare +n byref
     								
     									# Exibe a inicialização dos objetos da mensagem.	
     									[[ $_BOT_MONITOR_ ]] && {
