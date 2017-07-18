@@ -3057,7 +3057,7 @@ _EOF
     								
     									# Exibe a inicialização dos objetos.
     									[[ $_BOT_MONITOR_ ]] && {
-											echo -e "${_C_GREEN_}$var_name${_C_WHITE_} = ${_C_YELLOW_}'${byref[$index]}'${C_WHITE_}" | \
+											echo -e "${_C_GREEN_}$var_name${_C_WHITE_} = ${_C_YELLOW_}'${byref[$index]}'${_C_DEF_}" | \
 											sed ':a;N;s/\n/ /;ta'
     									}
     								}
