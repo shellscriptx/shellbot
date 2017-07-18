@@ -3008,7 +3008,7 @@ _EOF
     	
     			for index in $(seq 0 $((total_keys-1)))
     			do
-    				# Imprime a thread do processo.
+    				# Imprime a mensagem em fila
     				[[ $_BOT_MONITOR_ ]] && {
     					echo -e "${_C_WHITE_}-----------------------------------------------"
     					echo -e "${_C_CYAN_}Mensagem: ${_C_YELLOW_}$(($index + 1))"
@@ -3016,9 +3016,8 @@ _EOF
     				}
     
     				# Insere o primeiro elemento da consulta.	
-    				update=".result[$index]"
     				unset key_list
-    				key_list[0]=$update
+    				key_list[0]=".result[$index]"
     					
     				# Lê todas as chaves do arquivo json $jq_file recursivamente enquanto houver objetos.
     				while [[ ${key_list[@]} ]]
@@ -3056,16 +3055,16 @@ _EOF
 										# Atribui o valor de 'var_name', se a mesma não foi inicializada.
     									byref[$index]="$(json $jq_file "$obj_cur")"
     								
-    									# Exibe a inicialização dos objetos da mensagem.	
+    									# Exibe a inicialização dos objetos.
     									[[ $_BOT_MONITOR_ ]] && {
-    											echo -e "${_C_GREEN_}$var_name${_C_WHITE_} = ${_C_YELLOW_}'$(json $jq_file "$obj_cur" | \
-    											sed ':a;N;s/\n/ /;ta')'${_C_WHITE_}"
+    											echo -e "${_C_GREEN_}$var_name${_C_WHITE_} = ${_C_YELLOW_}'${byref[$index]}'${C_WHITE_}" | \
+    											sed ':a;N;s/\n/ /;ta'
     									}
     								}
 									
-									# remove ponteiro
+									# Remove ponteiro
 									declare +n byref
-    								unset byref
+									unset byref
 	
     								# Anexa a variável a lista caso não exista.
     								if ! echo "$_var_init_list_" | grep -qw "$var_name"; then
