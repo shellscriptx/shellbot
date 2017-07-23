@@ -1865,6 +1865,220 @@ _EOF
     	return $?
 				
 	}
+	
+	ShellBot.StickerMaskPosition()
+	{
+
+		local point x_shift y_shift scale zoom
+		
+		local param=$(getopt --quiet --options 'p:x:y:s:z:' \
+										--longoptions 'point:,
+														x_shift:,
+														y_shift:,
+														scale:,
+														zoom:' \
+										-- "$@")
+
+		eval set -- "$param"
+		
+		while :
+		do
+			case $1 in
+				-p|--point)
+					point="$2"
+					shift 2
+					;;
+				-x|--x_shift)
+					[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error API "$_ERR_TYPE_FLOAT_" "$1" "$2"
+					x_shift="$2"
+					shift 2
+					;;
+				-y|--y_shift)
+					[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error API "$_ERR_TYPE_FLOAT_" "$1" "$2"
+					y_shift="$2"
+					shift 2
+					;;
+				-s|--scale)
+					[[ "$2" =~ ^[0-9]+\.[0-9]+$ ]] || message_error API "$_ERR_TYPE_FLOAT_" "$1" "$2"
+					scale="$2"
+					shift 2
+					;;
+				-z|--zoom)
+					[[ "$2" =~ ^[0-9]+\.[0-9]+$ ]] || message_error API "$_ERR_TYPE_FLOAT_" "$1" "$2"
+					zoom="$2"
+					shift 2
+					;;
+				--)
+					shift
+					break
+					;;
+			esac
+		done
+		
+		[[ $point ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-p, --point]"
+		[[ $x_shift ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-x, --x_shift]"
+		[[ $y_shift ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-y, --y_shift]"
+		[[ $scale ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-s, --scale]"
+		[[ $zoom ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-z, --zoom]"
+		
+		cat << _EOF
+{
+"point": "$point",
+"x_shift": $x_shift,
+"y_shift": $y_shift,
+"scale": $scale,
+"zoom": $zoom
+}
+_EOF
+
+	return 0
+
+	}
+
+	ShellBot.createNewStickerSet()
+	{
+		local user_id name title png_sticker emojis contains_masks mask_position
+    	local jq_file=$(getFileJQ $FUNCNAME)
+		
+		local param=$(getopt --quiet --options 'u:n:t:s:e:c:m:' \
+										--longoptions 'user_id:,
+														name:,
+														title:,
+														png_sticker:,
+														emojis:,
+														contains_mask:,
+														mask_position:' \
+										-- "$@")
+
+		eval set -- "$param"
+		
+		while :
+		do
+			case $1 in
+				-u|--user_id)
+					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+					user_id="$2"
+					shift 2
+					;;
+				-n|--name)
+					name="$2"
+					shift 2
+					;;
+				-t|--title)
+					title="$2"
+					shift 2
+					;;
+				-s|--png_sticker)
+					png_sticker="$2"
+					shift 2
+					;;
+				-e|--emojis)
+					emojis="$2"
+					shift 2
+					;;
+				-c|--contains_masks)
+    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+					contains_masks="$2"
+					shift 2
+					;;
+				-m|--mask_position)
+					mask_position="$2"
+					shift 2
+					;;
+				--)
+					shift
+					break
+					;;
+			esac
+		done
+		
+		[[ $user_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
+		[[ $name ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-n, --name]"
+		[[ $title ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-t, --title]"
+		[[ $png_sticker ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-s, --png_sticker]"
+		[[ $emojis ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-e, --emojis]"
+	
+		eval $_POST_ $_API_TELEGRAM_ ${user_id:+-F user_id="'$user_id'"} \
+									 ${name:+-F name="'$name'"} \
+									 ${title:+-F title="'$title'"} \
+									 ${png_sticker:+-F png_sticker="'$png_sticker'"} \
+									 ${emojis:+-F emojis="'$emojis'"} \
+									 ${contains_masks:+-F contains_masks="'$contains_masks'"} \
+									 ${mask_position:+-F mask_position="'$mask_position'"} > $jq_file
+    	
+		# Testa o retorno do método
+    	json_status $jq_file || message_error TG $jq_file
+    	
+		# Status
+    	return $?
+			
+	}
+	
+	
+	ShellBot.addStickerToSet()
+	{
+		local user_id name png_sticker emojis mask_position
+    	local jq_file=$(getFileJQ $FUNCNAME)
+		
+		local param=$(getopt --quiet --options 'u:n:s:e:m:' \
+										--longoptions 'user_id:,
+														name:,
+														png_sticker:,
+														emojis:,
+														mask_position:' \
+										-- "$@")
+
+		eval set -- "$param"
+		
+		while :
+		do
+			case $1 in
+				-u|--user_id)
+					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+					user_id="$2"
+					shift 2
+					;;
+				-n|--name)
+					name="$2"
+					shift 2
+					;;
+				-s|--png_sticker)
+					png_sticker="$2"
+					shift 2
+					;;
+				-e|--emojis)
+					emojis="$2"
+					shift 2
+					;;
+				-m|--mask_position)
+					mask_position="$2"
+					shift 2
+					;;
+				--)
+					shift
+					break
+					;;
+			esac
+		done
+		
+		[[ $user_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
+		[[ $name ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-n, --name]"
+		[[ $png_sticker ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-s, --png_sticker]"
+		[[ $emojis ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-e, --emojis]"
+	
+		eval $_POST_ $_API_TELEGRAM_ ${user_id:+-F user_id="'$user_id'"} \
+									 ${name:+-F name="'$name'"} \
+									 ${png_sticker:+-F png_sticker="'$png_sticker'"} \
+									 ${emojis:+-F emojis="'$emojis'"} \
+									 ${mask_position:+-F mask_position="'$mask_position'"} > $jq_file
+    	
+		# Testa o retorno do método
+    	json_status $jq_file || message_error TG $jq_file
+    	
+		# Status
+    	return $?
+			
+	}
 
     # Função para enviar arquivos de vídeo.
     ShellBot.sendVideo()
@@ -3311,6 +3525,8 @@ _EOF
 				ShellBot.restrictChatMember \
 				ShellBot.getStickerSet \
 				ShellBot.uploadStickerFile \
+				ShellBot.createNewStickerSet \
+				ShellBot.addStickerToSet \
 				ShellBot.setStickerPositionInSet \
 				ShellBot.deleteStickerFromSet \
 				ShellBot.getUpdates
