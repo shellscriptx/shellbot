@@ -80,7 +80,7 @@ getObjVal(){ sed -nr '/\s*"[a-z_]+":\s+(\[|\{)/!{s/,$//;s/^.*:\s+"?(.*[^",])*"?/
 message_error()
 {
 	# Variáveis locais
-	local err_message err_code err_description assert jq_file err_line err_func
+	local err_message err_param assert jq_file err_line err_func
 	
 	# A variável 'BASH_LINENO' é dinâmica e armazena o número da linha onde foi expandida.
 	# Quando chamada dentro de um subshell, passa ser instanciada como um array, armazenando diversos
@@ -96,21 +96,22 @@ message_error()
 		TG)
 			# arquivo json
 			jq_file=${*: -1}
-			
-			err_code=$(json $jq_file '.error_code')
-			err_description=$(json $jq_file '.description')
-			err_message="${err_code:-1}: ${err_description:-ocorreu um problema durante a tentativa de atualização.}"
+			err_param=$(json $jq_file '.error_code')
+			err_message=$(json $jq_file '.description')
 			;;
 		API)
-			# Insere um '-', caso o valor de '_ERR_PARAM_' e '_ERR_ARG_VALUE_' for nulo; Se não houver
-			# mensagem de erro, imprime 'Erro desconhecido'
-			err_message="${3:--}: ${4:--}: ${2:-erro desconhecido}"
+			err_param="${3:--}: ${4:--}"
+			err_message="$2"
 			assert=1
 			;;
 	esac
 
 	# Imprime mensagem de erro
-	echo -e "${_C_RED_}${_BOT_SCRIPT_}: erro: linha ${err_line:--}: ${err_func:--}: ${err_message}${_C_DEF_}" 1>&2
+	printf "${_C_RED_}%s: erro: linha %d: %s: %s: %s\n${_C_DEF_}" "${_BOT_SCRIPT_}" \
+																	"${err_line:--}" \
+																	"${err_func:--}" \
+																	"${err_param:--}" \
+																	"${err_message:-erro desconhecido}"
 
 	# Finaliza script/thread em caso de erro interno, caso contrário retorna 1
 	[[ $assert ]] && exit 1 || return 1
