@@ -65,7 +65,7 @@ declare -r _ERR_ACTION_MODE_='tipo da ação inválida.'
 declare -r _ERR_PARAM_INVALID_='parâmetro inválido.'
 declare -r _ERR_PARAM_REQUIRED_='parâmetro/argumento requerido.'
 declare -r _ERR_TOKEN_='não autorizado. Verifique o número do token ou se possui privilégios.'
-declare -r _ERR_INVALID_TOKEN_='número do _TOKEN_ inválido.'
+declare -r _ERR_INVALID_TOKEN_='número do TOKEN inválido.'
 declare -r _ERR_FUNCTION_NOT_FOUND_='nome da função inválida ou não existe.'
 declare -r _ERR_BOT_ALREADY_INIT_='o bot já foi inicializado.'
 
@@ -111,7 +111,7 @@ message_error()
 																	"${err_line:--}" \
 																	"${err_func:--}" \
 																	"${err_param:--}" \
-																	"${err_message:-erro desconhecido}"
+																	"${err_message:-erro desconhecido.}" 1>&2
 
 	# Finaliza script/thread em caso de erro interno, caso contrário retorna 1
 	[[ $assert ]] && exit 1 || return 1
@@ -176,7 +176,7 @@ ShellBot.init()
     	return $?
     }
 
-   	_BOT_INFO_=$(ShellBot.getMe 2>/dev/null) || message_error API "$_ERR_TOKEN_"
+   	_BOT_INFO_=$(ShellBot.getMe 2>/dev/null) || message_error API "$_ERR_TOKEN_" '[-t, --token]'
    	
    	# Define o delimitador entre os campos.
    	# Inicializa um array somente leitura contendo as informações do bot.
@@ -1702,7 +1702,170 @@ _EOF
     	# Status
     	return $?
     }
+   
+	ShellBot.getStickerSet()
+	{
+		local name
+    	local jq_file=$(getFileJQ $FUNCNAME)
+		
+		local param=$(getopt --quiet --options 'n:' --longoptions 'name:' -- "$@")
+		
+		# parâmetros posicionais
+		eval set -- "$param"
+
+		while :
+		do
+			case $1 in
+				-n|--name)
+					name="$2"
+					shift 2
+					;;
+				--)
+					shift
+					break
+					;;
+			esac
+		done
+    	
+		[[ $name ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-n, --name]"
+    	
+		eval $_GET_ $_API_TELEGRAM_ ${name:+-d name="'$name'"} > $jq_file
+    	
+		# Testa o retorno do método
+    	json_status $jq_file && {
+    		json $jq_file '.result' | getObjVal
+    	} || message_error TG $jq_file
     
+    	# Status
+    	return $?
+	} 
+	
+	ShellBot.uploadStickerFile()
+	{
+		local user_id png_sticker
+    	local jq_file=$(getFileJQ $FUNCNAME)
+		
+		local param=$(getopt --quiet --options 'u:s:' \
+										--longoptions 'user_id:,png_sticker:' \
+										-- "$@")
+		
+		eval set -- "$param"
+		
+		while :
+		do
+			case $1 in
+				-u|--user_id)
+    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+					user_id="$2"
+					shift 2
+					;;
+				-s|--png_sticker)
+					png_sticker="$2"
+					shift 2
+					;;
+				--)
+					shift
+					break
+					;;
+				esac
+		done
+
+		[[ $user_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
+		[[ $png_sticker ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-s, --png_sticker]"
+    	
+		eval $_POST_ $_API_TELEGRAM_ ${user_id:+-F user_id="'$user_id'"} \
+									 ${png_sticker:+-F png_sticker="'$png_sticker'"} > $jq_file
+    	
+		# Testa o retorno do método
+    	json_status $jq_file && {
+    		json $jq_file '.result' | getObjVal
+    	} || message_error TG $jq_file
+    
+    	# Status
+    	return $?
+					
+	}
+
+	ShellBot.setStickerPositionInSet()
+	{
+		local sticker position
+    	local jq_file=$(getFileJQ $FUNCNAME)
+
+		local param=$(getopt --quiet --options 's:p:' \
+										--longoptions 'sticker:,
+														position:' \
+										-- "$@")
+		
+		eval set -- "$param"
+
+		while :
+		do
+			case $1 in
+				-s|--sticker)
+					sticker="$2"
+					shift 2
+					;;
+				-p|--position)
+					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+					position="$2"
+					shift 2
+					;;
+				--)
+					shift
+					break
+					;;
+			esac
+		done
+		
+		[[ $sticker ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-s, --sticker]"
+		[[ $position ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-p, --position]"
+    	
+		eval $_POST_ $_API_TELEGRAM_ ${sticker:+-d sticker="'$sticker'"} \
+									 ${position:+-d position="'$position'"} > $jq_file
+    	
+		# Testa o retorno do método
+    	json_status $jq_file || message_error TG $jq_file
+    	
+		# Status
+    	return $?
+				
+	}
+	
+	ShellBot.deleteStickerFromSet()
+	{
+		local sticker
+    	local jq_file=$(getFileJQ $FUNCNAME)
+
+		local param=$(getopt --quiet --options 's:' --longoptions 'sticker:' -- "$@")
+		
+		eval set -- "$param"
+
+		while :
+		do
+			case $1 in
+				-s|--sticker)
+					sticker="$2"
+					shift 2
+					;;
+				--)
+					shift
+					break
+					;;
+			esac
+		done
+		
+		[[ $sticker ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-s, --sticker]"
+    	
+		eval $_POST_ $_API_TELEGRAM_ ${sticker:+-d sticker="'$sticker'"}  > $jq_file
+    	
+		# Testa o retorno do método
+    	json_status $jq_file || message_error TG $jq_file
+    	
+		# Status
+    	return $?
+				
+	}
+
     # Função para enviar arquivos de vídeo.
     ShellBot.sendVideo()
     {
@@ -3146,6 +3309,10 @@ _EOF
 				ShellBot.unpinChatMessage \
 				ShellBot.promoteChatMember \
 				ShellBot.restrictChatMember \
+				ShellBot.getStickerSet \
+				ShellBot.uploadStickerFile \
+				ShellBot.setStickerPositionInSet \
+				ShellBot.deleteStickerFromSet \
 				ShellBot.getUpdates
    	# status
    	return 0
