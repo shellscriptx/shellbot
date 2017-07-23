@@ -2014,7 +2014,6 @@ _EOF
 			
 	}
 	
-	
 	ShellBot.addStickerToSet()
 	{
 		local user_id name png_sticker emojis mask_position
