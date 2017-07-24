@@ -3,12 +3,12 @@
 #-----------------------------------------------------------------------------------------------------------
 #	Data:				07 de Março de 2017
 #	Script:				ShellBot.sh
-#	Versão:				4.5
+#	Versão:				4.6
 #	Desenvolvido por:	Juliano Santos [SHAMAN]
 #	Página:				http://www.shellscriptx.blogspot.com.br
 #	Fanpage:			https://www.facebook.com/shellscriptx
 # 	Contato:			shellscriptx@gmail.com
-#	Descrição:			O script é uma API genérica desenvolvida para facilitar	a criação de 
+#	Descrição:			O script é uma API não-oficial desenvolvida para facilitar a criação de 
 #						bots na plataforma TELEGRAM. A API contém funções relevantes
 #						para o desenvolvimento; Mantendo a nomenclatura dos métodos registrados da
 #						API original (Telegram), assim como seus campos e valores.
