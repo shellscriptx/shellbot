@@ -346,7 +346,7 @@ ShellBot.init()
     				shift 2
     				;;
     			-c|--certificate)
-					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
     				certificate="$2"
     				shift 2
     				;;
@@ -397,7 +397,7 @@ ShellBot.init()
     				shift 2
     				;;
     			-p|--photo)
-					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
     				photo="$2"
     				shift 2
     				;;
@@ -865,7 +865,7 @@ ShellBot.init()
     				shift 2
     				;;
     			-v|--video_note)
-					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
     				video_note="$2"
     				shift 2
     				;;
@@ -1403,7 +1403,7 @@ _EOF
     				shift 2
     				;;
     			-p|--photo)
-					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
     				photo="$2"
     				shift 2
     				;;
@@ -1487,7 +1487,7 @@ _EOF
     				shift 2
     				;;
     			-a|--audio)
-					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
     				audio="$2"
     				shift 2
     				;;
@@ -1586,7 +1586,7 @@ _EOF
     				shift 2
     				;;
     			-d|--document)
-					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
     				document="$2"
     				shift 2
     				;;
@@ -1664,7 +1664,7 @@ _EOF
     				shift 2
     				;;
     			-s|--sticker)
-					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
     				sticker="$2"
     				shift 2
     				;;
@@ -1768,7 +1768,7 @@ _EOF
 					shift 2
 					;;
 				-s|--png_sticker)
-					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
 					png_sticker="$2"
 					shift 2
 					;;
@@ -1973,7 +1973,7 @@ _EOF
 					shift 2
 					;;
 				-s|--png_sticker)
-					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
 					png_sticker="$2"
 					shift 2
 					;;
@@ -2047,7 +2047,7 @@ _EOF
 					shift 2
 					;;
 				-s|--png_sticker)
-					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
 					png_sticker="$2"
 					shift 2
 					;;
@@ -2117,7 +2117,7 @@ _EOF
     				shift 2
     				;;
     			-v|--video)
-					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
     				video="$2"
     				shift 2
     				;;
@@ -2220,7 +2220,7 @@ _EOF
     				shift 2
     				;;
     			-v|--voice)
-					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
     				voice="$2"
     				shift 2
     				;;
