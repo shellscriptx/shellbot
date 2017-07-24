@@ -113,7 +113,7 @@ message_error()
 																	"${err_line:--}" \
 																	"${err_func:--}" \
 																	"${err_param:--}" \
-																	"${err_message:-erro desconhecido.}" 1>&2
+																	"${err_message:-Erro desconhecido.}" 1>&2
 
 	# Finaliza script/thread em caso de erro interno, caso contrário retorna 1
 	[[ $assert ]] && exit 1 || return 1
