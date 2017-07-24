@@ -57,17 +57,19 @@ declare -r _GET_='curl --silent --request GET --url'
 declare -r _POST_='curl --silent --request POST --url'
 
 # Erros registrados da API (Parâmetros/Argumentos)
-declare -r _ERR_TYPE_BOOL_='tipo incompatível. Somente "true" ou "false".'
-declare -r _ERR_TYPE_PARSE_MODE_='tipo incompatível. Somente "markdown" ou "html".'
-declare -r _ERR_TYPE_INT_='tipo incompatível. Somente inteiro positivo.'
-declare -r _ERR_TYPE_FLOAT_='tipo incompatível. Somente float.'
-declare -r _ERR_ACTION_MODE_='tipo da ação inválida.'
-declare -r _ERR_PARAM_INVALID_='parâmetro inválido.'
-declare -r _ERR_PARAM_REQUIRED_='parâmetro/argumento requerido.'
-declare -r _ERR_TOKEN_='não autorizado. Verifique o número do token ou se possui privilégios.'
-declare -r _ERR_INVALID_TOKEN_='número do TOKEN inválido.'
-declare -r _ERR_FUNCTION_NOT_FOUND_='nome da função inválida ou não existe.'
-declare -r _ERR_BOT_ALREADY_INIT_='o bot já foi inicializado.'
+declare -r _ERR_TYPE_BOOL_='Tipo incompatível. Somente "true" ou "false".'
+declare -r _ERR_TYPE_PARSE_MODE_='Tipo incompatível. Somente "markdown" ou "html".'
+declare -r _ERR_TYPE_INT_='Tipo incompatível. Somente inteiro positivo.'
+declare -r _ERR_TYPE_FLOAT_='Tipo incompatível. Somente float.'
+declare -r _ERR_ACTION_MODE_='Tipo da ação inválida.'
+declare -r _ERR_PARAM_INVALID_='Parâmetro inválido.'
+declare -r _ERR_PARAM_REQUIRED_='Parâmetro/argumento requerido.'
+declare -r _ERR_TOKEN_='Não autorizado. Verifique o número do token ou se possui privilégios.'
+declare -r _ERR_INVALID_TOKEN_='Múmero do TOKEN inválido.'
+declare -r _ERR_FUNCTION_NOT_FOUND_='Mome da função inválida ou não existe.'
+declare -r _ERR_BOT_ALREADY_INIT_='O bot já foi inicializado.'
+declare -r _ERR_TYPE_POINT_='Nome da máscara inválida. Deve ser “forehead”, “eyes”, “mouth” ou “chin”.'
+declare -r _ERR_FILE_NOT_FOUND_='Arquivo não encontrado.'
 
 # Remove diretório JSON se o script for interrompido.
 trap "rm -rf $_TMP_DIR_ &>/dev/null; exit 1" SIGQUIT SIGINT SIGKILL SIGTERM SIGSTOP SIGPWR
@@ -345,6 +347,7 @@ ShellBot.init()
     				shift 2
     				;;
     			-c|--certificate)
+					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
     				certificate="$2"
     				shift 2
     				;;
@@ -395,6 +398,7 @@ ShellBot.init()
     				shift 2
     				;;
     			-p|--photo)
+					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
     				photo="$2"
     				shift 2
     				;;
@@ -862,6 +866,7 @@ ShellBot.init()
     				shift 2
     				;;
     			-v|--video_note)
+					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
     				video_note="$2"
     				shift 2
     				;;
@@ -1399,6 +1404,7 @@ _EOF
     				shift 2
     				;;
     			-p|--photo)
+					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
     				photo="$2"
     				shift 2
     				;;
@@ -1482,6 +1488,7 @@ _EOF
     				shift 2
     				;;
     			-a|--audio)
+					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
     				audio="$2"
     				shift 2
     				;;
@@ -1580,6 +1587,7 @@ _EOF
     				shift 2
     				;;
     			-d|--document)
+					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
     				document="$2"
     				shift 2
     				;;
@@ -1657,6 +1665,7 @@ _EOF
     				shift 2
     				;;
     			-s|--sticker)
+					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
     				sticker="$2"
     				shift 2
     				;;
@@ -1760,6 +1769,7 @@ _EOF
 					shift 2
 					;;
 				-s|--png_sticker)
+					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
 					png_sticker="$2"
 					shift 2
 					;;
@@ -1885,6 +1895,7 @@ _EOF
 		do
 			case $1 in
 				-p|--point)
+					[[ "$2" =~ ^(forehead|eyes|mouth|chin)$ ]] || message_error API "$_ERR_TYPE_POINT_" "$1" "$2"
 					point="$2"
 					shift 2
 					;;
@@ -1922,13 +1933,7 @@ _EOF
 		[[ $zoom ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-z, --zoom]"
 		
 		cat << _EOF
-{
-"point": "$point",
-"x_shift": $x_shift,
-"y_shift": $y_shift,
-"scale": $scale,
-"zoom": $zoom
-}
+{ "point": "$point", "x_shift": $x_shift, "y_shift": $y_shift, "scale": $scale, "zoom": $zoom }
 _EOF
 
 	return 0
@@ -1969,6 +1974,7 @@ _EOF
 					shift 2
 					;;
 				-s|--png_sticker)
+					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
 					png_sticker="$2"
 					shift 2
 					;;
@@ -2042,6 +2048,7 @@ _EOF
 					shift 2
 					;;
 				-s|--png_sticker)
+					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
 					png_sticker="$2"
 					shift 2
 					;;
@@ -2111,6 +2118,7 @@ _EOF
     				shift 2
     				;;
     			-v|--video)
+					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
     				video="$2"
     				shift 2
     				;;
@@ -2213,6 +2221,7 @@ _EOF
     				shift 2
     				;;
     			-v|--voice)
+					[[ $2 =~ ^@ && ! -e ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
     				voice="$2"
     				shift 2
     				;;
