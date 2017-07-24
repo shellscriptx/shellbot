@@ -20,7 +20,7 @@
 [[ $_SHELLBOT_SH_ ]] && return 1
 
 # Verifica se os pacotes necessários estão instalados.
-for _pkg_ in curl jq; do
+for _pkg_ in curl jq getopt; do
 	# Se estiver ausente, trata o erro e finaliza o script.
 	if ! which $_pkg_ &>/dev/null; then
 		echo "ShellBot.sh: erro: '$_pkg_' O pacote requerido não está instalando." 1>&2
@@ -65,8 +65,8 @@ declare -r _ERR_TYPE_POINT_='Máscara inválida: Deve ser “forehead”, “eye
 declare -r _ERR_ACTION_MODE_='Ação inválida: A definição da ação não é suportada.'
 declare -r _ERR_PARAM_INVALID_='Opção inválida: A opção informada é inválida ou não suportada.'
 declare -r _ERR_PARAM_REQUIRED_='Opção requerida: Verique se o(s) parâmetro(s) ou argumento(s) obrigatório(s) estão presente(s).'
-declare -r _ERR_TOKEN_='Não autorizado. Verifique se possui permissões para utilizar o token.'
-declare -r _ERR_INVALID_TOKEN_='TOKEN inválido: Verique a token e tente novamente.'
+declare -r _ERR_TOKEN_UNAUTHORIZED_='Não autorizado. Verifique se possui permissões para utilizar o token.'
+declare -r _ERR_TOKEN_INVALID_='TOKEN inválido: Verique o número do token e tente novamente.'
 declare -r _ERR_FUNCTION_NOT_FOUND_='Função inválida: Verique se o nome está correto ou se a função existe.'
 declare -r _ERR_BOT_ALREADY_INIT_='Inicialização negada: O bot já foi inicializado.'
 declare -r _ERR_FILE_NOT_FOUND_='Não foi possível acessar: Arquivo não encontrado.'
@@ -138,7 +138,7 @@ ShellBot.init()
     do
     	case $1 in
     		-t|--token)
-    			[[ $2 =~ ^[0-9]+:[a-zA-Z0-9_-]+$ ]] || message_error API "$_ERR_INVALID_TOKEN_" "$1" "$2"
+    			[[ $2 =~ ^[0-9]+:[a-zA-Z0-9_-]+$ ]] || message_error API "$_ERR_TOKEN_INVALID_" "$1" "$2"
     			declare -gr _TOKEN_="$2"																# TOKEN
     			declare -gr _API_TELEGRAM_="https://api.telegram.org/bot$_TOKEN_/\${FUNCNAME#*.}"		# API
     			shift 2
@@ -177,7 +177,7 @@ ShellBot.init()
     	return $?
     }
 
-   	_BOT_INFO_=$(ShellBot.getMe 2>/dev/null) || message_error API "$_ERR_TOKEN_" '[-t, --token]'
+   	_BOT_INFO_=$(ShellBot.getMe 2>/dev/null) || message_error API "$_ERR_TOKEN_UNAUTHORIZED_" '[-t, --token]'
    	
    	# Define o delimitador entre os campos.
    	# Inicializa um array somente leitura contendo as informações do bot.
