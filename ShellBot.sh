@@ -61,6 +61,7 @@ declare -r _ERR_TYPE_BOOL_='Tipo incompatível. Somente "true" ou "false".'
 declare -r _ERR_TYPE_PARSE_MODE_='Tipo incompatível. Somente "markdown" ou "html".'
 declare -r _ERR_TYPE_INT_='Tipo incompatível. Somente inteiro positivo.'
 declare -r _ERR_TYPE_FLOAT_='Tipo incompatível. Somente float.'
+declare -r _ERR_TYPE_POINT_='Nome da máscara inválida. Deve ser “forehead”, “eyes”, “mouth” ou “chin”.'
 declare -r _ERR_ACTION_MODE_='Tipo da ação inválida.'
 declare -r _ERR_PARAM_INVALID_='Parâmetro inválido.'
 declare -r _ERR_PARAM_REQUIRED_='Parâmetro/argumento requerido.'
@@ -68,7 +69,6 @@ declare -r _ERR_TOKEN_='Não autorizado. Verifique o número do token ou se poss
 declare -r _ERR_INVALID_TOKEN_='Múmero do TOKEN inválido.'
 declare -r _ERR_FUNCTION_NOT_FOUND_='Mome da função inválida ou não existe.'
 declare -r _ERR_BOT_ALREADY_INIT_='O bot já foi inicializado.'
-declare -r _ERR_TYPE_POINT_='Nome da máscara inválida. Deve ser “forehead”, “eyes”, “mouth” ou “chin”.'
 declare -r _ERR_FILE_NOT_FOUND_='Arquivo não encontrado.'
 
 # Remove diretório JSON se o script for interrompido.
@@ -139,8 +139,7 @@ ShellBot.init()
     	case $1 in
     		-t|--token)
     			[[ $2 =~ ^[0-9]+:[a-zA-Z0-9_-]+$ ]] || message_error API "$_ERR_INVALID_TOKEN_" "$1" "$2"
-    			declare -gr _TOKEN_="$2"											# TOKEN
-    			# Visível em todo shell/subshell
+    			declare -gr _TOKEN_="$2"																# TOKEN
     			declare -gr _API_TELEGRAM_="https://api.telegram.org/bot$_TOKEN_/\${FUNCNAME#*.}"		# API
     			shift 2
    				;;
