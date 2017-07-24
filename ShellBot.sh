@@ -122,10 +122,11 @@ ShellBot.init()
 	[[ $_SHELLBOT_INIT_ ]] && message_error API "$_ERR_BOT_ALREADY_INIT_"
 
 	# Variável local
-	local param=$(getopt --name "$(message_error API)" --options 't:m' \
-    									--longoptions 'token:,
-    												   monitor' \
-    									-- "$@")
+	local param=$(getopt --name "$(message_error API)" \
+						 --options 't:m' \
+						 --longoptions 'token:,
+										monitor' \
+    					 -- "$@")
     
     # Define os parâmetros posicionais
     eval set -- "$param"
@@ -200,11 +201,12 @@ ShellBot.init()
     {
     	local function callback_data handle args
     
-    	local param=$(getopt --name "$(message_error API)" --options 'f:a:d:' \
-										--longoptions 'function:,
-														args:,
-														callback_data:' \
-														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'f:a:d:' \
+							 --longoptions 'function:,
+											args:,
+											callback_data:' \
+							 -- "$@")
     
     	eval set -- "$param"
     		
@@ -258,7 +260,10 @@ ShellBot.init()
     ShellBot.watchHandle()
     {
     	local 	callback_data func_handle \
-    			param=$(getopt --name "$(message_error API)" --options 'd' --longoptions 'callback_data' -- "$@")
+    			param=$(getopt --name "$(message_error API)" \
+								--options 'd' \
+								--longoptions 'callback_data' \
+								-- "$@")
     
     	eval set -- "$param"
     
@@ -325,12 +330,13 @@ ShellBot.init()
     	local url certificate max_connections allowed_updates
     	local jq_file=$(getFileJQ $FUNCNAME)
     	
-    	local param=$(getopt --name "$(message_error API)" --options 'u:c:m:a:' \
-    												--longoptions 'url:, 
-    																certificate:,
-    																max_connections:,
-    																allowed_updates:' \
-    																-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'u:c:m:a:' \
+							 --longoptions 'url:, 
+    										certificate:,
+    										max_connections:,
+    										allowed_updates:' \
+    						 -- "$@")
     	
     	eval set -- "$param"
     	
@@ -381,7 +387,10 @@ ShellBot.init()
     	local chat_id photo
     	local jq_file=$(getFileJQ $FUNCNAME)
     	
-    	local param=$(getopt --name "$(message_error API)" --options 'c:p:' --longoptions 'chat_id:,photo:' -- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:p:' \
+							 --longoptions 'chat_id:,photo:' \
+							 -- "$@")
     	
     	eval set -- "$param"
     	
@@ -421,7 +430,10 @@ ShellBot.init()
     	local chat_id
     	local jq_file=$(getFileJQ $FUNCNAME)
     	
-    	local param=$(getopt --name "$(message_error API)" --options 'c:' --longoptions 'chat_id:' -- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:' \
+							 --longoptions 'chat_id:' \
+							 -- "$@")
     	
     	eval set -- "$param"
     	
@@ -456,7 +468,10 @@ ShellBot.init()
     	local chat_id title
     	local jq_file=$(getFileJQ $FUNCNAME)
     	
-    	local param=$(getopt --name "$(message_error API)" --options 'c:t:' --longoptions 'chat_id:,title:' -- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:t:' \
+							 --longoptions 'chat_id:,title:' \
+							 -- "$@")
     	
     	eval set -- "$param"
     	
@@ -497,7 +512,10 @@ ShellBot.init()
     	local chat_id description
     	local jq_file=$(getFileJQ $FUNCNAME)
     	
-    	local param=$(getopt --name "$(message_error API)" --options 'c:d:' --longoptions 'chat_id:,description:' -- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:d:' \
+							 --longoptions 'chat_id:,description:' \
+							 -- "$@")
     	
     	eval set -- "$param"
     	
@@ -537,10 +555,12 @@ ShellBot.init()
     	local chat_id message_id disable_notification
     	local jq_file=$(getFileJQ $FUNCNAME)
     	
-    	local param=$(getopt --name "$(message_error API)" --options 'c:m:n:' --longoptions 'chat_id:,
-    																				message_id:,
-    																				disable_notification:' \
-    																				-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:m:n:' \
+							 --longoptions 'chat_id:,
+											message_id:,
+    										disable_notification:' \
+    						 -- "$@")
     	
     	eval set -- "$param"
     	
@@ -586,7 +606,10 @@ ShellBot.init()
     	local chat_id
     	local jq_file=$(getFileJQ $FUNCNAME)
     	
-    	local param=$(getopt --name "$(message_error API)" --options 'c:' --longoptions 'chat_id:' -- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:' \
+							 --longoptions 'chat_id:' \
+							 -- "$@")
     	
     	eval set -- "$param"
     	
@@ -622,14 +645,16 @@ ShellBot.init()
     
     	local jq_file=$(getFileJQ $FUNCNAME)
     	
-    	local param=$(getopt --name "$(message_error API)" --options 'c:u:d:s:m:o:w:' \
-    												--longoptions 'chat_id:,
-    																user_id:,
-    																until_date:,
-    																can_send_messages:,
-    																can_send_media_messages:,
-    																can_send_other_messages:,
-    																can_add_web_page_previews:' -- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:u:d:s:m:o:w:' \
+    						 --longoptions 'chat_id:,
+    										user_id:,
+    										until_date:,
+    										can_send_messages:,
+    										can_send_media_messages:,
+    										can_send_other_messages:,
+    										can_add_web_page_previews:' \
+							 -- "$@")
     	
     	eval set -- "$param"
     	
@@ -704,17 +729,19 @@ ShellBot.init()
     
     	local jq_file=$(getFileJQ $FUNCNAME)
     	
-    	local param=$(getopt --name "$(message_error API)" --options 'c:u:i:p:e:d:v:r:f:m:' \
-    												--longoptions 'chat_id:,
-    																user_id:,
-    																can_change_info:,
-    																can_post_messages:,
-    																can_edit_messages:,
-    																can_delete_messages:,
-    																can_invite_users:,
-    																can_restrict_members:,
-    																can_pin_messages:,
-    																can_promote_members:' -- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:u:i:p:e:d:v:r:f:m:' \
+							 --longoptions 'chat_id:,
+    										user_id:,
+    										can_change_info:,
+    										can_post_messages:,
+    										can_edit_messages:,
+    										can_delete_messages:,
+    										can_invite_users:,
+    										can_restrict_members:,
+    										can_pin_messages:,
+    										can_promote_members:' \
+							 -- "$@")
     	
     	eval set -- "$param"
     	
@@ -802,7 +829,10 @@ ShellBot.init()
     	local chat_id
     	local jq_file=$(getFileJQ $FUNCNAME)
     
-    	local param=$(getopt --name "$(message_error API)" --options 'c:' --longoptions 'chat_id:' -- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:' \
+							 --longoptions 'chat_id:' \
+							 -- "$@")
     	
     	eval set -- "$param"
     
@@ -840,15 +870,16 @@ ShellBot.init()
     
     	local jq_file=$(getFileJQ $FUNCNAME)
     	
-    	local param=$(getopt --name "$(message_error API)" --options 'c:v:t:l:n:r:m:' \
-    										--longoptions 'chat_id:,
-    														video_note:,
-    														duration:,
-    														length:,
-    														disable_notification:,
-    														reply_to_message_id:,
-    														reply_markup:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:v:t:l:n:r:m:' \
+							 --longoptions 'chat_id:,
+    										video_note:,
+    										duration:,
+    										length:,
+    										disable_notification:,
+    										reply_to_message_id:,
+    										reply_markup:' \
+    						 -- "$@")
     	
     	# Define os parâmetros posicionais
     	eval set -- "$param"
@@ -923,15 +954,16 @@ ShellBot.init()
                 switch_inline_query switch_inline_query_current_chat \
     			delm
     
-        local	param=$(getopt --name "$(message_error API)" --options 'b:l:t:u:c:q:s:' \
-                                            --longoptions 'button:,
-                                                            line:,
-                                                            text:,
-                                                            url:,
-                                                            callback_data:,
-                                                            switch_inline_query:,
-                                                            switch_inline_query_chat:' \
-                                                            -- "$@")
+        local param=$(getopt --name "$(message_error API)" \
+							 --options 'b:l:t:u:c:q:s:' \
+							 --longoptions 'button:,
+											line:,
+											text:,
+											url:,
+											callback_data:,
+											switch_inline_query:,
+											switch_inline_query_chat:' \
+							 -- "$@")
     
     	eval set -- "$param"
     
@@ -999,12 +1031,12 @@ ShellBot.init()
     	# Obrigatório: text, callback_data 
     	# Opcional: url, switch_inline_query, switch_inline_query_current_chat
     	button[$line]+="${delm}{ 
-    \"text\":\"${text}\",
-    \"callback_data\":\"${callback_data}\"
-    ${url:+,\"url\":\"${url}\"}
-    ${switch_inline_query:+,\"switch_inline_query\":\"${switch_inline_query}\"}
-    ${switch_inline_query_current_chat:+,\"switch_inline_query_current_chat\":\"${switch_inline_query_current_chat}\"}
-    }" || return 1	# Erro ao salvar o botão. 
+    					\"text\":\"${text}\",
+						\"callback_data\":\"${callback_data}\"
+						${url:+,\"url\":\"${url}\"}
+						${switch_inline_query:+,\"switch_inline_query\":\"${switch_inline_query}\"}
+						${switch_inline_query_current_chat:+,\"switch_inline_query_current_chat\":\"${switch_inline_query_current_chat}\"}
+						}" || return 1	# Erro ao salvar o botão. 
     	
     	# Fecha o array
     	button[$line]="${button[$line]/#/[}"
@@ -1017,7 +1049,10 @@ ShellBot.init()
     ShellBot.InlineKeyboardMarkup()
     {
     	local 	button temp_kb 
-        local 	param=$(getopt --name "$(message_error API)" --options 'b:' --longoptions 'button:' -- "$@")
+        local param=$(getopt --name "$(message_error API)" \
+							 --options 'b:' \
+							 --longoptions 'button:' \
+							 -- "$@")
     
     	eval set -- "$param"
     
@@ -1076,13 +1111,14 @@ ShellBot.init()
     	local callback_query_id text show_alert url cache_time
     	local jq_file=$(getFileJQ $FUNCNAME)
     	
-    	local param=$(getopt --name "$(message_error API)" --options 'c:t:s:u:e:' \
-    										--longoptions 'callback_query_id:,
-    														text:,
-    														show_alert:,
-    														url:,
-    														cache_time:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:t:s:u:e:' \
+    						 --longoptions 'callback_query_id:,
+    										text:,
+    										show_alert:,
+    										url:,
+    										cache_time:' \
+    						 -- "$@")
     
     
     	eval set -- "$param"
@@ -1141,12 +1177,13 @@ ShellBot.init()
     	local 	button resize_keyboard on_time_keyboard selective
     	
     	# Lê os parâmetros da função.
-    	local param=$(getopt --name "$(message_error API)" --options 'b:r:t:s:' \
-    										--longoptions 'button:,
-    														resize_keyboard:,
-    														one_time_keyboard:,
-    														selective:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'b:r:t:s:' \
+    						 --longoptions 'button:,
+    										resize_keyboard:,
+    										one_time_keyboard:,
+    										selective:' \
+    						 -- "$@")
     	
     	# Transforma os parâmetros da função em parâmetros posicionais
     	#
@@ -1218,15 +1255,16 @@ _EOF
     	local jq_file=$(getFileJQ $FUNCNAME)
     	
     	# Lê os parâmetros da função
-    	local param=$(getopt --name "$(message_error API)" --options 'c:t:p:w:n:r:k:' \
-    										--longoptions 'chat_id:,
-    														text:,
-    														parse_mode:,
-    														disable_web_page_preview:,
-    														disable_notification:,
-    														reply_to_message_id:,
-    														reply_markup:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:t:p:w:n:r:k:' \
+							 --longoptions 'chat_id:,
+    										text:,
+    										parse_mode:,
+    										disable_web_page_preview:,
+    										disable_notification:,
+    										reply_to_message_id:,
+    										reply_markup:' \
+    						 -- "$@")
     
     	# Define os parâmetros posicionais
     	eval set -- "$param"
@@ -1309,12 +1347,13 @@ _EOF
     	local jq_file=$(getFileJQ $FUNCNAME)
     	
     	# Lê os parâmetros da função
-    	local param=$(getopt --name "$(message_error API)" --options 'c:f:n:m:' \
-    										--longoptions 'chat_id:,
-    														from_chat_id:,
-    														disable_notification:,
-    														message_id:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:f:n:m:' \
+    						 --longoptions 'chat_id:,
+    										from_chat_id:,
+    										disable_notification:,
+    										message_id:' \
+    						 -- "$@")
     
     	
     	# Define os parâmetros posicionais
@@ -1378,14 +1417,15 @@ _EOF
     	local jq_file=$(getFileJQ $FUNCNAME)
     
     	# Lê os parâmetros da função
-    	local param=$(getopt --name "$(message_error API)" --options 'c:p:t:n:r:k:' \
-    										--longoptions 'chat_id:, 
-    														photo:,
-    														caption:,
-    														disable_notification:,
-    														reply_to_message_id:,
-    														reply_markup:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:p:t:n:r:k:' \
+    						 --longoptions 'chat_id:, 
+    										photo:,
+    										caption:,
+    										disable_notification:,
+    										reply_to_message_id:,
+    										reply_markup:' \
+    						 -- "$@")
     
     
     	# Define os parâmetros posicionais
@@ -1460,17 +1500,18 @@ _EOF
     	local jq_file=$(getFileJQ $FUNCNAME)
     	
     	# Lê os parâmetros da função
-    	local param=$(getopt --name "$(message_error API)" --options 'c:a:t:d:e:i:n:r:k' \
-    										 --longoptions 'chat_id:,
-    														audio:,
-    														caption:,
-    														duration:,
-    														performer:,
-    														title:,
-    														disable_notification:,
-    														reply_to_message_id:,	
-    														reply_markup:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:a:t:d:e:i:n:r:k' \
+    						 --longoptions 'chat_id:,
+    										audio:,
+    										caption:,
+    										duration:,
+    										performer:,
+    										title:,
+    										disable_notification:,
+    										reply_to_message_id:,	
+    										reply_markup:' \
+    						 -- "$@")
     
     	# Define os parâmetros posicionais
     	eval set -- "$param"
@@ -1561,14 +1602,15 @@ _EOF
     	local jq_file=$(getFileJQ $FUNCNAME)
     	
     	# Lê os parâmetros da função
-    	local param=$(getopt --name "$(message_error API)" --options 'c:d:t:n:r:k:' \
-    										--longoptions 'chat_id:,
-    														document:,
-    														caption:,
-    														disable_notification:,
-    														reply_to_message_id:,
-    														reply_markup:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:d:t:n:r:k:' \
+    						 --longoptions 'chat_id:,
+											document:,
+    										caption:,
+    										disable_notification:,
+    										reply_to_message_id:,
+    										reply_markup:' \
+    						 -- "$@")
     
     	
     	# Define os parâmetros posicionais
@@ -1641,13 +1683,14 @@ _EOF
     	local jq_file=$(getFileJQ $FUNCNAME)
     
     	# Lê os parâmetros da função
-    	local param=$(getopt --name "$(message_error API)" --options 'c:s:n:r:k:' \
-    										--longoptions 'chat_id:,
-    														sticker:,
-    														disable_notification:,
-    														reply_to_message_id:,
-    														reply_markup:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:s:n:r:k:' \
+    						 --longoptions 'chat_id:,
+    										sticker:,
+    										disable_notification:,
+    										reply_to_message_id:,
+    										reply_markup:' \
+    						 -- "$@")
     
     	# Define os parâmetros posicionais
     	eval set -- "$param"
@@ -1712,7 +1755,10 @@ _EOF
 		local name
     	local jq_file=$(getFileJQ $FUNCNAME)
 		
-		local param=$(getopt --name "$(message_error API)" --options 'n:' --longoptions 'name:' -- "$@")
+		local param=$(getopt --name "$(message_error API)" \
+							 --options 'n:' \
+							 --longoptions 'name:' \
+							 -- "$@")
 		
 		# parâmetros posicionais
 		eval set -- "$param"
@@ -1749,9 +1795,11 @@ _EOF
 		local user_id png_sticker
     	local jq_file=$(getFileJQ $FUNCNAME)
 		
-		local param=$(getopt --name "$(message_error API)" --options 'u:s:' \
-										--longoptions 'user_id:,png_sticker:' \
-										-- "$@")
+		local param=$(getopt --name "$(message_error API)" \
+							 --options 'u:s:' \
+							 --longoptions 'user_id:,
+											png_sticker:' \
+							 -- "$@")
 		
 		eval set -- "$param"
 		
@@ -1796,10 +1844,11 @@ _EOF
 		local sticker position
     	local jq_file=$(getFileJQ $FUNCNAME)
 
-		local param=$(getopt --name "$(message_error API)" --options 's:p:' \
-										--longoptions 'sticker:,
-														position:' \
-										-- "$@")
+		local param=$(getopt --name "$(message_error API)" \
+							 --options 's:p:' \
+							 --longoptions 'sticker:,
+											position:' \
+							 -- "$@")
 		
 		eval set -- "$param"
 
@@ -1876,13 +1925,14 @@ _EOF
 
 		local point x_shift y_shift scale zoom
 		
-		local param=$(getopt --name "$(message_error API)" --options 'p:x:y:s:z:' \
-										--longoptions 'point:,
-														x_shift:,
-														y_shift:,
-														scale:,
-														zoom:' \
-										-- "$@")
+		local param=$(getopt --name "$(message_error API)" \
+							 --options 'p:x:y:s:z:' \
+							 --longoptions 'point:,
+											x_shift:,
+											y_shift:,
+											scale:,
+											zoom:' \
+							 -- "$@")
 
 		eval set -- "$param"
 		
@@ -1940,15 +1990,16 @@ _EOF
 		local user_id name title png_sticker emojis contains_masks mask_position
     	local jq_file=$(getFileJQ $FUNCNAME)
 		
-		local param=$(getopt --name "$(message_error API)" --options 'u:n:t:s:e:c:m:' \
-										--longoptions 'user_id:,
-														name:,
-														title:,
-														png_sticker:,
-														emojis:,
-														contains_mask:,
-														mask_position:' \
-										-- "$@")
+		local param=$(getopt --name "$(message_error API)" \
+							 --options 'u:n:t:s:e:c:m:' \
+							 --longoptions 'user_id:,
+											name:,
+											title:,
+											png_sticker:,
+											emojis:,
+											contains_mask:,
+											mask_position:' \
+							 -- "$@")
 
 		eval set -- "$param"
 		
@@ -2020,13 +2071,14 @@ _EOF
 		local user_id name png_sticker emojis mask_position
     	local jq_file=$(getFileJQ $FUNCNAME)
 		
-		local param=$(getopt --name "$(message_error API)" --options 'u:n:s:e:m:' \
-										--longoptions 'user_id:,
-														name:,
-														png_sticker:,
-														emojis:,
-														mask_position:' \
-										-- "$@")
+		local param=$(getopt --name "$(message_error API)" \
+							 --options 'u:n:s:e:m:' \
+							 --longoptions 'user_id:,
+											name:,
+											png_sticker:,
+											emojis:,
+											mask_position:' \
+							 -- "$@")
 
 		eval set -- "$param"
 		
@@ -2089,17 +2141,18 @@ _EOF
     	local jq_file=$(getFileJQ $FUNCNAME)
     
     	# Lê os parâmetros da função
-    	local param=$(getopt --name "$(message_error API)" --options 'c:v:d:w:h:t:n:r:k:' \
-    										--longoptions 'chat_id:,
-    														video:,
-    														duration:,
-    														width:,
-    														height:,
-    														caption:,
-    														disable_notification:,
-    														reply_to_message_id:,
-    														reply_markup:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:v:d:w:h:t:n:r:k:' \
+							 --longoptions 'chat_id:,
+    										video:,
+    										duration:,
+    										width:,
+    										height:,
+    										caption:,
+    										disable_notification:,
+    										reply_to_message_id:,
+    										reply_markup:' \
+    						 -- "$@")
     
     	
     	# Define os parâmetros posicionais
@@ -2194,15 +2247,16 @@ _EOF
     	local jq_file=$(getFileJQ $FUNCNAME)
     
     	# Lê os parâmetros da função
-    	local param=$(getopt --name "$(message_error API)" --options 'c:v:t:d:n:r:k:' \
-    										--longoptions 'chat_id:,
-    														voice:,
-    														caption:,
-    														duration:,
-    														disable_notification:,
-    														reply_to_message_id:,
-    														reply_markup:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:v:t:d:n:r:k:' \
+    						 --longoptions 'chat_id:,
+    										voice:,
+    										caption:,
+    										duration:,
+    										disable_notification:,
+    										reply_to_message_id:,
+    										reply_markup:' \
+    						 -- "$@")
     
     	
     	# Define os parâmetros posicionais
@@ -2283,14 +2337,15 @@ _EOF
     	local jq_file=$(getFileJQ $FUNCNAME)
     
     	# Lê os parâmetros da função
-    	local param=$(getopt --name "$(message_error API)" --options 'c:l:g:n:r:k:' \
-    										--longoptions 'chat_id:,
-    														latitude:,
-    														longitude:,
-    														disable_notification:,
-    														reply_to_message_id:,
-    														reply_markup:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:l:g:n:r:k:' \
+    						 --longoptions 'chat_id:,
+    										latitude:,
+    										longitude:,
+    										disable_notification:,
+    										reply_to_message_id:,
+    										reply_markup:' \
+    						 -- "$@")
     
     	
     	# Define os parâmetros posicionais
@@ -2367,17 +2422,18 @@ _EOF
     	local jq_file=$(getFileJQ $FUNCNAME)
     	
     	# Lê os parâmetros da função
-    	local param=$(getopt --name "$(message_error API)" --options 'c:l:g:i:a:f:n:r:k:' \
-    										--longoptions 'chat_id:,
-    														latitude:,
-    														longitude:,
-    														title:,
-    														address:,
-    														foursquare_id:,
-    														disable_notification:,
-    														reply_to_message_id:,
-    														reply_markup:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:l:g:i:a:f:n:r:k:' \
+    						 --longoptions 'chat_id:,
+    										latitude:,
+    										longitude:,
+    										title:,
+    										address:,
+    										foursquare_id:,
+    										disable_notification:,
+    										reply_to_message_id:,
+    										reply_markup:' \
+    						 -- "$@")
     
     	# Define os parâmetros posicionais
     	eval set -- "$param"
@@ -2470,15 +2526,16 @@ _EOF
     	local jq_file=$(getFileJQ $FUNCNAME)
     	
     	# Lê os parâmetros da função
-    	local param=$(getopt --name "$(message_error API)" --options 'c:p:f:l:n:r:k:' \
-    										--longoptions 'chat_id:,
-    														phone_number:,
-    														first_name:,
-    														last_name:,
-    														disable_notification:,
-    														reply_to_message_id:,
-    														reply_markup:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:p:f:l:n:r:k:' \
+    						 --longoptions 'chat_id:,
+    										phone_number:,
+    										first_name:,
+    										last_name:,
+    										disable_notification:,
+    										reply_to_message_id:,
+    										reply_markup:' \
+    						 -- "$@")
     
     
     	# Define os parâmetros posicionais
@@ -2556,10 +2613,11 @@ _EOF
     	local jq_file=$(getFileJQ $FUNCNAME)
     	
     	# Lê os parâmetros da função
-    	local param=$(getopt --name "$(message_error API)" --options 'c:a:' \
-    										--longoptions 'chat_id:,
-    														action:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:a:' \
+    						 --longoptions 'chat_id:,
+    										action:' \
+    						 -- "$@")
     
     	# Define os parâmetros posicionais
     	eval set -- "$param"
@@ -2682,9 +2740,10 @@ _EOF
     	local jq_file=$(getFileJQ $FUNCNAME)
     
     	# Lê os parâmetros da função
-    	local param=$(getopt --name "$(message_error API)" --options 'f:' \
-    										--longoptions 'file_id:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'f:' \
+    						 --longoptions 'file_id:' \
+    						 -- "$@")
     
     	
     	# Define os parâmetros posicionais
@@ -2727,11 +2786,12 @@ _EOF
     	local jq_file=$(getFileJQ $FUNCNAME)
     
     	# Lê os parâmetros da função
-    	local param=$(getopt --name "$(message_error API)" --options 'c:u:d:' \
-    										--longoptions 'chat_id:,
-    														user_id:,
-    														until_date:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:u:d:' \
+    						 --longoptions 'chat_id:,
+    										user_id:,
+    										until_date:' \
+    						 -- "$@")
     
     	# Define os parâmetros posicionais
     	eval set -- "$param"
@@ -2785,9 +2845,10 @@ _EOF
     	local jq_file=$(getFileJQ $FUNCNAME)
     
     	# Lê os parâmetros da função
-    	local param=$(getopt --name "$(message_error API)" --options 'c:' \
-    										--longoptions 'chat_id:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:' \
+    						 --longoptions 'chat_id:' \
+    						 -- "$@")
     
     	
     	# Define os parâmetros posicionais
@@ -2824,10 +2885,11 @@ _EOF
     	local jq_file=$(getFileJQ $FUNCNAME)
     
     	# Lê os parâmetros da função
-    	local param=$(getopt --name "$(message_error API)" --options 'c:u:' \
-    										--longoptions 'chat_id:,
-    														user_id:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:u:' \
+    						 --longoptions 'chat_id:,
+    										user_id:' \
+    						 -- "$@")
     
     	
     	# Define os parâmetros posicionais
@@ -2871,9 +2933,10 @@ _EOF
     	local jq_file=$(getFileJQ $FUNCNAME)
     
     	# Lê os parâmetros da função
-    	local param=$(getopt --name "$(message_error API)" --options 'c:' \
-    										--longoptions 'chat_id:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:' \
+    						 --longoptions 'chat_id:' \
+    						 -- "$@")
     
     	
     	# Define os parâmetros posicionais
@@ -2912,9 +2975,10 @@ _EOF
     	local jq_file=$(getFileJQ $FUNCNAME)
     
     	# Lê os parâmetros da função
-    	local param=$(getopt --name "$(message_error API)" --options 'c:' \
-    										--longoptions 'chat_id:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:' \
+    						 --longoptions 'chat_id:' \
+    						 -- "$@")
     
     	
     	# Define os parâmetros posicionais
@@ -2964,9 +3028,10 @@ _EOF
     	local jq_file=$(getFileJQ $FUNCNAME)
     
     	# Lê os parâmetros da função
-    	local param=$(getopt --name "$(message_error API)" --options 'c:' \
-    										--longoptions 'chat_id:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:' \
+    						 --longoptions 'chat_id:' \
+    						 -- "$@")
     
     	
     	# Define os parâmetros posicionais
@@ -3005,10 +3070,11 @@ _EOF
     	local jq_file=$(getFileJQ $FUNCNAME)
     
     	# Lê os parâmetros da função
-    	local param=$(getopt --name "$(message_error API)" --options 'c:u:' \
-    										--longoptions 'chat_id:,
-    														user_id:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:u:' \
+    						 --longoptions 'chat_id:,
+    						 				user_id:' \
+    						 -- "$@")
     
     	
     	# Define os parâmetros posicionais
@@ -3052,15 +3118,16 @@ _EOF
     	local chat_id message_id inline_message_id text parse_mode disable_web_page_preview reply_markup
     	local jq_file=$(getFileJQ $FUNCNAME)
     	
-    	local param=$(getopt --name "$(message_error API)" --options 'c:m:i:t:p:w:r:' \
-    										--longoptions 'chat_id:,
-    														message_id:,
-    														inline_message_id:,
-    														text:,
-    														parse_mode:,
-    														disable_web_page_preview:,
-    														reply_markup:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:m:i:t:p:w:r:' \
+    						 --longoptions 'chat_id:,
+    										message_id:,
+    										inline_message_id:,
+    										text:,
+    										parse_mode:,
+    										disable_web_page_preview:,
+    										reply_markup:' \
+    						 -- "$@")
     	
     	eval set -- "$param"
     
@@ -3138,13 +3205,14 @@ _EOF
     	local chat_id message_id inline_message_id caption reply_markup
     	local jq_file=$(getFileJQ $FUNCNAME)
     	
-    	local param=$(getopt --name "$(message_error API)" --options 'c:m:i:t:r:' \
-    										--longoptions 'chat_id:,
-    														message_id:,
-    														inline_message_id:,
-    														caption:,
-    														reply_markup:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:m:i:t:r:' \
+    						 --longoptions 'chat_id:,
+    										message_id:,
+    										inline_message_id:,
+    										caption:,
+    										reply_markup:' \
+    						 -- "$@")
     	
     	eval set -- "$param"
     
@@ -3202,12 +3270,13 @@ _EOF
     	local chat_id message_id inline_message_id reply_markup
     	local jq_file=$(getFileJQ $FUNCNAME)
     	
-    	local param=$(getopt --name "$(message_error API)" --options 'c:m:i:r:' \
-    										--longoptions 'chat_id:,
-    														message_id:,
-    														inline_message_id:,
-    														reply_markup:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:m:i:r:' \
+    						 --longoptions 'chat_id:,
+    										message_id:,
+    										inline_message_id:,
+    										reply_markup:' \
+    						 -- "$@")
     	
     	eval set -- "$param"
     
@@ -3266,10 +3335,11 @@ _EOF
     	local chat_id message_id
     	local jq_file=$(getFileJQ $FUNCNAME)
     	
-    	local param=$(getopt --name "$(message_error API)" --options 'c:m:' \
-    										--longoptions 'chat_id:,
-    														message_id:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'c:m:' \
+    						 --longoptions 'chat_id:,
+    										message_id:' \
+    						 -- "$@")
     	
     	eval set -- "$param"
     
@@ -3304,7 +3374,6 @@ _EOF
     
     }
     
-    
     ShellBot.getUpdates()
     {
     	local total_keys offset limit timeout allowed_updates
@@ -3312,12 +3381,13 @@ _EOF
     	local jq_file=$(getFileJQ $FUNCNAME)
     
     	# Define os parâmetros da função
-    	local param=$(getopt  --name "$(message_error API)" --options 'o:l:t:a:' \
-    												--longoptions 'offset:,
-    														limit:,
-    														timeout:,
-    														allowed_updates:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'o:l:t:a:' \
+    						 --longoptions 'offset:,
+    										limit:,
+    										timeout:,
+    										allowed_updates:' \
+    						 -- "$@")
     
     	
     	eval set -- "$param"
