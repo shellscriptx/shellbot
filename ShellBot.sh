@@ -62,7 +62,6 @@ declare -r _ERR_TYPE_INT_='Tipo incompatível: Suporta somente integer.'
 declare -r _ERR_TYPE_FLOAT_='Tipo incompatível: Suporta somente float.'
 declare -r _ERR_TYPE_POINT_='Máscara inválida: Deve ser “forehead”, “eyes”, “mouth” ou “chin”.'
 declare -r _ERR_ACTION_MODE_='Ação inválida: A definição da ação não é suportada.'
-declare -r _ERR_PARAM_INVALID_='Opção inválida: A opção informada é inválida ou não suportada.'
 declare -r _ERR_PARAM_REQUIRED_='Opção requerida: Verique se o(s) parâmetro(s) ou argumento(s) obrigatório(s) estão presente(s).'
 declare -r _ERR_TOKEN_UNAUTHORIZED_='Não autorizado. Verifique se possui permissões para utilizar o token.'
 declare -r _ERR_TOKEN_INVALID_='TOKEN inválido: Verique o número do token e tente novamente.'
@@ -1890,7 +1889,10 @@ _EOF
 		local sticker
     	local jq_file=$(getFileJQ $FUNCNAME)
 
-		local param=$(getopt --name "$(message_error API)" --options 's:' --longoptions 'sticker:' -- "$@")
+		local param=$(getopt --name "$(message_error API)" \
+							 --options 's:' \
+							 --longoptions 'sticker:' \
+							 -- "$@")
 		
 		eval set -- "$param"
 
@@ -2667,11 +2669,12 @@ _EOF
         local jq_file=$(getFileJQ $FUNCNAME)
     
     	# Lê os parâmetros da função
-    	local param=$(getopt --name "$(message_error API)" --options 'u:o:l:' \
-    										--longoptions 'user_id:,
-    														offset:,
-    														limit:' \
-    														-- "$@")
+    	local param=$(getopt --name "$(message_error API)" \
+							 --options 'u:o:l:' \
+    						 --longoptions 'user_id:,
+    										offset:,
+    										limit:' \
+    						 -- "$@")
     
     	
     	# Define os parâmetros posicionais
@@ -3541,7 +3544,7 @@ _EOF
     	return $?
     }
     
-	# somente leitura
+	# Bot métodos (somente leitura)
 	declare -rf ShellBot.token \
 				ShellBot.id \
 				ShellBot.username \
@@ -3607,6 +3610,7 @@ _EOF
    	return 0
 }
 
+# Funções (somente leitura)
 declare -rf message_error \
             json \
             json_status \
