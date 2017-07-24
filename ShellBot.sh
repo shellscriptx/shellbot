@@ -3605,6 +3605,7 @@ _EOF
 				ShellBot.addStickerToSet \
 				ShellBot.setStickerPositionInSet \
 				ShellBot.deleteStickerFromSet \
+				ShellBot.StickerMaskPosition \
 				ShellBot.getUpdates
    	# status
    	return 0
