@@ -23,7 +23,7 @@
 for _pkg_ in curl jq getopt; do
 	# Se estiver ausente, trata o erro e finaliza o script.
 	if ! which $_pkg_ &>/dev/null; then
-		echo "ShellBot.sh: erro: '$_pkg_' O pacote requerido não está instalando." 1>&2
+		echo "ShellBot.sh: erro: '$_pkg_' O pacote requerido não está instalado." 1>&2
 		exit 1	# Status
 	fi
 done
@@ -3379,7 +3379,7 @@ _EOF
     			[[ $_BOT_MONITOR_ ]] && {
     				# Cabeçalho
     				echo -e "${_C_WHITE_}"
-    				echo -e "\n=================== MONITOR ==================="
+    				echo -e "=================== MONITOR ==================="
     				echo -e "Data: $(date)"
     				echo -e "Script: $_BOT_SCRIPT_"
     				echo -e "Bot (nome): $(ShellBot.first_name)"
