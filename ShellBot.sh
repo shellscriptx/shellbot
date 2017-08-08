@@ -131,10 +131,10 @@ message_error()
 
 	# Imprime erro
 	printf "%s: erro: linha %s: %s: %s: %s\n" "${_BOT_SCRIPT_}" \
-											  "${err_line:--}" \
-											  "${err_func:--}" \
-											  "${err_param:--}" \
-											  "${err_message:-$_ERR_UNKNOWN_}" 1>&2 
+												"${err_line:--}" \
+												"${err_func:--}" \
+												"${err_param:--}" \
+												"${err_message:-$_ERR_UNKNOWN_}" 1>&2 
 
 	# Finaliza script/thread em caso de erro interno, caso contrário retorna 1
 	[[ $assert ]] && exit 1 || return 1
@@ -3407,13 +3407,13 @@ _EOF
 	
 		local file_id file_info filename dir opt
 		local uri="https://api.telegram.org/file/bot$_TOKEN_"
-    	local jq_file=$(getFileJQ $FUNCNAME)
+		local jq_file=$(getFileJQ $FUNCNAME)
 
 		local param=$(getopt --name "$FUNCNAME" \
-							 --options 'f:d:' \
-							 --longoptions 'file_id:,
-											dir:' \
-							 -- "$@")
+								--options 'f:d:' \
+								--longoptions 'file_id:,
+												dir:' \
+								-- "$@")
 		
 		
 		eval set -- "$param"
