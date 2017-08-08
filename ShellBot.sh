@@ -7,7 +7,7 @@
 #	DESENVOLVIDO POR:	Juliano Santos [SHAMAN]
 #	PÁGINA:				http://www.shellscriptx.blogspot.com.br
 #	FANPAGE:			https://www.facebook.com/shellscriptx
-#	GITHUB:				https://github.com/shellscriptx/
+#	GITHUB:				https://github.com/shellscriptx
 # 	CONTATO:			shellscriptx@gmail.com
 #
 #	DESCRIÇÃO:			ShellBot é uma API não-oficial desenvolvida para facilitar a criação de 
@@ -28,7 +28,7 @@
 #						obrigatórios retornam uma mensagem de erro caso o argumento seja omitido.
 #						
 #	NOTAS:				Desenvolvida na linguagem Shell Script, utilizando o interpretador de 
-#						comandos BASH e explorando ao máximo os recursos building do mesmo,
+#						comandos BASH e explorando ao máximo os recursos build do mesmo,
 #						reduzindo o nível de dependências de pacotes externos.
 #-----------------------------------------------------------------------------------------------------------
 
@@ -76,7 +76,7 @@ declare -r _CURL_OPT_='--silent --request'
 # Erros registrados da API (Parâmetros/Argumentos)
 declare -r _ERR_TYPE_BOOL_='Tipo incompatível: Suporta somente "true" ou "false".'
 declare -r _ERR_TYPE_PARSE_MODE_='Formação inválida: Suporta Somente "markdown" ou "html".'
-declare -r _ERR_TYPE_INT_='Tipo incompatível: Suporta somente integer.'
+declare -r _ERR_TYPE_INT_='Tipo incompatível: Suporta somente inteiro.'
 declare -r _ERR_TYPE_FLOAT_='Tipo incompatível: Suporta somente float.'
 declare -r _ERR_TYPE_POINT_='Máscara inválida: Deve ser “forehead”, “eyes”, “mouth” ou “chin”.'
 declare -r _ERR_ACTION_MODE_='Ação inválida: A definição da ação não é suportada.'
@@ -89,6 +89,7 @@ declare -r _ERR_FILE_NOT_FOUND_='Arquivo não encontrado: Não foi possível ler
 declare -r _ERR_DIR_WRITE_DENIED_='Não é possível gravar no diretório: Permissão negada.'
 declare -r _ERR_DIR_NOT_FOUND_='Não foi possível acessar: Diretório não encontrado.'
 declare -r _ERR_FILE_DOWNLOAD_='Não foi possível realizar o download: Arquivo não encontrado.'
+declare -r _ERR_FILE_INVALID_ID_='Arquivo não encontrado: ID inválido.'
 declare -r _ERR_UNKNOWN_='Erro desconhecido: Ocorreu uma falha inesperada. Reporte o problema ao desenvolvedor.'
 
 # Remove diretório JSON se o script for interrompido.
@@ -117,19 +118,23 @@ message_error()
 	case $1 in
 		TG)
 			# arquivo json
-			jq_file=${*: -1}
-			err_param=$(json $jq_file '.error_code')
-			err_message=$(json $jq_file '.description')
+			jq_file="${*: -1}"
+			err_param="$(json $jq_file '.error_code')"
+			err_message="$(json $jq_file '.description')"
 			;;
 		API)
 			err_param="${3:--}: ${4:--}"
-			err_message="${2:--}"
+			err_message="$2"
 			assert=1
 			;;
 	esac
 
-	# Imprime mensagem de erro
-	echo "${_BOT_SCRIPT_}: linha ${err_line:--}: ${err_func:--}: ${err_param:--}: ${err_message:-$_ERR_UNKNOWN_}" 1>&2
+	# Imprime erro
+	printf "%s: erro: linha %s: %s: %s: %s\n" "${_BOT_SCRIPT_}" \
+											  "${err_line:--}" \
+											  "${err_func:--}" \
+											  "${err_param:--}" \
+											  "${err_message:-$_ERR_UNKNOWN_}" 1>&2 
 
 	# Finaliza script/thread em caso de erro interno, caso contrário retorna 1
 	[[ $assert ]] && exit 1 || return 1
@@ -156,7 +161,7 @@ ShellBot.init()
     	case $1 in
     		-t|--token)
     			[[ $2 =~ ^[0-9]+:[a-zA-Z0-9_-]+$ ]] || message_error API "$_ERR_TOKEN_INVALID_" "$1" "$2"
-    			declare -gr _TOKEN_="$2"																# TOKEN
+    			declare -gr _TOKEN_="$2"												# TOKEN
     			declare -gr _API_TELEGRAM_="https://api.telegram.org/bot$_TOKEN_"		# API
     			shift 2
    				;;
@@ -3417,6 +3422,7 @@ _EOF
 		do
 			case $1 in
 				-f|--file_id)
+					opt="$1"
 					file_id="$2"
 					shift 2
 					;;
@@ -3424,7 +3430,6 @@ _EOF
 					[[ -d $2 ]] && {
 						[[ -w $2 ]] || message_error API "$_ERR_DIR_WRITE_DENIED_" "$1" "$2"
 					} || message_error API "$_ERR_DIR_NOT_FOUND_" "$1" "$2"
-					opt="$1"
 					dir="${2%/}"
 					shift 2
 					;;
@@ -3440,16 +3445,18 @@ _EOF
 
 		if file_info=$(ShellBot.getFile --file_id "$file_id" 2>/dev/null); then
 
-			file_path="$(echo $file_info | cut -d'|' -f3)"
-			filename="${file_path##*/}"
+			file_remote="$(echo $file_info | cut -d'|' -f3)"
+			file_info="$(echo $file_info | cut -d'|' -f-2)"
+			ext="${file_remote##*.}"
+			file_path="$(mktemp -u --tmpdir="$dir" "file$(date +%d%m%Y%H%M%S)-XXXXX${ext:+.$ext}")"
 
-			if wget "$uri/$file_path" -O "$dir/$filename" &>/dev/null; then
-				echo "$file_info|$dir/$filename"
+			if wget "$uri/$file_remote" -O "$file_path" &>/dev/null; then
+				echo "$file_info|$file_path"
 			else
-				message_error API "$_ERR_FILE_DOWNLOAD_" "$opt" "$file_path"
+				message_error API "$_ERR_FILE_DOWNLOAD_" "$opt" "$file_remote"
 			fi
 		else
-			message_error API "$_ERR_FILE_DOWNLOAD_" "$opt" "$file_id"
+			message_error API "$_ERR_FILE_INVALID_ID_" "$opt" "$file_id"
 		fi
 				
 		return $?
