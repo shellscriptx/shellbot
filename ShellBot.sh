@@ -3414,12 +3414,7 @@ _EOF
 								--longoptions 'file_id:,
 												dir:' \
 								-- "$@")
-<<<<<<< HEAD
 		
-		
-=======
-
->>>>>>> v4.7
 		eval set -- "$param"
 
 		while :
