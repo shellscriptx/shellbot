@@ -3405,7 +3405,7 @@ _EOF
    
 	ShellBot.downloadFile() {
 	
-		local file_id file_info filename dir opt
+		local file_id file_info file_remote file_path filename dir opt ext
 		local uri="https://api.telegram.org/file/bot$_TOKEN_"
     	local jq_file=$(getFileJQ $FUNCNAME)
 
