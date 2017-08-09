@@ -28,7 +28,7 @@
 #						obrigatórios retornam uma mensagem de erro caso o argumento seja omitido.
 #						
 #	NOTAS:				Desenvolvida na linguagem Shell Script, utilizando o interpretador de 
-#						comandos BASH e explorando ao máximo os recursos build do mesmo,
+#						comandos BASH e explorando ao máximo os recursos built-in do mesmo,
 #						reduzindo o nível de dependências de pacotes externos.
 #-----------------------------------------------------------------------------------------------------------
 
