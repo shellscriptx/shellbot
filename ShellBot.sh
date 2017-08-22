@@ -1948,7 +1948,7 @@ _EOF
 				
 	}
 	
-	ShellBot.StickerMaskPosition()
+	ShellBot.stickerMaskPosition()
 	{
 
 		local point x_shift y_shift scale zoom
@@ -3689,7 +3689,7 @@ _EOF
 				ShellBot.addStickerToSet \
 				ShellBot.setStickerPositionInSet \
 				ShellBot.deleteStickerFromSet \
-				ShellBot.StickerMaskPosition \
+				ShellBot.stickerMaskPosition \
 				ShellBot.downloadFile \
 				ShellBot.getUpdates
    	# status
