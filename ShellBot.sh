@@ -107,7 +107,7 @@ flushOffset()
 	
 	# Sem erro
 	cod=0
-	update_id=1
+	update_id=0
 	
 	while [[ $update_id ]]
 	do
@@ -124,7 +124,7 @@ flushOffset()
 			(($end > 0)) && last_id=$end
 		else
 			# Seta o erro e finaliza o laço em caso de falha na chamada do método.
-			ret=1
+			cod=1
 			break
 		fi	
 	done
