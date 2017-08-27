@@ -213,7 +213,7 @@ ShellBot.init()
 				# Define a FLAG flush para o método 'ShellBot.getUpdates'. Se ativada, faz com que
 				# o método obtenha somente as atualizações disponíveis, ignorando a extração dos
 				# objetos JSON e a inicialização das variáveis.
-				declare -g _FLUSH_OFFSET_=1
+				declare -x _FLUSH_OFFSET_=1
 				shift
 				;;	
    			--)
@@ -3566,11 +3566,11 @@ _EOF
 
     	# Verifica se ocorreu erros durante a chamada do método	
     	json_status $jq_file && {
-
+		
 			# Flag flush
 			[[ $_FLUSH_OFFSET_ ]] && return 0
     		
-    		local var_init_list key key_list obj obj_cur obj_type var_name i
+			local var_init_list key key_list obj obj_cur obj_type var_name i
     
     		# Total de atualizações
     		total_keys=$(json $jq_file '.result|length')
