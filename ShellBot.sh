@@ -100,6 +100,44 @@ json_status(){ [[ $(json $1 '.ok') != false ]] && return 0 || return 1; }
 getFileJQ(){ echo $_TMP_DIR_/${1#*.}.json; return 0; } # Gera nomenclatura dos arquivos json.
 getObjVal(){ sed -nr '/\s*"[a-z_]+":\s+(\[|\{)/!{s/,$//;s/^.*:\s+"?(.*[^",])*"?/\1/p}' | sed ':a;N;s/\n/|/;ta'; return 0; }
 
+flushOffset()
+{    
+	local first_id last_id cod end
+	local jq_file=$(getFileJQ getUpdates)
+	
+	# Sem erro
+	cod=0
+	update_id=1
+	
+	while [[ $update_id ]]
+	do
+		# Lê as atualizações do offset atual. É possível listar no máximo 100 objetos por offset.
+		if ShellBot.getUpdates --limit 100 --offset $(ShellBot.OffsetNext)
+		then
+			# Lê os IDs das atualizações disponíveis, salva o primeiro e último elemento da lista.
+			# Interrompe o laço se não houver mais atualizações.
+			unset update_id
+			update_id=($(json $jq_file '.result|.[]|.update_id'))
+
+			first_id=${first_id:-$update_id}
+			end=$(ShellBot.OffsetEnd)
+			(($end > 0)) && last_id=$end
+		else
+			# Seta o erro e finaliza o laço em caso de falha na chamada do método.
+			ret=1
+			break
+		fi	
+	done
+
+	# Retorna '0' se não houver registro.
+	# Saída: 0|0
+	echo "${first_id:-0}|${last_id:-0}"
+	unset _FLUSH_OFFSET_ 	# Limpa a flag
+
+	# Status
+	return $cod
+}    
+ 
 message_error()
 {
 	# Variáveis locais
@@ -146,11 +184,12 @@ ShellBot.init()
 	# Verifica se o bot já foi inicializado.
 	[[ $_SHELLBOT_INIT_ ]] && message_error API "$_ERR_BOT_ALREADY_INIT_"
 
-	# Variável local
+	
 	local param=$(getopt --name "$FUNCNAME" \
-						 --options 't:m' \
+						 --options 't:mf' \
 						 --longoptions 'token:,
-										monitor' \
+										monitor,
+										flush' \
     					 -- "$@")
     
     # Define os parâmetros posicionais
@@ -170,6 +209,13 @@ ShellBot.init()
    				declare -gr _BOT_MONITOR_=1
    				shift
    				;;
+			-f|--flush)
+				# Define a FLAG flush para o método 'ShellBot.getUpdates'. Se ativada, faz com que
+				# o método obtenha somente as atualizações disponíveis, ignorando a extração dos
+				# objetos JSON e a inicialização das variáveis.
+				declare -g _FLUSH_OFFSET_=1
+				shift
+				;;	
    			--)
    				shift
    				break
@@ -219,9 +265,9 @@ ShellBot.init()
    	
 	ShellBot.token() { echo "${_TOKEN_}"; }
 	ShellBot.id() { echo "${_BOT_INFO_[0]}"; }
-	ShellBot.first_name() { echo "${_BOT_INFO_[1]}"; }
-	ShellBot.username() { echo "${_BOT_INFO_[2]}"; }
-    
+	ShellBot.first_name() { echo "${_BOT_INFO_[2]}"; }
+	ShellBot.username() { echo "${_BOT_INFO_[3]}"; }
+   
     ShellBot.regHandleFunction()
     {
     	local function callback_data handle args
@@ -3517,9 +3563,12 @@ _EOF
     
     	# Limpa as variáveis inicializadas.
     	unset $_var_init_list_
-    	
+
     	# Verifica se ocorreu erros durante a chamada do método	
     	json_status $jq_file && {
+
+			# Flag flush
+			[[ $_FLUSH_OFFSET_ ]] && return 0
     		
     		local var_init_list key key_list obj obj_cur obj_type var_name i
     
@@ -3627,7 +3676,7 @@ _EOF
     	# Status
     	return $?
     }
-    
+   
 	# Bot métodos (somente leitura)
 	declare -rf ShellBot.token \
 				ShellBot.id \
@@ -3692,7 +3741,11 @@ _EOF
 				ShellBot.stickerMaskPosition \
 				ShellBot.downloadFile \
 				ShellBot.getUpdates
-   	# status
+   
+	# Retorna objetos
+	echo "$(ShellBot.id)|$(ShellBot.username)|$(ShellBot.first_name)|$( (($_FLUSH_OFFSET_)) && flushOffset )"
+
+	# status
    	return 0
 }
 
@@ -3701,4 +3754,5 @@ declare -rf message_error \
             json \
             json_status \
             getFileJQ \
-            getObjVal
+            getObjVal \
+			flushOffset
