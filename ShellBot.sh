@@ -132,7 +132,9 @@ flushOffset()
 	# Retorna '0' se não houver registro.
 	# Saída: 0|0
 	echo "${first_id:-0}|${last_id:-0}"
-	unset _FLUSH_OFFSET_ 	# Limpa a flag
+
+	# Desativa a flag
+	_FLUSH_OFFSET_=$((~_FLUSH_OFFSET_))
 
 	# Status
 	return $cod
@@ -3568,7 +3570,7 @@ _EOF
     	json_status $jq_file && {
 		
 			# Flag flush
-			[[ $_FLUSH_OFFSET_ ]] && return 0
+			((_FLUSH_OFFSET_ == 1)) && return 0
     		
 			local var_init_list key key_list obj obj_cur obj_type var_name i
     
