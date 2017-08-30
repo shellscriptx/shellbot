@@ -59,8 +59,6 @@ declare -r _C_GREEN_='\033[0;32m'
 declare -r _C_CYAN_='\033[0;36m'
 declare -r _C_DEF_='\033[0;m'
 
-# diretório temporário
-
 # curl parâmetros
 declare -r _CURL_OPT_='--silent --request'
 
