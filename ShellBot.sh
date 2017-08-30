@@ -46,14 +46,6 @@ done
 
 # Script que importou a API.
 declare -r _BOT_SCRIPT_=$(basename "$0")
-
-# Diretório temporário onde são gerados os arquivos json (JavaSCript Object Notation) sempre que um método é chamado. 
-_TMP_DIR_=$(mktemp -q -d --tmpdir=/tmp ${_BOT_SCRIPT_%%.*}-XXXXXXXXXX) || {
-	echo -e "ShellBot: erro: não foi possível criar o diretório JSON em '/tmp'." 1>&2
-	echo -e "Verifique se o diretório existe ou se possui permissões de escrita e tente novamente." 1>&2
-	exit 1
-} 
-
 # API inicializada.
 declare -r _SHELLBOT_SH_=1
 
@@ -68,7 +60,6 @@ declare -r _C_CYAN_='\033[0;36m'
 declare -r _C_DEF_='\033[0;m'
 
 # diretório temporário
-declare -r _TMP_DIR_
 
 # curl parâmetros
 declare -r _CURL_OPT_='--silent --request'
@@ -92,18 +83,13 @@ declare -r _ERR_FILE_DOWNLOAD_='Não foi possível realizar o download: Arquivo 
 declare -r _ERR_FILE_INVALID_ID_='Arquivo não encontrado: ID inválido.'
 declare -r _ERR_UNKNOWN_='Erro desconhecido: Ocorreu uma falha inesperada. Reporte o problema ao desenvolvedor.'
 
-# Remove diretório JSON se o script for interrompido.
-trap "rm -rf $_TMP_DIR_ &>/dev/null; exit 1" SIGQUIT SIGINT SIGKILL SIGTERM SIGSTOP SIGPWR
-
-json() { jq -r "${*:2}" $1 2>/dev/null; }
-json_status(){ [[ $(json $1 '.ok') != false ]] && return 0 || return 1; }
-getFileJQ(){ echo $_TMP_DIR_/${1#*.}.json; return 0; } # Gera nomenclatura dos arquivos json.
-getObjVal(){ sed -nr '/\s*"[a-z_]+":\s+(\[|\{)/!{s/,$//;s/^.*:\s+"?(.*[^",])*"?/\1/p}' | sed ':a;N;s/\n/|/;ta'; return 0; }
+json() { jq "$1" <<< "${*:2}" | sed -r 's/"([^"]*)":/\1:/;/^"/{s/(^"|"$)//g}' 2>/dev/null; }
+getObjVal(){ sed -nr '/^\s*[a-z_]+:\s+(\[|\{)/!{s/,$//;s/^.*:\s+"?(.*[^",])*"?$/\1/p}' | sed ':a;N;s/\n/|/;ta'; }
+json_status(){ [[ $(json '.ok' "$*") == true ]] && return 0 || return 1; }
 
 flushOffset()
 {    
-	local first_id last_id cod end
-	local jq_file=$(getFileJQ getUpdates)
+	local first_id last_id cod end jq_obj
 	
 	# Sem erro
 	cod=0
@@ -112,12 +98,12 @@ flushOffset()
 	while [[ $update_id ]]
 	do
 		# Lê as atualizações do offset atual. É possível listar no máximo 100 objetos por offset.
-		if ShellBot.getUpdates --limit 100 --offset $(ShellBot.OffsetNext)
+		if jq_obj=$(ShellBot.getUpdates --limit 100 --offset $(ShellBot.OffsetNext))
 		then
 			# Lê os IDs das atualizações disponíveis, salva o primeiro e último elemento da lista.
 			# Interrompe o laço se não houver mais atualizações.
 			unset update_id
-			update_id=($(json $jq_file '.result|.[]|.update_id'))
+			update_id=($(json '.result|.[]|.update_id' $jq_obj))
 
 			first_id=${first_id:-$update_id}
 			end=$(ShellBot.OffsetEnd)
@@ -143,7 +129,7 @@ flushOffset()
 message_error()
 {
 	# Variáveis locais
-	local err_message err_param assert jq_file err_line err_func
+	local err_message err_param assert err_line err_func
 	
 	# A variável 'BASH_LINENO' é dinâmica e armazena o número da linha onde foi expandida.
 	# Quando chamada dentro de um subshell, passa ser instanciada como um array, armazenando diversos
@@ -158,9 +144,8 @@ message_error()
 	case $1 in
 		TG)
 			# arquivo json
-			jq_file="${*: -1}"
-			err_param="$(json $jq_file '.error_code')"
-			err_message="$(json $jq_file '.description')"
+			err_param="$(json '.error_code' ${*:2})"
+			err_message="$(json '.description' ${*:2})"
 			;;
 		API)
 			err_param="${3:--}: ${4:--}"
@@ -232,17 +217,16 @@ ShellBot.init()
     # Não requer parâmetros. Retorna informações básicas sobre o bot em forma de um objeto Usuário.
     ShellBot.getMe()
     {
-    	# Variável local
-    	local jq_file=$(getFileJQ $FUNCNAME)
-    
+		local jq_obj
+
     	# Chama o método getMe passando o endereço da API, seguido do nome do método.
-    	curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} > $jq_file
+    	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.})
     	
     	# Verifica o status de retorno do método
-    	json_status $jq_file && {
+    	json_status $jq_obj && {
     		# Retorna as informações armazenadas em "result".
-    		json $jq_file '.result' | getObjVal
-    	} || message_error TG $jq_file
+    		json '.result' $jq_obj | getObjVal
+    	} || message_error TG $jq_obj
     
     	return $?
     }
@@ -371,15 +355,15 @@ ShellBot.init()
     ShellBot.getWebhookInfo()
     {
     	# Variável local
-    	local jq_file=$(getFileJQ $FUNCNAME)
-    		
+    	local jq_obj
+	
     	# Chama o método getMe passando o endereço da API, seguido do nome do método.
-    	curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} > $jq_file
+    	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.})
     	
     	# Verifica o status de retorno do método
-    	json_status $jq_file && {
-    		json $jq_file '.result' | getObjVal
-    	} || message_error TG $jq_file
+    	json_status $jq_obj && {
+    		json '.result' $jq_obj | getObjVal
+    	} || message_error TG $jq_obj
     	
     	return $?
     }
@@ -387,21 +371,20 @@ ShellBot.init()
     ShellBot.deleteWebhook()
     {
     	# Variável local
-    	local jq_file=$(getFileJQ $FUNCNAME)
-    		
+    	local jq_obj
+	
     	# Chama o método getMe passando o endereço da API, seguido do nome do método.
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} > $jq_file
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.})
     	
     	# Verifica o status de retorno do método
-    	json_status $jq_file || message_error TG $jq_file
+    	json_status $jq_obj || message_error TG $jq_obj
     	
     	return $?
     }
     
     ShellBot.setWebhook()
     {
-    	local url certificate max_connections allowed_updates
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local url certificate max_connections allowed_updates jq_obj
     	
     	local param=$(getopt --name "$FUNCNAME" \
 							 --options 'u:c:m:a:' \
@@ -443,13 +426,13 @@ ShellBot.init()
     	
     	[[ $url ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-u, --url]"
     
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${url:+-d url="$url"} \
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${url:+-d url="$url"} \
     								 ${certificate:+-d certificate="$certificate"} \
     								 ${max_connections:+-d max_connections="$max_connections"} \
-    								 ${allowed_updates:+-d allowed_updates="$allowed_updates"} > $jq_file
+    								 ${allowed_updates:+-d allowed_updates="$allowed_updates"})
     
     	# Testa o retorno do método.
-    	json_status $jq_file || message_error TG $jq_file
+    	json_status $jq_obj || message_error TG $jq_obj
     	
     	# Status
     	return $?
@@ -457,8 +440,7 @@ ShellBot.init()
     
     ShellBot.setChatPhoto()
     {
-    	local chat_id photo
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id photo jq_obj
     	
     	local param=$(getopt --name "$FUNCNAME" \
 							 --options 'c:p:' \
@@ -489,10 +471,10 @@ ShellBot.init()
     	[[ $chat_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
     	[[ $photo ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-p, --photo"
     	
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
-    								 ${photo:+-F photo="$photo"} > $jq_file
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
+    								 ${photo:+-F photo="$photo"})
     
-    	json_status $jq_file || message_error TG $jq_file
+    	json_status $jq_obj || message_error TG $jq_obj
     		
     	# Status
     	return $?
@@ -500,8 +482,7 @@ ShellBot.init()
     
     ShellBot.deleteChatPhoto()
     {
-    	local chat_id
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id jq_obj
     	
     	local param=$(getopt --name "$FUNCNAME" \
 							 --options 'c:' \
@@ -526,9 +507,9 @@ ShellBot.init()
     	
     	[[ $chat_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
     	
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} > $jq_file
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"})
     
-    	json_status $jq_file || message_error TG $jq_file
+    	json_status $jq_obj || message_error TG $jq_obj
     		
     	# Status
     	return $?
@@ -538,8 +519,7 @@ ShellBot.init()
     ShellBot.setChatTitle()
     {
     	
-    	local chat_id title
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id title jq_obj
     	
     	local param=$(getopt --name "$FUNCNAME" \
 							 --options 'c:t:' \
@@ -569,10 +549,10 @@ ShellBot.init()
     	[[ $chat_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
     	[[ $title ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-t, --title"
     	
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
-    								 ${title:+-d title="$title"} > $jq_file
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
+    								 ${title:+-d title="$title"})
     
-    	json_status $jq_file || message_error TG $jq_file
+    	json_status $jq_obj || message_error TG $jq_obj
     		
     	# Status
     	return $?
@@ -582,8 +562,7 @@ ShellBot.init()
     ShellBot.setChatDescription()
     {
     	
-    	local chat_id description
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id description jq_obj
     	
     	local param=$(getopt --name "$FUNCNAME" \
 							 --options 'c:d:' \
@@ -613,10 +592,10 @@ ShellBot.init()
     	[[ $chat_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
     	[[ $description ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-d, --description"
     	
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
-    								 ${description:+-d description="$description"} > $jq_file
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
+    								 ${description:+-d description="$description"})
     
-    	json_status $jq_file || message_error TG $jq_file
+    	json_status $jq_obj || message_error TG $jq_obj
     		
     	# Status
     	return $?
@@ -625,8 +604,7 @@ ShellBot.init()
     ShellBot.pinChatMessage()
     {
     	
-    	local chat_id message_id disable_notification
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id message_id disable_notification jq_obj
     	
     	local param=$(getopt --name "$FUNCNAME" \
 							 --options 'c:m:n:' \
@@ -664,11 +642,11 @@ ShellBot.init()
     	[[ $chat_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
     	[[ $message_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-m, --message_id"
     	
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
     								 ${message_id:+-d message_id="$message_id"} \
-    								 ${disable_notification:+-d disable_notification="$disable_notification"} > $jq_file
+    								 ${disable_notification:+-d disable_notification="$disable_notification"})
     
-    	json_status $jq_file || message_error TG $jq_file
+    	json_status $jq_obj || message_error TG $jq_obj
     		
     	# Status
     	return $?
@@ -676,8 +654,7 @@ ShellBot.init()
     
     ShellBot.unpinChatMessage()
     {
-    	local chat_id
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id jq_obj
     	
     	local param=$(getopt --name "$FUNCNAME" \
 							 --options 'c:' \
@@ -702,9 +679,9 @@ ShellBot.init()
     	
     	[[ $chat_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
     	
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} > $jq_file
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"})
     
-    	json_status $jq_file || message_error TG $jq_file
+    	json_status $jq_obj || message_error TG $jq_obj
     		
     	# Status
     	return $?
@@ -714,10 +691,8 @@ ShellBot.init()
     {
     	local	chat_id user_id until_date can_send_messages \
     			can_send_media_messages can_send_other_messages \
-    			can_add_web_page_previews
+    			can_add_web_page_previews jq_obj
     
-    	local jq_file=$(getFileJQ $FUNCNAME)
-    	
     	local param=$(getopt --name "$FUNCNAME" \
 							 --options 'c:u:d:s:m:o:w:' \
     						 --longoptions 'chat_id:,
@@ -778,15 +753,15 @@ ShellBot.init()
     	[[ $chat_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
     	[[ $user_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --user_id"
     	
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
     								 ${user_id:+-d user_id="$user_id"} \
     								 ${until_date_:+-d until_date="$until_date"} \
     								 ${can_send_messages:+-d can_send_messages="$can_send_messages"} \
     								 ${can_send_media_messages:+-d can_send_media_messages="$can_send_media_messages"} \
     								 ${can_send_other_messages:+-d can_send_other_messages="$can_send_other_messages"} \
-    								 ${can_add_web_page_previews:+-d can_add_web_page_previews="$can_add_web_page_previews"} > $jq_file
+    								 ${can_add_web_page_previews:+-d can_add_web_page_previews="$can_add_web_page_previews"})
     
-    	json_status $jq_file || message_error TG $jq_file
+    	json_status $jq_obj || message_error TG $jq_obj
     		
     	# Status
     	return $?
@@ -798,10 +773,9 @@ ShellBot.init()
     {
     	local	chat_id user_id can_change_info can_post_messages \
     			can_edit_messages can_delete_messages can_invite_users \
-    			can_restrict_members can_pin_messages can_promote_members
+    			can_restrict_members can_pin_messages can_promote_members \
+				jq_obj
     
-    	local jq_file=$(getFileJQ $FUNCNAME)
-    	
     	local param=$(getopt --name "$FUNCNAME" \
 							 --options 'c:u:i:p:e:d:v:r:f:m:' \
 							 --longoptions 'chat_id:,
@@ -880,7 +854,7 @@ ShellBot.init()
     	[[ $chat_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
     	[[ $user_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --user_id"
     	
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
     								 ${user_id:+-d user_id="$user_id"} \
     								 ${can_change_info:+-d can_change_info="$can_change_info"} \
     								 ${can_post_messages:+-d can_post_messages="$can_post_messages"} \
@@ -889,9 +863,9 @@ ShellBot.init()
     								 ${can_invite_users:+-d can_invite_users="$can_invite_users"} \
     								 ${can_restrict_members:+-d can_restrict_members="$can_restrict_members"} \
     								 ${can_pin_messages:+-d can_pin_messages="$can_pin_messages"} \
-    								 ${can_promote_members:+-d can_promote_members="$can_promote_members"} > $jq_file
+    								 ${can_promote_members:+-d can_promote_members="$can_promote_members"})
     
-    	json_status $jq_file || message_error TG $jq_file
+    	json_status $jq_obj || message_error TG $jq_obj
     		
     	# Status
     	return $?
@@ -899,8 +873,7 @@ ShellBot.init()
     
     ShellBot.exportChatInviteLink()
     {
-    	local chat_id
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id jq_obj
     
     	local param=$(getopt --name "$FUNCNAME" \
 							 --options 'c:' \
@@ -925,12 +898,12 @@ ShellBot.init()
     
     	[[ $chat_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
     	
-    	curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} > $jq_file
+    	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"})
     	
     	# Testa o retorno do método.
-    	json_status $jq_file && {
-    		json $jq_file '.result'
-    	} || message_error TG $jq_file
+    	json_status $jq_obj && {
+    		json '.result' $jq_obj
+    	} || message_error TG $jq_obj
     		
     	# Status
     	return $?
@@ -939,10 +912,8 @@ ShellBot.init()
     ShellBot.sendVideoNote()
     {
     	local chat_id video_note duration length disable_notification \
-    			reply_to_message_id reply_markup
+    			reply_to_message_id reply_markup jq_obj
     
-    	local jq_file=$(getFileJQ $FUNCNAME)
-    	
     	local param=$(getopt --name "$FUNCNAME" \
 							 --options 'c:v:t:l:n:r:m:' \
 							 --longoptions 'chat_id:,
@@ -1003,18 +974,18 @@ ShellBot.init()
     	[[ $chat_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --chat_id"
     	[[ $video_note ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-v, --video_note"
     	
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
     								 ${video_note:+-F video_note="$video_note"} \
     								 ${duration:+-F duration="$duration"} \
     								 ${length:+-F length="$length"} \
     								 ${disable_notification:+-F disable_notification="$disable_notification"} \
     								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
-    								 ${reply_markup:+-F reply_markup="$reply_markup"} > $jq_file
+    								 ${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Testa o retorno do método.
-    	json_status $jq_file && {
-    		json $jq_file '.result' | getObjVal
-    	} || message_error TG $jq_file
+    	json_status $jq_obj && {
+    		json '.result' $jq_obj | getObjVal
+    	} || message_error TG $jq_obj
     	
     	# Status
     	return $?
@@ -1181,8 +1152,7 @@ ShellBot.init()
     
     ShellBot.answerCallbackQuery()
     {
-    	local callback_query_id text show_alert url cache_time
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local callback_query_id text show_alert url cache_time jq_obj
     	
     	local param=$(getopt --name "$FUNCNAME" \
 							 --options 'c:t:s:u:e:' \
@@ -1232,13 +1202,13 @@ ShellBot.init()
     	
     	[[ $callback_query_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "-c, --callback_query_id"
     	
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${callback_query_id:+-d callback_query_id="$callback_query_id"} \
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${callback_query_id:+-d callback_query_id="$callback_query_id"} \
     								 ${text:+-d text="$text"} \
     								 ${show_alert:+-d show_alert="$show_alert"} \
     								 ${url:+-d url="$url"} \
-    								 ${cache_time:+-d cache_time="$cache_time"} > $jq_file
+    								 ${cache_time:+-d cache_time="$cache_time"})
     
-    	json_status $jq_file || message_error TG $jq_file
+    	json_status $jq_obj || message_error TG $jq_obj
     
     	return $?
     }
@@ -1324,8 +1294,7 @@ _EOF
     ShellBot.sendMessage()
     {
     	# Variáveis locais 
-    	local chat_id text parse_mode disable_web_page_preview disable_notification reply_to_message_id reply_markup
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id text parse_mode disable_web_page_preview disable_notification reply_to_message_id reply_markup jq_obj
     	
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
@@ -1395,18 +1364,18 @@ _EOF
     	# Chama o método da API, utilizando o comando request especificado; Os parâmetros 
     	# e valores são passados no form e lidos pelo método. O retorno do método é redirecionado para o arquivo 'update.json'.
     	# Variáveis com valores nulos são ignoradas e consequentemente os respectivos parâmetros omitidos.
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
     								 ${text:+-d text="$text"} \
     								 ${parse_mode:+-d parse_mode="$parse_mode"} \
     								 ${disable_web_page_preview:+-d disable_web_page_preview="$disable_web_page_preview"} \
     								 ${disable_notification:+-d disable_notification="$disable_notification"} \
     								 ${reply_to_message_id:+-d reply_to_message_id="$reply_to_message_id"} \
-    								 ${reply_markup:+-d reply_markup="$reply_markup"} > $jq_file
-    
+    								 ${reply_markup:+-d reply_markup="$reply_markup"})
+   
     	# Testa o retorno do método.
-    	json_status $jq_file && {
-    		json $jq_file '.result' | getObjVal
-    	} || message_error TG $jq_file
+    	json_status $jq_obj && {
+    		json '.result' $jq_obj | getObjVal
+    	} || message_error TG $jq_obj
     	
     	# Status
     	return $?
@@ -1416,8 +1385,7 @@ _EOF
     ShellBot.forwardMessage()
     {
     	# Variáveis locais
-    	local chat_id form_chat_id disable_notification message_id
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id form_chat_id disable_notification message_id jq_obj
     	
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
@@ -1468,15 +1436,15 @@ _EOF
     	[[ $message_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
     
     	# Chama o método
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
     		 						 ${from_chat_id:+-d from_chat_id="$from_chat_id"} \
     								 ${disable_notification:+-d disable_notification="$disable_notification"} \
-    								 ${message_id:+-d message_id="$message_id"} > $jq_file
+    								 ${message_id:+-d message_id="$message_id"})
     	
     	# Retorno do método
-    	json_status $jq_file && {
-    		json $jq_file '.result' | getObjVal
-    	} || message_error TG $jq_file
+    	json_status $jq_obj && {
+    		json '.result' $jq_obj | getObjVal
+    	} || message_error TG $jq_obj
     
     	# status
     	return $?
@@ -1486,8 +1454,7 @@ _EOF
     ShellBot.sendPhoto()
     {
     	# Variáveis locais
-    	local chat_id photo caption disable_notification reply_to_message_id reply_markup
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id photo caption disable_notification reply_to_message_id reply_markup jq_obj
     
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
@@ -1549,17 +1516,17 @@ _EOF
     	[[ $photo ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-p, --photo]"
     	
     	# Chama o método
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
     								 ${photo:+-F photo="$photo"} \
     								 ${caption:+-F caption="$caption"} \
     								 ${disable_notification:+-F disable_notification="$disable_notification"} \
     								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
-    								 ${reply_markup:+-F reply_markup="$reply_markup"} > $jq_file
+    								 ${reply_markup:+-F reply_markup="$reply_markup"})
     	
     	# Retorno do método
-    	json_status $jq_file && {
-    		json $jq_file '.result' | getObjVal
-    	} || message_error TG $jq_file
+    	json_status $jq_obj && {
+    		json '.result' $jq_obj | getObjVal
+    	} || message_error TG $jq_obj
     
     	# Status
     	return $?
@@ -1569,8 +1536,7 @@ _EOF
     ShellBot.sendAudio()
     {
     	# Variáveis locais
-    	local chat_id audio caption duration performer title disable_notification reply_to_message_id reply_markup	
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id audio caption duration performer title disable_notification reply_to_message_id reply_markup jq_obj
     	
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
@@ -1647,7 +1613,7 @@ _EOF
     	[[ $audio ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-a, --audio]"
     	
     	# Chama o método
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
     								 ${audio:+-F audio="$audio"} \
     								 ${caption:+-F caption="$caption"} \
     								 ${duration:+-F duration="$duration"} \
@@ -1655,12 +1621,12 @@ _EOF
     								 ${title:+-F title="$title"} \
     								 ${disable_notification:+-F disable_notification="$disable_notification"} \
     								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
-    								 ${reply_markup:+-F reply_markup="$reply_markup"} > $jq_file
+    								 ${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Retorno do método
-    	json_status $jq_file && {
-    		json $jq_file '.result' | getObjVal
-    	} || message_error TG $jq_file
+    	json_status $jq_obj && {
+    		json '.result' $jq_obj | getObjVal
+    	} || message_error TG $jq_obj
     
     	# Status
     	return $?
@@ -1671,8 +1637,7 @@ _EOF
     ShellBot.sendDocument()
     {
     	# Variáveis locais
-    	local chat_id document caption disable_notification reply_to_message_id reply_markup
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id document caption disable_notification reply_to_message_id reply_markup jq_obj
     	
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
@@ -1731,17 +1696,17 @@ _EOF
     	[[ $document ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-d, --document]"
     	
     	# Chama o método
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
     								 ${document:+-F document="$document"} \
     								 ${caption:+-F caption="$caption"} \
     								 ${disable_notification:+-F disable_notification="$disable_notification"} \
     								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
-    								 ${reply_markup:+-F reply_markup="$reply_markup"} > $jq_file
+    								 ${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Retorno do método
-    	json_status $jq_file && {
-    		json $jq_file '.result' | getObjVal
-    	} || message_error TG $jq_file
+    	json_status $jq_obj && {
+    		json '.result' $jq_obj | getObjVal
+    	} || message_error TG $jq_obj
     
     	# Status
     	return $?
@@ -1752,8 +1717,7 @@ _EOF
     ShellBot.sendSticker()
     {
     	# Variáveis locais
-    	local chat_id sticker disable_notification reply_to_message_id reply_markup
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id sticker disable_notification reply_to_message_id reply_markup jq_obj
     
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
@@ -1808,16 +1772,16 @@ _EOF
     	[[ $sticker ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-s, --sticker]"
     
     	# Chama o método
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
     								 ${sticker:+-F sticker="$sticker"} \
     								 ${disable_notification:+-F disable_notification="$disable_notification"} \
     								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
-    								 ${reply_markup:+-F reply_markup="$reply_markup"} > $jq_file
+    								 ${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Testa o retorno do método
-    	json_status $jq_file && {
-    		json $jq_file '.result' | getObjVal
-    	} || message_error TG $jq_file
+    	json_status $jq_obj && {
+    		json '.result' $jq_obj | getObjVal
+    	} || message_error TG $jq_obj
     
     	# Status
     	return $?
@@ -1825,8 +1789,7 @@ _EOF
    
 	ShellBot.getStickerSet()
 	{
-		local name
-    	local jq_file=$(getFileJQ $FUNCNAME)
+		local name jq_obj
 		
 		local param=$(getopt --name "$FUNCNAME" \
 							 --options 'n:' \
@@ -1852,12 +1815,12 @@ _EOF
     	
 		[[ $name ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-n, --name]"
     	
-		curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${name:+-d name="$name"} > $jq_file
+		jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${name:+-d name="$name"})
     	
 		# Testa o retorno do método
-    	json_status $jq_file && {
-    		json $jq_file '.result' | getObjVal
-    	} || message_error TG $jq_file
+    	json_status $jq_obj && {
+    		json '.result' $jq_obj | getObjVal
+    	} || message_error TG $jq_obj
     
     	# Status
     	return $?
@@ -1865,8 +1828,7 @@ _EOF
 	
 	ShellBot.uploadStickerFile()
 	{
-		local user_id png_sticker
-    	local jq_file=$(getFileJQ $FUNCNAME)
+		local user_id png_sticker jq_obj
 		
 		local param=$(getopt --name "$FUNCNAME" \
 							 --options 'u:s:' \
@@ -1899,13 +1861,13 @@ _EOF
 		[[ $user_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
 		[[ $png_sticker ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-s, --png_sticker]"
     	
-		curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${user_id:+-F user_id="$user_id"} \
-									 ${png_sticker:+-F png_sticker="$png_sticker"} > $jq_file
+		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${user_id:+-F user_id="$user_id"} \
+									 ${png_sticker:+-F png_sticker="$png_sticker"})
     	
 		# Testa o retorno do método
-    	json_status $jq_file && {
-    		json $jq_file '.result' | getObjVal
-    	} || message_error TG $jq_file
+    	json_status $jq_obj && {
+    		json '.result' $jq_obj | getObjVal
+    	} || message_error TG $jq_obj
     
     	# Status
     	return $?
@@ -1914,8 +1876,7 @@ _EOF
 
 	ShellBot.setStickerPositionInSet()
 	{
-		local sticker position
-    	local jq_file=$(getFileJQ $FUNCNAME)
+		local sticker position jq_obj
 
 		local param=$(getopt --name "$FUNCNAME" \
 							 --options 's:p:' \
@@ -1947,11 +1908,11 @@ _EOF
 		[[ $sticker ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-s, --sticker]"
 		[[ $position ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-p, --position]"
     	
-		curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${sticker:+-d sticker="$sticker"} \
-									 ${position:+-d position="$position"} > $jq_file
+		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${sticker:+-d sticker="$sticker"} \
+									 ${position:+-d position="$position"})
     	
 		# Testa o retorno do método
-    	json_status $jq_file || message_error TG $jq_file
+    	json_status $jq_obj || message_error TG $jq_obj
     	
 		# Status
     	return $?
@@ -1960,8 +1921,7 @@ _EOF
 	
 	ShellBot.deleteStickerFromSet()
 	{
-		local sticker
-    	local jq_file=$(getFileJQ $FUNCNAME)
+		local sticker jq_obj
 
 		local param=$(getopt --name "$FUNCNAME" \
 							 --options 's:' \
@@ -1986,10 +1946,10 @@ _EOF
 		
 		[[ $sticker ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-s, --sticker]"
     	
-		curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${sticker:+-d sticker="$sticker"}  > $jq_file
+		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${sticker:+-d sticker="$sticker"})
     	
 		# Testa o retorno do método
-    	json_status $jq_file || message_error TG $jq_file
+    	json_status $jq_obj || message_error TG $jq_obj
     	
 		# Status
     	return $?
@@ -2063,8 +2023,7 @@ _EOF
 
 	ShellBot.createNewStickerSet()
 	{
-		local user_id name title png_sticker emojis contains_masks mask_position
-    	local jq_file=$(getFileJQ $FUNCNAME)
+		local user_id name title png_sticker emojis contains_masks mask_position jq_obj
 		
 		local param=$(getopt --name "$FUNCNAME" \
 							 --options 'u:n:t:s:e:c:m:' \
@@ -2126,16 +2085,16 @@ _EOF
 		[[ $png_sticker ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-s, --png_sticker]"
 		[[ $emojis ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-e, --emojis]"
 	
-		curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${user_id:+-F user_id="$user_id"} \
+		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${user_id:+-F user_id="$user_id"} \
 									 ${name:+-F name="$name"} \
 									 ${title:+-F title="$title"} \
 									 ${png_sticker:+-F png_sticker="$png_sticker"} \
 									 ${emojis:+-F emojis="$emojis"} \
 									 ${contains_masks:+-F contains_masks="$contains_masks"} \
-									 ${mask_position:+-F mask_position="$mask_position"} > $jq_file
+									 ${mask_position:+-F mask_position="$mask_position"})
     	
 		# Testa o retorno do método
-    	json_status $jq_file || message_error TG $jq_file
+    	json_status $jq_obj || message_error TG $jq_obj
     	
 		# Status
     	return $?
@@ -2144,8 +2103,7 @@ _EOF
 	
 	ShellBot.addStickerToSet()
 	{
-		local user_id name png_sticker emojis mask_position
-    	local jq_file=$(getFileJQ $FUNCNAME)
+		local user_id name png_sticker emojis mask_position jq_obj
 		
 		local param=$(getopt --name "$FUNCNAME" \
 							 --options 'u:n:s:e:m:' \
@@ -2195,14 +2153,14 @@ _EOF
 		[[ $png_sticker ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-s, --png_sticker]"
 		[[ $emojis ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-e, --emojis]"
 	
-		curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${user_id:+-F user_id="$user_id"} \
+		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${user_id:+-F user_id="$user_id"} \
 									 ${name:+-F name="$name"} \
 									 ${png_sticker:+-F png_sticker="$png_sticker"} \
 									 ${emojis:+-F emojis="$emojis"} \
-									 ${mask_position:+-F mask_position="$mask_position"} > $jq_file
+									 ${mask_position:+-F mask_position="$mask_position"})
     	
 		# Testa o retorno do método
-    	json_status $jq_file || message_error TG $jq_file
+    	json_status $jq_obj || message_error TG $jq_obj
     	
 		# Status
     	return $?
@@ -2213,8 +2171,7 @@ _EOF
     ShellBot.sendVideo()
     {
     	# Variáveis locais
-    	local chat_id video duration width height caption disable_notification reply_to_message_id reply_markup
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id video duration width height caption disable_notification reply_to_message_id reply_markup jq_obj
     
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
@@ -2295,7 +2252,7 @@ _EOF
     	[[ $video ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-v, --video]"
     
     	# Chama o método
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
     								 ${video:+-F video="$video"} \
     								 ${duration:+-F duration="$duration"} \
     								 ${width:+-F width="$width"} \
@@ -2303,12 +2260,12 @@ _EOF
     								 ${caption:+-F caption="$caption"} \
     								 ${disable_notification:+-F disable_notification="$disable_notification"} \
     								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
-    								 ${reply_markup:+-F reply_markup="$reply_markup"} > $jq_file
+    								 ${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Testa o retorno do método
-    	json_status $jq_file && {
-    		json $jq_file '.result' | getObjVal
-    	} || message_error TG $jq_file
+    	json_status $jq_obj && {
+    		json '.result' $jq_obj | getObjVal
+    	} || message_error TG $jq_obj
     
     	# Status
     	return $?
@@ -2319,8 +2276,7 @@ _EOF
     ShellBot.sendVoice()
     {
     	# Variáveis locais
-    	local chat_id voice caption duration disable_notification reply_to_message_id reply_markup
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id voice caption duration disable_notification reply_to_message_id reply_markup jq_obj
     
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
@@ -2387,18 +2343,18 @@ _EOF
     	[[ $voice ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-v, --voice]"
     	
     	# Chama o método
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
     								 ${voice:+-F voice="$voice"} \
     								 ${caption:+-F caption="$caption"} \
     								 ${duration:+-F duration="$duration"} \
     								 ${disable_notification:+-F disable_notification="$disable_notification"} \
     								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
-    								 ${reply_markup:+-F reply_markup="$reply_markup"} > $jq_file
+    								 ${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Testa o retorno do método
-    	json_status $jq_file && {
-    		json $jq_file '.result' | getObjVal
-    	} || message_error TG $jq_file
+    	json_status $jq_obj && {
+    		json '.result' $jq_obj | getObjVal
+    	} || message_error TG $jq_obj
     
     	# Status
     	return $?
@@ -2409,8 +2365,7 @@ _EOF
     ShellBot.sendLocation()
     {
     	# Variáveis locais
-    	local chat_id latitude longitude disable_notification reply_to_message_id reply_markup
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id latitude longitude disable_notification reply_to_message_id reply_markup jq_obj
     
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
@@ -2474,17 +2429,17 @@ _EOF
     	[[ $longitude ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-g, --longitude]"
     			
     	# Chama o método
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
     								 ${latitude:+-F latitude="$latitude"} \
     								 ${longitude:+-F longitude="$longitude"} \
     								 ${disable_notification:+-F disable_notification="$disable_notification"} \
     								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
-    								 ${reply_markup:+-F reply_markup="$reply_markup"} > $jq_file
+    								 ${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Testa o retorno do método
-    	json_status $jq_file && {
-    		json $jq_file '.result' | getObjVal
-    	} || message_error TG $jq_file
+    	json_status $jq_obj && {
+    		json '.result' $jq_obj | getObjVal
+    	} || message_error TG $jq_obj
     
     	return $?
     	
@@ -2494,8 +2449,7 @@ _EOF
     ShellBot.sendVenue()
     {
     	# Variáveis locais
-    	local chat_id latitude longitude title address foursquare_id disable_notification reply_to_message_id reply_markup
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id latitude longitude title address foursquare_id disable_notification reply_to_message_id reply_markup jq_obj
     	
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
@@ -2575,7 +2529,7 @@ _EOF
     	[[ $address ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-a, --address]"
     	
     	# Chama o método
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
     								 ${latitude:+-F latitude="$latitude"} \
     								 ${longitude:+-F longitude="$longitude"} \
     								 ${title:+-F title="$title"} \
@@ -2583,12 +2537,12 @@ _EOF
     								 ${foursquare_id:+-F foursquare_id="$foursquare_id"} \
     								 ${disable_notification:+-F disable_notification="$disable_notification"} \
     								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
-    								 ${reply_markup:+-F reply_markup="$reply_markup"} > $jq_file
+    								 ${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Testa o retorno do método
-    	json_status $jq_file && {
-    		json $jq_file '.result' | getObjVal
-    	} || message_error TG $jq_file
+    	json_status $jq_obj && {
+    		json '.result' $jq_obj | getObjVal
+    	} || message_error TG $jq_obj
     
     	# Status
     	return $?
@@ -2598,8 +2552,7 @@ _EOF
     ShellBot.sendContact()
     {
     	# Variáveis locais
-    	local chat_id phone_number first_name last_name disable_notification reply_to_message_id reply_markup
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id phone_number first_name last_name disable_notification reply_to_message_id reply_markup jq_obj
     	
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
@@ -2664,18 +2617,18 @@ _EOF
     	[[ $first_name ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-f, --first_name]"
     	
     	# Chama o método
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
     								 ${phone_number:+-F phone_number="$phone_number"} \
     								 ${first_name:+-F first_name="$first_name"} \
     								 ${last_name:+-F last_name="$last_name"} \
     								 ${disable_notification:+-F disable_notification="$disable_notification"} \
     								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
-    								 ${reply_markup:+-F reply_markup="$reply_markup"} > $jq_file
+    								 ${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Testa o retorno do método
-    	json_status $jq_file && {
-    		json $jq_file '.result' | getObjVal
-    	} || message_error TG $jq_file
+    	json_status $jq_obj && {
+    		json '.result' $jq_obj | getObjVal
+    	} || message_error TG $jq_obj
     
     	# Status
     	return $?
@@ -2685,8 +2638,7 @@ _EOF
     ShellBot.sendChatAction()
     {
     	# Variáveis locais
-    	local chat_id action
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id action jq_obj
     	
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
@@ -2725,11 +2677,11 @@ _EOF
     	[[ $action ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-a, --action]"
     	
     	# Chama o método
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
-    													${action:+-d action="$action"} > $jq_file
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
+    													${action:+-d action="$action"})
     	
     	# Testa o retorno do método
-    	json_status $jq_file || message_error TG $jq_file
+    	json_status $jq_obj || message_error TG $jq_obj
     
     	# Status
     	return $?
@@ -2739,8 +2691,7 @@ _EOF
     ShellBot.getUserProfilePhotos()
     {
     	# Variáveis locais 
-    	local user_id offset limit ind last index max item total
-        local jq_file=$(getFileJQ $FUNCNAME)
+    	local user_id offset limit ind last index max item total jq_obj
     
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
@@ -2783,27 +2734,27 @@ _EOF
     	[[ $user_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
     	
     	# Chama o método
-    	curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${user_id:+-d user_id="$user_id"} \
+    	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${user_id:+-d user_id="$user_id"} \
     													${offset:+-d offset="$offset"} \
-    													${limit:+-d limit="$limit"} > $jq_file
+    													${limit:+-d limit="$limit"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	json_status $jq_file && {
+    	json_status $jq_obj && {
     
-    		total=$(json $jq_file '.result.total_count')
+    		total=$(json '.result.total_count' $jq_obj)
     
     		if [[ $total -gt 0 ]]; then	
     			for index in $(seq 0 $((total-1)))
     			do
-    				max=$(json $jq_file ".result.photos[$index]|length")
+    				max=$(json ".result.photos[$index]|length" $jq_obj)
     				for item in $(seq 0 $((max-1)))
     				do
-    					json $jq_file ".result.photos[$index][$item]" | getObjVal
+    					json ".result.photos[$index][$item]" $jq_obj | getObjVal
     				done
     			done
     		fi	
     
-    	} || message_error TG $jq_file
+    	} || message_error TG $jq_obj
     	
     	# Status
     	return $?
@@ -2813,8 +2764,7 @@ _EOF
     ShellBot.getFile()
     {
     	# Variáveis locais
-    	local file_id
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local file_id jq_obj
     
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
@@ -2844,12 +2794,12 @@ _EOF
     	[[ $file_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-f, --file_id]"
     	
     	# Chama o método.
-    	curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${file_id:+-d file_id="$file_id"} > $jq_file
+    	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${file_id:+-d file_id="$file_id"})
     
     	# Testa o retorno do método.
-    	json_status $jq_file && {
-    		json $jq_file '.result' | getObjVal
-    	} || message_error TG $jq_file
+    	json_status $jq_obj && {
+    		json '.result' $jq_obj | getObjVal
+    	} || message_error TG $jq_obj
     
     	# Status
     	return $?
@@ -2859,8 +2809,7 @@ _EOF
     ShellBot.kickChatMember()
     {
     	# Variáveis locais
-    	local chat_id user_id until_date
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id user_id until_date jq_obj
     
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
@@ -2903,12 +2852,12 @@ _EOF
     	[[ $user_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
     	
     	# Chama o método
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
     								 ${user_id:+-d user_id="$user_id"} \
-    								 ${until_date:+-d until_date="$until_date"} > $jq_file
+    								 ${until_date:+-d until_date="$until_date"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	json_status $jq_file || message_error TG $jq_file
+    	json_status $jq_obj || message_error TG $jq_obj
     
     	# Status
     	return $?
@@ -2918,8 +2867,7 @@ _EOF
     ShellBot.leaveChat()
     {
     	# Variáveis locais
-    	local chat_id
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id jq_obj
     
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
@@ -2947,10 +2895,10 @@ _EOF
     
     	[[ $chat_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
     	
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} > $jq_file
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	json_status $jq_file || message_error TG $jq_file
+    	json_status $jq_obj || message_error TG $jq_obj
     
     	return $?
     	
@@ -2958,8 +2906,7 @@ _EOF
     
     ShellBot.unbanChatMember()
     {
-    	local chat_id user_id
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id user_id jq_obj
     
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
@@ -2994,11 +2941,11 @@ _EOF
     	[[ $chat_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
     	[[ $user_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
     	
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
-    								 ${user_id:+-d user_id="$user_id"} > $jq_file
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
+    								 ${user_id:+-d user_id="$user_id"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	json_status $jq_file || message_error TG $jq_file
+    	json_status $jq_obj || message_error TG $jq_obj
     
     	return $?
     }
@@ -3006,8 +2953,7 @@ _EOF
     ShellBot.getChat()
     {
     	# Variáveis locais
-    	local chat_id
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id jq_obj
     
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
@@ -3035,12 +2981,12 @@ _EOF
     
     	[[ $chat_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
     	
-    	curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} > $jq_file
+    	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	json_status $jq_file && {
-    		json $jq_file '.result' | getObjVal
-    	} || message_error TG $jq_file
+    	json_status $jq_obj && {
+    		json '.result' $jq_obj | getObjVal
+    	} || message_error TG $jq_obj
     	
     	# Status
     	return $?
@@ -3048,8 +2994,7 @@ _EOF
     
     ShellBot.getChatAdministrators()
     {
-    	local chat_id total key index
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id total key index jq_obj
     
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
@@ -3077,23 +3022,23 @@ _EOF
     
     	[[ $chat_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
     	
-    	curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} > $jq_file
+    	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	json_status $jq_file && {
+    	json_status $jq_obj && {
     
     		# Total de administratores
-    		declare -i total=$(json $jq_file '.result|length')
+    		declare -i total=$(json '.result|length' $jq_obj)
     
     		# Lê os administradores do grupo se houver.
     		if [ $total -gt 0 ]; then
     			for index in $(seq 0 $((total-1)))
     			do
-    				json $jq_file ".result[$index]" | getObjVal
+    				json ".result[$index]" $jq_obj | getObjVal
     			done
     		fi
     
-    	} || message_error TG $jq_file
+    	} || message_error TG $jq_obj
     
     	# Status	
     	return $?
@@ -3101,8 +3046,7 @@ _EOF
     
     ShellBot.getChatMembersCount()
     {
-    	local chat_id
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id jq_obj
     
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
@@ -3130,12 +3074,12 @@ _EOF
     
     	[[ $chat_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
     	
-    	curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} > $jq_file
+    	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	json_status $jq_file && {
-    		json $jq_file '.result'
-    	} || message_error TG $jq_file
+    	json_status $jq_obj && {
+    		json '.result' $jq_obj
+    	} || message_error TG $jq_obj
     
     	return $?
     }
@@ -3143,8 +3087,7 @@ _EOF
     ShellBot.getChatMember()
     {
     	# Variáveis locais
-    	local chat_id user_id
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id user_id jq_obj
     
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
@@ -3179,21 +3122,20 @@ _EOF
     	[[ $chat_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
     	[[ $user_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
     	
-    	curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
-    								${user_id:+-d user_id="$user_id"} > $jq_file
+    	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
+    								${user_id:+-d user_id="$user_id"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	json_status $jq_file && {
-    		json $jq_file '.result' | getObjVal
-    	} || message_error TG $jq_file
+    	json_status $jq_obj && {
+    		json '.result' $jq_obj | getObjVal
+    	} || message_error TG $jq_obj
     
     	return $?
     }
     
     ShellBot.editMessageText()
     {
-    	local chat_id message_id inline_message_id text parse_mode disable_web_page_preview reply_markup
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id message_id inline_message_id text parse_mode disable_web_page_preview reply_markup jq_obj
     	
     	local param=$(getopt --name "$FUNCNAME" \
 							 --options 'c:m:i:t:p:w:r:' \
@@ -3260,18 +3202,18 @@ _EOF
     	
     	[[ $text ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-t, --text]"
     
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
     								 ${message_id:+-d message_id="$message_id"} \
     								 ${inline_message_id:+-d inline_message_id="$inline_message_id"} \
     								 ${text:+-d text="$text"} \
     								 ${parse_mode:+-d parse_mode="$parse_mode"} \
     								 ${disable_web_page_preview:+-d disable_web_page_preview="$disable_web_page_preview"} \
-    								 ${reply_markup:+-d reply_markup="$reply_markup"} > $jq_file
+    								 ${reply_markup:+-d reply_markup="$reply_markup"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	json_status $jq_file && {
-    		json $jq_file '.result' | getObjVal
-    	} || message_error TG $jq_file
+    	json_status $jq_obj && {
+    		json '.result' $jq_obj | getObjVal
+    	} || message_error TG $jq_obj
     	
     	return $?
     	
@@ -3279,8 +3221,7 @@ _EOF
     
     ShellBot.editMessageCaption()
     {
-    	local chat_id message_id inline_message_id caption reply_markup
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id message_id inline_message_id caption reply_markup jq_obj
     	
     	local param=$(getopt --name "$FUNCNAME" \
 							 --options 'c:m:i:t:r:' \
@@ -3327,16 +3268,16 @@ _EOF
     	[[ $chat_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
     	[[ $message_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
     	
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
     								 ${message_id:+-d message_id="$message_id"} \
     								 ${inline_message_id:+-d inline_message_id="$inline_message_id"} \
     								 ${caption:+-d caption="$caption"} \
-    								 ${reply_markup:+-d reply_markup="$reply_markup"} > $jq_file
+    								 ${reply_markup:+-d reply_markup="$reply_markup"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	json_status $jq_file && {
-    		json $jq_file '.result' | getObjVal
-    	} || message_error TG $jq_file
+    	json_status $jq_obj && {
+    		json '.result' $jq_obj | getObjVal
+    	} || message_error TG $jq_obj
     	
     	return $?
     	
@@ -3344,8 +3285,7 @@ _EOF
     
     ShellBot.editMessageReplyMarkup()
     {
-    	local chat_id message_id inline_message_id reply_markup
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id message_id inline_message_id reply_markup jq_obj
     	
     	local param=$(getopt --name "$FUNCNAME" \
 							 --options 'c:m:i:r:' \
@@ -3393,15 +3333,15 @@ _EOF
     		unset inline_message_id
     	} 
     	
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
     								 ${message_id:+-d message_id="$message_id"} \
      								 ${inline_message_id:+-d inline_message_id="$inline_message_id"} \
-    								 ${reply_markup:+-d reply_markup="$reply_markup"} > $jq_file
+    								 ${reply_markup:+-d reply_markup="$reply_markup"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	json_status $jq_file && {
-    		json $jq_file '.result' | getObjVal
-    	} || message_error TG $jq_file
+    	json_status $jq_obj && {
+    		json '.result' $jq_obj | getObjVal
+    	} || message_error TG $jq_obj
     	
     	return $?
     	
@@ -3409,8 +3349,7 @@ _EOF
     
     ShellBot.deleteMessage()
     {
-    	local chat_id message_id
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local chat_id message_id jq_obj
     	
     	local param=$(getopt --name "$FUNCNAME" \
 							 --options 'c:m:' \
@@ -3441,11 +3380,11 @@ _EOF
     	[[ $chat_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
     	[[ $message_id ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
     
-    	curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
-    								 ${message_id:+-d message_id="$message_id"}  > $jq_file
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
+    								 ${message_id:+-d message_id="$message_id"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	json_status $jq_file || message_error TG $jq_file
+    	json_status $jq_obj || message_error TG $jq_obj
     	
     	return $?
     
@@ -3455,7 +3394,6 @@ _EOF
 	
 		local file_id file_info file_remote file_path filename dir opt ext
 		local uri="https://api.telegram.org/file/bot$_TOKEN_"
-		local jq_file=$(getFileJQ $FUNCNAME)
 
 		local param=$(getopt --name "$FUNCNAME" \
 								--options 'f:d:' \
@@ -3511,9 +3449,7 @@ _EOF
 
     ShellBot.getUpdates()
     {
-    	local total_keys offset limit timeout allowed_updates
-    
-    	local jq_file=$(getFileJQ $FUNCNAME)
+    	local total_keys offset limit timeout allowed_updates jq_obj
     
     	# Define os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
@@ -3558,24 +3494,24 @@ _EOF
     	done
     	
     	# Seta os parâmetros
-    	curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${offset:+-d offset="$offset"} \
+    	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${offset:+-d offset="$offset"} \
     								${limit:+-d limit="$limit"} \
     								${timeout:+-d timeout="$timeout"} \
-    								${allowed_updates:+-d allowed_updates="$allowed_updates"} > $jq_file
-    
+    								${allowed_updates:+-d allowed_updates="$allowed_updates"})
+
     	# Limpa as variáveis inicializadas.
     	unset $_var_init_list_
 
     	# Verifica se ocorreu erros durante a chamada do método	
-    	json_status $jq_file && {
+    	json_status $jq_obj && {
 		
-			# Flag flush
-			((_FLUSH_OFFSET_ == 1)) && return 0
+			# Se o modo flush estiver ativado, retorna uma coleção de objetos json contendo as atualizações.
+			((_FLUSH_OFFSET_ == 1)) && { echo "$jq_obj"; return 0; }
     		
 			local var_init_list key key_list obj obj_cur obj_type var_name i
     
     		# Total de atualizações
-    		total_keys=$(json $jq_file '.result|length')
+    		total_keys=$(json '.result|length' $jq_obj)
     		
     		if [[ $total_keys -gt 0 ]]; then
     			
@@ -3583,12 +3519,12 @@ _EOF
     			[[ $_BOT_MONITOR_ ]] && {
     				# Cabeçalho
     				echo -e "${_C_WHITE_}"
-    				echo -e "=================== MONITOR ==================="
-    				echo -e "Data: $(date)"
-    				echo -e "Script: $_BOT_SCRIPT_"
-    				echo -e "Bot (nome): $(ShellBot.first_name)"
-    				echo -e "Bot (usuario): $(ShellBot.username)"
-    				echo -e "Bot (id): $(ShellBot.id)"
+    				echo "=================== MONITOR ==================="
+    				echo "Data: $(date)"
+    				echo "Script: $_BOT_SCRIPT_"
+    				echo "Bot (nome): $(ShellBot.first_name)"
+    				echo "Bot (usuario): $(ShellBot.username)"
+    				echo "Bot (id): $(ShellBot.id)"
     			}
     
     			# Salva e fecha o descritor de erro
@@ -3608,7 +3544,7 @@ _EOF
     				unset key_list
     				key_list[0]=".result[$index]"
     					
-    				# Lê todas as chaves do arquivo json $jq_file recursivamente enquanto houver objetos.
+    				# Lê recursivamente todos os objetos.
     				while [[ ${key_list[@]} ]]
     				do
     				    i=0
@@ -3620,21 +3556,21 @@ _EOF
     				        unset key_list
     	
     						# Lê as chaves do atual objeto
-    				        for obj in $(json $jq_file "$key|keys[]")
+    				        for obj in $(json "$key|keys[]" $jq_obj)
     				        do
     							# Se o tipo da chave for string, number ou boolean, imprime o valor armazenado.
     							# Se for object salva o nível atual em key_list. Caso contrário, lê o próximo
     							# elemento da lista.
        	         				obj_cur="$key.$obj"
-    				            obj_type=$(json $jq_file "$obj_cur|type")
-    	
+    				            obj_type=$(json "$obj_cur|type" $jq_obj)
+
        	         			if [[ $obj_type =~ (string|number|boolean) ]]; then
     
     								# Define a nomenclatura válida para a variável que irá armazenar o valor da chave.
     	   	         				var_name=${obj_cur#.result\[$index\].}
     								var_name=${var_name//[]/}
     								var_name=${var_name//./_}
-    								
+    							
     								# Cria um ponteiro que aponta para a variável armazenada em 'var_name'.
 									declare -g $var_name
     								declare -n byref=$var_name
@@ -3642,12 +3578,13 @@ _EOF
     								[[ ${byref[$index]} ]] || {
     									
 										# Atribui o valor de 'var_name', se a mesma não foi inicializada.
-    									byref[$index]="$(json $jq_file "$obj_cur")"
+    									byref[$index]="$(json "$obj_cur" $jq_obj)"
     								
-    									# Exibe a inicialização dos objetos.
+    									# Exibe a inicialização das variáveis.
     									[[ $_BOT_MONITOR_ ]] && {
-											echo -e "${_C_GREEN_}$var_name${_C_WHITE_} = ${_C_YELLOW_}'${byref[$index]}'${_C_DEF_}" | \
-											sed ':a;N;s/\n/ /;ta'
+											echo -en "${_C_GREEN_}$var_name${_C_WHITE_} = ${_C_YELLOW_}"
+											echo -n "'${byref[$index]}'" | sed ':a;N;s/\n/ /;ta'
+											echo -e "${_C_DEF_}"
     									}
     								}
 									
@@ -3673,7 +3610,7 @@ _EOF
     			exec 2<&5
     		fi
     	
-    	} || message_error TG $jq_file
+    	} || message_error TG $jq_obj
     
     	# Status
     	return $?
@@ -3755,6 +3692,5 @@ _EOF
 declare -rf message_error \
             json \
             json_status \
-            getFileJQ \
             getObjVal \
 			flushOffset
