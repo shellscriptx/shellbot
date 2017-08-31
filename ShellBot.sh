@@ -81,9 +81,9 @@ declare -r _ERR_FILE_DOWNLOAD_='Não foi possível realizar o download: Arquivo 
 declare -r _ERR_FILE_INVALID_ID_='Arquivo não encontrado: ID inválido.'
 declare -r _ERR_UNKNOWN_='Erro desconhecido: Ocorreu uma falha inesperada. Reporte o problema ao desenvolvedor.'
 
-json() { jq "$1" <<< "${*:2}" | sed -r 's/"([^"]*)":/\1:/;/^"/{s/(^"|"$)//g}' 2>/dev/null; }
+json() { jq "$1" <<< "${*:2}" 2>/dev/null | sed -r 's/"([^"]*)":/\1:/;/^"/{s/(^"|"$)//g}'; }
 getObjVal(){ sed -nr '/^\s*[a-z_]+:\s+(\[|\{)/!{s/,$//;s/^.*:\s+"?(.*[^",])*"?$/\1/p}' | sed ':a;N;s/\n/|/;ta'; }
-json_status(){ [[ $(json '.ok' "$*") == true ]] && return 0 || return 1; }
+json_status(){ [[ $(jq '.ok' <<< "$*") == true ]] && return 0 || return 1; }
 
 flushOffset()
 {    
