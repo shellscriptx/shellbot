@@ -298,7 +298,7 @@ ShellBot.init()
     	# Testa se o indentificador armazenado em handle já existe. Caso já exista, repete
     	# o procedimento até que um handle válido seja gerado; Evitando sobreescrever handle's existentes.
     	until ! declare -fp $handle &>/dev/null; do
-    		handle=handleid:$(tr -dc a-zA-Z0-9 < /dev/urandom | head -c15)
+			handle=$(basename $(mktemp --dry-run HandleID:XXXXXXXXXXXXXXX))
     	done
     
     	# Cria a função com o nome gerado e adiciona a chamada com os argumentos especificados.
