@@ -3497,16 +3497,19 @@ _EOF
     								${timeout:+-d timeout="$timeout"} \
     								${allowed_updates:+-d allowed_updates="$allowed_updates"})
 
-    	# Limpa as variáveis inicializadas.
-    	unset $_var_init_list_
+		# Limpa as variáveis inicializadas.
+		unset ${_var_init_list_[@]}
+		unset _var_init_list_
 
+		declare -ag _var_init_list_
+		
     	# Verifica se ocorreu erros durante a chamada do método	
     	json_status $jq_obj && {
 		
 			# Se o modo flush estiver ativado, retorna uma coleção de objetos json contendo as atualizações.
 			((_FLUSH_OFFSET_ == 1)) && { echo "$jq_obj"; return 0; }
     		
-			local var_init_list key key_list obj obj_cur obj_type var_name i
+			local key key_list obj obj_cur obj_type var_name i
     
     		# Total de atualizações
     		total_keys=$(json '.result|length' $jq_obj)
@@ -3591,9 +3594,9 @@ _EOF
 									unset byref
 	
     								# Anexa a variável a lista caso não exista.
-    								if ! echo "$_var_init_list_" | grep -qw "$var_name"; then
-    									declare -g _var_init_list_+="$var_name "; fi
-    				            
+									if ! grep -qw $var_name <<< ${_var_init_list_[@]}; then
+										_var_init_list_+=($var_name); fi
+
     							elif [[ $obj_type = object ]]; then
     				                key_list[$((i++))]=$obj_cur
     							elif [[ $obj_type = array ]]; then
