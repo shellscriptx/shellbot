@@ -3,7 +3,7 @@
 #-----------------------------------------------------------------------------------------------------------
 #	DATA:				07 de Março de 2017
 #	SCRIPT:				ShellBot.sh
-#	VERSÃO:				4.9
+#	VERSÃO:				5.0
 #	DESENVOLVIDO POR:	Juliano Santos [SHAMAN]
 #	PÁGINA:				http://www.shellscriptx.blogspot.com.br
 #	FANPAGE:			https://www.facebook.com/shellscriptx
@@ -46,18 +46,12 @@ done
 
 # Script que importou a API.
 declare -r _BOT_SCRIPT_=$(basename "$0")
+
 # API inicializada.
 declare -r _SHELLBOT_SH_=1
 
 # Desabilitar globbing
 set -f
-
-# Paleta de cores
-declare -r _C_WHITE_='\033[0;37m'
-declare -r _C_YELLOW_='\033[0;33m'
-declare -r _C_GREEN_='\033[0;32m'
-declare -r _C_CYAN_='\033[0;36m'
-declare -r _C_DEF_='\033[0;m'
 
 # curl parâmetros
 declare -r _CURL_OPT_='--silent --request'
@@ -73,13 +67,17 @@ declare -r _ERR_PARAM_REQUIRED_='Opção requerida: Verique se o(s) parâmetro(s
 declare -r _ERR_TOKEN_UNAUTHORIZED_='Não autorizado. Verifique se possui permissões para utilizar o token.'
 declare -r _ERR_TOKEN_INVALID_='TOKEN inválido: Verique o número do token e tente novamente.'
 declare -r _ERR_FUNCTION_NOT_FOUND_='Função inválida: Verique se o nome está correto ou se a função existe.'
-declare -r _ERR_BOT_ALREADY_INIT_='Inicialização negada: O bot já foi inicializado.'
+declare -r _ERR_BOT_ALREADY_INIT_='Ação não permitida: O bot já foi inicializado.'
 declare -r _ERR_FILE_NOT_FOUND_='Arquivo não encontrado: Não foi possível ler o arquivo especificado.'
 declare -r _ERR_DIR_WRITE_DENIED_='Não é possível gravar no diretório: Permissão negada.'
 declare -r _ERR_DIR_NOT_FOUND_='Não foi possível acessar: Diretório não encontrado.'
 declare -r _ERR_FILE_DOWNLOAD_='Não foi possível realizar o download: Arquivo não encontrado.'
 declare -r _ERR_FILE_INVALID_ID_='Arquivo não encontrado: ID inválido.'
 declare -r _ERR_UNKNOWN_='Erro desconhecido: Ocorreu uma falha inesperada. Reporte o problema ao desenvolvedor.'
+declare -r _ERR_SERVICE_NOT_ROOT_='Acesso negado: Requer privilégios de root.'
+declare -r _ERR_SERVICE_EXISTS_='Não foi possível criar o serviço: O nome do serviço já existe.'
+declare -r _ERR_SERVICE_SYSTEMD_NOT_FOUND_='Erro ao ativar: O sistema não possui suporte ao gerenciamento de serviços "systemd".'
+declare -r _ERR_SERVICE_USER_NOT_FOUND_='Usuário não encontrado: A conta de usuário informada é inválida.'
 
 json() { jq "$1" <<< "${*:2}" 2>/dev/null | sed -r '/^"/s/(^"|"$)//g'; }
 getObjVal(){ sed -nr 's/^\s+"[a-z_]+":\s+"?(.+[^",])*"?,?$/\1/p' | sed ':a;N;s/\n/|/;ta'; }
@@ -105,7 +103,7 @@ flushOffset()
 
 			first_id=${first_id:-$update_id}
 			end=$(ShellBot.OffsetEnd)
-			(($end > 0)) && last_id=$end
+			((end > 0)) && last_id=$end
 		else
 			# Seta o erro e finaliza o laço em caso de falha na chamada do método.
 			cod=1
@@ -118,12 +116,12 @@ flushOffset()
 	echo "${first_id:-0}|${last_id:-0}"
 
 	# Desativa a flag
-	_FLUSH_OFFSET_=$((~_FLUSH_OFFSET_))
+	unset _FLUSH_OFFSET_
 
 	# Status
 	return $cod
 }    
- 
+
 message_error()
 {
 	# Variáveis locais
@@ -163,23 +161,89 @@ message_error()
 	[[ $assert ]] && exit 1 || return 1
 }
 
+createUnitService()
+{
+	local service=${1%.*}.service
+	local ok='\033[0;32m[OK]\033[0;m'
+	local fail='\033[0;31m[FALHA]\033[0;m'
+	
+	((UID == 0)) || message_error API "$_ERR_SERVICE_NOT_ROOT_"
+
+	# O modo 'service' requer que o sistema de gerenciamento de processos 'systemd'
+	# esteja presente para que o Unit target seja linkado ao serviço.
+	if ! which systemd &>/dev/null; then
+		message_error API "$_ERR_SERVICE_SYSTEMD_NOT_FOUND_"; fi
+
+
+	# Se o serviço existe.
+	test -e /lib/systemd/system/$service && \
+	message_error API "$_ERR_SERVICE_EXISTS_" "$service"
+
+	# Gerando as configurações do target.
+	cat > /lib/systemd/system/$service << _eof
+[Unit]
+Description=$1 - (SHELLBOT)
+After=network-online.target
+
+[Service]
+User=$2
+WorkingDirectory=$PWD
+ExecStart=/bin/bash $1
+ExecReload=/bin/kill -HUP \$MAINPID
+ExecStop=/bin/kill -KILL \$MAINPID
+KillMode=process
+Restart=on-failure
+RestartPreventExitStatus=255
+Type=simple
+
+[Install]
+WantedBy=multi-user.target
+_eof
+
+	[[ $? -eq 0 ]] && {	
+		
+		printf '%s foi criado com sucesso !!\n' $service	
+	
+		ln -s /lib/systemd/system/$service /etc/systemd/system/$service
+		systemctl daemon-reload
+		
+		echo -n "Habilitando..."
+ 		systemctl enable $service &>/dev/null && echo -e $ok || \
+		{ echo -e $fail; message_error API "$_ERR_UNKNOWN_"; }
+
+		sed -i -r '/^\s*ShellBot.init/s/\s--?(s(ervice)?|u(ser)?\s+\w+)\b//g' "$1"
+
+		echo -n "Iniciando..."
+		systemctl start $service && echo -e $ok || echo -e $fail
+		systemctl status $service
+
+		echo -e "\nUso: sudo systemctl $service {start|stop|restart|reload|status}"
+	
+	} || message_error API "$_ERR_UNKNOWN_"
+
+	exit 0
+}
+
 # Inicializa o bot, definindo sua API e _TOKEN_.
 ShellBot.init()
 {
 	# Verifica se o bot já foi inicializado.
 	[[ $_SHELLBOT_INIT_ ]] && message_error API "$_ERR_BOT_ALREADY_INIT_"
-
 	
+	local enable_service user_unit
+
 	local param=$(getopt --name "$FUNCNAME" \
-						 --options 't:mf' \
+						 --options 't:mfsu:' \
 						 --longoptions 'token:,
 										monitor,
-										flush' \
+										flush,
+										service,
+										user:' \
     					 -- "$@")
     
     # Define os parâmetros posicionais
     eval set -- "$param"
-    
+   
 	while :
     do
     	case $1 in
@@ -200,17 +264,30 @@ ShellBot.init()
 				# objetos JSON e a inicialização das variáveis.
 				declare -x _FLUSH_OFFSET_=1
 				shift
-				;;	
+				;;
+			-s|--service)
+				enable_service=1
+				shift
+				;;
+			-u|--user)
+				if ! id "$2" &>/dev/null; then
+					message_error API "$_ERR_SERVICE_USER_NOT_FOUND_" "[-u, --user]" "$2"; fi
+
+				user_unit="$2"
+				shift 2
+				;;				
    			--)
    				shift
    				break
    				;;
    		esac
    	done
-   
+  
    	# Parâmetro obrigatório.	
    	[[ $_TOKEN_ ]] || message_error API "$_ERR_PARAM_REQUIRED_" "[-t, --token]"
-   
+	[[ $user_unit && ! $enable_service ]] && message_error API "$_ERR_PARAM_REQUIRED_" "[-s, --service]" 
+	[[ $enable_service ]] && createUnitService "$_BOT_SCRIPT_" "${user_unit:-$USER}"
+		   
     # Um método simples para testar o token de autenticação do seu bot. 
     # Não requer parâmetros. Retorna informações básicas sobre o bot em forma de um objeto Usuário.
     ShellBot.getMe()
@@ -298,7 +375,7 @@ ShellBot.init()
     	# Testa se o indentificador armazenado em handle já existe. Caso já exista, repete
     	# o procedimento até que um handle válido seja gerado; Evitando sobreescrever handle's existentes.
     	until ! declare -fp $handle &>/dev/null; do
-			handle=$(basename $(mktemp --dry-run HandleID:XXXXXXXXXXXXXXX))
+			handle=$(mktemp --dry-run HandleID:XXXXXXXXXXXXXXX)
     	done
     
     	# Cria a função com o nome gerado e adiciona a chamada com os argumentos especificados.
@@ -3507,7 +3584,7 @@ _EOF
     	json_status $jq_obj && {
 		
 			# Se o modo flush estiver ativado, retorna uma coleção de objetos json contendo as atualizações.
-			((_FLUSH_OFFSET_ == 1)) && { echo "$jq_obj"; return 0; }
+			((_FLUSH_OFFSET_)) && { echo "$jq_obj"; return 0; }
     		
 			local key key_list obj obj_cur obj_type var_name i
     
@@ -3517,16 +3594,14 @@ _EOF
     		if [[ $total_keys -gt 0 ]]; then
     			
     			# Modo monitor
-    			[[ $_BOT_MONITOR_ ]] && {
-    				# Cabeçalho
-    				echo -e "${_C_WHITE_}"
-    				echo "=================== MONITOR ==================="
-    				echo "Data: $(date)"
-    				echo "Script: $_BOT_SCRIPT_"
-    				echo "Bot (nome): $(ShellBot.first_name)"
-    				echo "Bot (usuario): $(ShellBot.username)"
-    				echo "Bot (id): $(ShellBot.id)"
-    			}
+				((_BOT_MONITOR_)) && cat << _eof
+=================== MONITOR ===================
+Data: $(date '+%d/%m/%Y %T')
+Script: $_BOT_SCRIPT_
+Bot (nome): $(ShellBot.first_name)
+Bot (usuario): $(ShellBot.username)
+Bot (id): $(ShellBot.id)
+_eof
     
     			# Salva e fecha o descritor de erro
     			exec 5<&2
@@ -3535,13 +3610,12 @@ _EOF
     			for index in $(seq 0 $((total_keys-1)))
     			do
     				# Imprime a mensagem em fila
-    				[[ $_BOT_MONITOR_ ]] && {
-    					echo -e "${_C_WHITE_}-----------------------------------------------"
-    					echo -e "${_C_CYAN_}Mensagem: ${_C_YELLOW_}$(($index + 1))"
-    					echo -e "${_C_WHITE_}-----------------------------------------------"
-    				}
-    
-    				# Insere o primeiro elemento da consulta.	
+					((_BOT_MONITOR_)) && cat << _eof
+-----------------------------------------------
+Mensagem: $((index + 1))
+-----------------------------------------------
+_eof
+					# Insere o primeiro elemento da consulta.	
     				unset key_list
     				key_list[0]=".result[$index]"
     					
@@ -3572,7 +3646,7 @@ _EOF
     								var_name=${var_name//[]/}
     								var_name=${var_name//./_}
     							
-    								# Cria um ponteiro que aponta para a variável armazenada em 'var_name'.
+    								# Cria um ponteiro para a variável armazenada em 'var_name'.
 									declare -g $var_name
     								declare -n byref=$var_name
     								
@@ -3582,11 +3656,7 @@ _EOF
     									byref[$index]="$(json "$obj_cur" $jq_obj)"
     								
     									# Exibe a inicialização das variáveis.
-    									[[ $_BOT_MONITOR_ ]] && {
-											echo -en "${_C_GREEN_}$var_name${_C_WHITE_} = ${_C_YELLOW_}"
-											echo -n "'${byref[$index]}'" | sed ':a;N;s/\n/ /;ta'
-											echo -e "${_C_DEF_}"
-    									}
+										((_BOT_MONITOR_)) && sed ':a;N;s/\n/ /;ta' <<< "$var_name = '${byref[$index]}'"
     								}
 									
 									# Remove ponteiro
@@ -3683,7 +3753,7 @@ _EOF
 				ShellBot.getUpdates
    
 	# Retorna objetos
-	echo "$(ShellBot.id)|$(ShellBot.username)|$(ShellBot.first_name)|$( (($_FLUSH_OFFSET_)) && flushOffset )"
+	echo "$(ShellBot.id)|$(ShellBot.username)|$(ShellBot.first_name)|$(((_FLUSH_OFFSET_)) && flushOffset)"
 
 	# status
    	return 0
@@ -3694,4 +3764,5 @@ declare -rf message_error \
             json \
             json_status \
             getObjVal \
-			flushOffset
+			flushOffset \
+			createUnitService
