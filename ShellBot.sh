@@ -211,7 +211,7 @@ _eof
  		systemctl enable $service &>/dev/null && echo -e $ok || \
 		{ echo -e $fail; message_error API "$_ERR_UNKNOWN_"; }
 
-		sed -i -r '/^\s*ShellBot.init/s/\s--?(s(ervice)?|u(ser)?\s+\w+)\b//g' "$1"
+		sed -i -r '/^[^#]*ShellBot.init\s/s/\s--?(s(ervice)?|u(ser)?\s+\w+)\b//g' "$1"
 
 		echo -n "Iniciando..."
 		systemctl start $service && echo -e $ok || echo -e $fail
