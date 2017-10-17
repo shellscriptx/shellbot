@@ -131,6 +131,7 @@ message_error()
 	# Quando chamada dentro de um subshell, passa ser instanciada como um array, armazenando diversos
 	# valores onde cada índice refere-se a um shell/subshell. As mesmas caracteristicas se aplicam a variável
 	# 'FUNCNAME', onde é armazenado o nome da função onde foi chamada.
+	#
 	err_line=${BASH_LINENO[1]}	# Obtem o número da linha no shell pai.
 	err_func=${FUNCNAME[1]}		# Obtem o nome da função no shell pai.
 	
