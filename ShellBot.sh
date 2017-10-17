@@ -216,7 +216,8 @@ _eof
 		echo -n "Iniciando..."
 		systemctl start $service &>/dev/null && {
 		
-			echo -e $ok; systemctl status $service
+			echo -e $ok
+			systemctl status $service
 			echo -e "\nUso: sudo systemctl {start|stop|restart|reload|status} $service"
 		
 		} || echo -e $fail
