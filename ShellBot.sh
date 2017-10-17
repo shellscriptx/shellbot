@@ -211,12 +211,8 @@ _eof
  		systemctl enable $service &>/dev/null && echo -e $ok || \
 		{ echo -e $fail; message_error API; }
 
-<<<<<<< HEAD
-		sed -i -r '/^[^#]*ShellBot.init\s/s/\s--?(s(ervice)?|u(ser)?\s+\w+)\b//g' "$1"
-=======
 		sed -i -r '/^\s*ShellBot.init\s/s/\s--?(s(ervice)?|u(ser)?\s+\w+)\b//g' "$1"
->>>>>>> dev
-
+		
 		echo -n "Iniciando..."
 		systemctl start $service &>/dev/null && {
 		
