@@ -129,7 +129,7 @@ checkArgType(){
 	local value="$3"
 
 	case $ctype in
-		int)		[[ $value =~ ^[0-9]+$ ]] 						|| message_error API "$_ERR_TYPE_INT_" "$param" "$value";;
+		int)		[[ $value =~ ^[0-9]+$ ]]						|| message_error API "$_ERR_TYPE_INT_" "$param" "$value";;
 		float)		[[ $value =~ ^-?[0-9]+\.[0-9]+$ ]]				|| message_error API "$_ERR_TYPE_FLOAT_" "$param" "$value";;
 		bool)		[[ $value =~ ^(true|false)$ ]]					|| message_error API "$_ERR_TYPE_BOOL_" "$param" "$value";;
 		token)		[[ $value =~ ^[0-9]+:[a-zA-Z0-9_-]+$ ]]			|| message_error API "$_ERR_TOKEN_INVALID_" "$param" "$value";;
