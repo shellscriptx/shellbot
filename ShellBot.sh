@@ -136,10 +136,14 @@ checkArgType(){
 		file)		[[ $value =~ ^@ && ! -f ${value#@} ]]			&& message_error API "$_ERR_FILE_NOT_FOUND_" "$param" "$value";;
 		parsemode)	[[ $value =~ ^(markdown|html)$ ]]				|| message_error API "$_ERR_TYPE_PARSE_MODE_" "$param" "$value";;
 		point)		[[ $value =~ ^(forehead|eyes|mouth|chin)$ ]]	|| message_error API "$_ERR_TYPE_POINT_" "$param" "$value";;
-		action)		[[ $value =~ ^(typing|upload_photo|
-									record_video|upload_video|
-									record_audio|upload_audio|
-									upload_document|find_location|
+		action)		[[ $value =~ ^(typing|
+									upload_photo|
+									record_video|
+									upload_video|
+									record_audio|
+									upload_audio|
+									upload_document|
+									find_location|
 									record_video_note|
 									upload_video_note)$ ]]			|| message_error API "$_ERR_ACTION_MODE_" "$param" "$value";;
     esac
