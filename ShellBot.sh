@@ -129,19 +129,19 @@ checkArgType(){
 	local value="$3"
 
 	case $ctype in
-        int)		[[ $value =~ ^[0-9]+$ ]] 						|| message_error API "$_ERR_TYPE_INT_" "$param" "$value";;
-        float) 		[[ $value =~ ^-?[0-9]+\.[0-9]+$ ]]				|| message_error API "$_ERR_TYPE_FLOAT_" "$param" "$value";;
-		bool) 		[[ $value =~ ^(true|false)$ ]]					|| message_error API "$_ERR_TYPE_BOOL_" "$param" "$value";;
-		token) 		[[ $value =~ ^[0-9]+:[a-zA-Z0-9_-]+$ ]]			|| message_error API "$_ERR_TOKEN_INVALID_" "$param" "$value";;
-		file) 		[[ $value =~ ^@ && ! -f ${value#@} ]]			&& message_error API "$_ERR_FILE_NOT_FOUND_" "$param" "$value";;
-		parsemode) 	[[ $value =~ ^(markdown|html)$ ]]				|| message_error API "$_ERR_TYPE_PARSE_MODE_" "$param" "$value";;
-		point) 		[[ $value =~ ^(forehead|eyes|mouth|chin)$ ]]	|| message_error API "$_ERR_TYPE_POINT_" "$param" "$value";;
-		action) 	[[ $value =~ ^(typing|upload_photo|
+		int)		[[ $value =~ ^[0-9]+$ ]] 						|| message_error API "$_ERR_TYPE_INT_" "$param" "$value";;
+		float)		[[ $value =~ ^-?[0-9]+\.[0-9]+$ ]]				|| message_error API "$_ERR_TYPE_FLOAT_" "$param" "$value";;
+		bool)		[[ $value =~ ^(true|false)$ ]]					|| message_error API "$_ERR_TYPE_BOOL_" "$param" "$value";;
+		token)		[[ $value =~ ^[0-9]+:[a-zA-Z0-9_-]+$ ]]			|| message_error API "$_ERR_TOKEN_INVALID_" "$param" "$value";;
+		file)		[[ $value =~ ^@ && ! -f ${value#@} ]]			&& message_error API "$_ERR_FILE_NOT_FOUND_" "$param" "$value";;
+		parsemode)	[[ $value =~ ^(markdown|html)$ ]]				|| message_error API "$_ERR_TYPE_PARSE_MODE_" "$param" "$value";;
+		point)		[[ $value =~ ^(forehead|eyes|mouth|chin)$ ]]	|| message_error API "$_ERR_TYPE_POINT_" "$param" "$value";;
+		action)		[[ $value =~ ^(typing|upload_photo|
 									record_video|upload_video|
 									record_audio|upload_audio|
 									upload_document|find_location|
 									record_video_note|
-									upload_video_note)$ ]] 			|| message_error API "$_ERR_ACTION_MODE_" "$param" "$value";;
+									upload_video_note)$ ]]			|| message_error API "$_ERR_ACTION_MODE_" "$param" "$value";;
     esac
 }
 
