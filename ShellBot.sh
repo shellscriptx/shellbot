@@ -86,15 +86,18 @@ json_status(){ [[ $(jq '.ok' <<< "$*") == true ]] && return 0 || return 1; }
 message_error()
 {
 	# Variáveis locais
-	local err_message err_param assert err_line err_func
+	local err_message err_param assert err_line err_func ind
 	
 	# A variável 'BASH_LINENO' é dinâmica e armazena o número da linha onde foi expandida.
 	# Quando chamada dentro de um subshell, passa ser instanciada como um array, armazenando diversos
 	# valores onde cada índice refere-se a um shell/subshell. As mesmas caracteristicas se aplicam a variável
 	# 'FUNCNAME', onde é armazenado o nome da função onde foi chamada.
-	#
-	err_line=${BASH_LINENO[$((${#BASH_LINENO[@]}-2))]}	# Obtem o número da linha no shell pai.
-	err_func=${FUNCNAME[$((${#FUNCNAME[@]}-2))]}		# Obtem o nome da função no shell pai.
+	
+	# Obtem o índice da hierarquia na chamada da função.
+	[[ ${FUNCNAME[1]} == checkArgType ]] && ind=2 || ind=1
+	err_line=${BASH_LINENO[$ind]}	# linha
+	err_func=${FUNCNAME[$ind]}		# função
+	
 	# Lê o tipo de ocorrência.
 	# TG - Erro externo retornado pelo core do telegram.
 	# API - Erro interno gerado pela API do ShellBot.
