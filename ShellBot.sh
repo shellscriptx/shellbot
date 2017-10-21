@@ -93,7 +93,7 @@ message_error()
 	# valores onde cada índice refere-se a um shell/subshell. As mesmas caracteristicas se aplicam a variável
 	# 'FUNCNAME', onde é armazenado o nome da função onde foi chamada.
 	
-	# Obtem o índice da hierarquia na chamada da função.
+	# Obtem o índice da função na hierarquia de chamada.
 	[[ ${FUNCNAME[1]} == checkArgType ]] && ind=2 || ind=1
 	err_line=${BASH_LINENO[$ind]}	# linha
 	err_func=${FUNCNAME[$ind]}		# função
