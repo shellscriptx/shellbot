@@ -58,7 +58,7 @@ declare -r _CURL_OPT_='--silent --request'
 
 # Erros registrados da API (Parâmetros/Argumentos)
 declare -r _ERR_TYPE_BOOL_='Tipo incompatível: Suporta somente "true" ou "false".'
-declare -r _ERR_TYPE_PARSE_MODE_='Formação inválida: Suporta Somente "markdown" ou "html".'
+declare -r _ERR_TYPE_PARSE_MODE_='Formatação inválida: Suporta somente "markdown" ou "html".'
 declare -r _ERR_TYPE_INT_='Tipo incompatível: Suporta somente inteiro.'
 declare -r _ERR_TYPE_FLOAT_='Tipo incompatível: Suporta somente float.'
 declare -r _ERR_TYPE_POINT_='Máscara inválida: Deve ser “forehead”, “eyes”, “mouth” ou “chin”.'
@@ -82,6 +82,68 @@ declare -r _ERR_SERVICE_USER_NOT_FOUND_='Usuário não encontrado: A conta de us
 json() { jq "$1" <<< "${*:2}" 2>/dev/null | sed -r 's/(^"|"$)//g'; }
 getObjVal(){ sed -nr 's/^\s+"[a-z_]+":\s+"?(.+[^",])*"?,?$/\1/p' | sed ':a;N;s/\n/|/;ta'; }
 json_status(){ [[ $(jq '.ok' <<< "$*") == true ]] && return 0 || return 1; }
+
+message_error()
+{
+	# Variáveis locais
+	local err_message err_param assert err_line err_func
+	
+	# A variável 'BASH_LINENO' é dinâmica e armazena o número da linha onde foi expandida.
+	# Quando chamada dentro de um subshell, passa ser instanciada como um array, armazenando diversos
+	# valores onde cada índice refere-se a um shell/subshell. As mesmas caracteristicas se aplicam a variável
+	# 'FUNCNAME', onde é armazenado o nome da função onde foi chamada.
+	#
+	err_line=${BASH_LINENO[$((${#BASH_LINENO[@]}-2))]}	# Obtem o número da linha no shell pai.
+	err_func=${FUNCNAME[$((${#FUNCNAME[@]}-2))]}		# Obtem o nome da função no shell pai.
+	# Lê o tipo de ocorrência.
+	# TG - Erro externo retornado pelo core do telegram.
+	# API - Erro interno gerado pela API do ShellBot.
+	case $1 in
+		TG)
+			# arquivo json
+			err_param="$(json '.error_code' ${*:2})"
+			err_message="$(json '.description' ${*:2})"
+			;;
+		API)
+			err_param="${3:--}: ${4:--}"
+			err_message="$2"
+			assert=1
+			;;
+	esac
+
+	# Imprime erro
+	printf "%s: erro: linha %s: %s: %s: %s\n" "${_BOT_SCRIPT_}" \
+												"${err_line:--}" \
+												"${err_func:--}" \
+												"${err_param:--}" \
+												"${err_message:-$_ERR_UNKNOWN_}" 1>&2 
+
+	# Finaliza script/thread em caso de erro interno, caso contrário retorna 1
+	[[ $assert ]] && exit 1 || return 1
+}
+
+checkArgType(){
+
+	local ctype="$1"
+	local param="$2"
+	local value="$3"
+
+	case $ctype in
+        int)		[[ $value =~ ^[0-9]+$ ]] 						|| message_error API "$_ERR_TYPE_INT_" "$param" "$value";;
+        float) 		[[ $value =~ ^-?[0-9]+\.[0-9]+$ ]]				|| message_error API "$_ERR_TYPE_FLOAT_" "$param" "$value";;
+		bool) 		[[ $value =~ ^(true|false)$ ]]					|| message_error API "$_ERR_TYPE_BOOL_" "$param" "$value";;
+		token) 		[[ $value =~ ^[0-9]+:[a-zA-Z0-9_-]+$ ]]			|| message_error API "$_ERR_TOKEN_INVALID_" "$param" "$value";;
+		file) 		[[ $value =~ ^@ && ! -f ${value#@} ]]			&& message_error API "$_ERR_FILE_NOT_FOUND_" "$param" "$value";;
+		parsemode) 	[[ $value =~ ^(markdown|html)$ ]]				|| message_error API "$_ERR_TYPE_PARSE_MODE_" "$param" "$value";;
+		point) 		[[ $value =~ ^(forehead|eyes|mouth|chin)$ ]]	|| message_error API "$_ERR_TYPE_POINT_" "$param" "$value";;
+		action) 	[[ $value =~ ^(typing|upload_photo|
+									record_video|upload_video|
+									record_audio|upload_audio|
+									upload_document|find_location|
+									record_video_note|
+									upload_video_note)$ ]] 			|| message_error API "$_ERR_ACTION_MODE_" "$param" "$value";;
+    esac
+}
 
 flushOffset()
 {    
@@ -121,46 +183,6 @@ flushOffset()
 	# Status
 	return $cod
 }    
-
-message_error()
-{
-	# Variáveis locais
-	local err_message err_param assert err_line err_func
-	
-	# A variável 'BASH_LINENO' é dinâmica e armazena o número da linha onde foi expandida.
-	# Quando chamada dentro de um subshell, passa ser instanciada como um array, armazenando diversos
-	# valores onde cada índice refere-se a um shell/subshell. As mesmas caracteristicas se aplicam a variável
-	# 'FUNCNAME', onde é armazenado o nome da função onde foi chamada.
-	#
-	err_line=${BASH_LINENO[1]}	# Obtem o número da linha no shell pai.
-	err_func=${FUNCNAME[1]}		# Obtem o nome da função no shell pai.
-	
-	# Lê o tipo de ocorrência.
-	# TG - Erro externo retornado pelo core do telegram.
-	# API - Erro interno gerado pela API do ShellBot.
-	case $1 in
-		TG)
-			# arquivo json
-			err_param="$(json '.error_code' ${*:2})"
-			err_message="$(json '.description' ${*:2})"
-			;;
-		API)
-			err_param="${3:--}: ${4:--}"
-			err_message="$2"
-			assert=1
-			;;
-	esac
-
-	# Imprime erro
-	printf "%s: erro: linha %s: %s: %s: %s\n" "${_BOT_SCRIPT_}" \
-												"${err_line:--}" \
-												"${err_func:--}" \
-												"${err_param:--}" \
-												"${err_message:-$_ERR_UNKNOWN_}" 1>&2 
-
-	# Finaliza script/thread em caso de erro interno, caso contrário retorna 1
-	[[ $assert ]] && exit 1 || return 1
-}
 
 createUnitService()
 {
@@ -252,7 +274,7 @@ ShellBot.init()
     do
     	case $1 in
     		-t|--token)
-    			[[ $2 =~ ^[0-9]+:[a-zA-Z0-9_-]+$ ]] || message_error API "$_ERR_TOKEN_INVALID_" "$1" "$2"
+    			checkArgType token "$1" "$2"
     			declare -gr _TOKEN_="$2"												# TOKEN
     			declare -gr _API_TELEGRAM_="https://api.telegram.org/bot$_TOKEN_"		# API
     			shift 2
@@ -483,12 +505,12 @@ ShellBot.init()
     				shift 2
     				;;
     			-c|--certificate)
-					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					checkArgType file "$1" "$2"
     				certificate="$2"
     				shift 2
     				;;
     			-m|--max_connections)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				max_connections="$2"
     				shift 2
     				;;
@@ -536,7 +558,7 @@ ShellBot.init()
     				shift 2
     				;;
     			-p|--photo)
-					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					checkArgType file "$1" "$2"
     				photo="$2"
     				shift 2
     				;;
@@ -702,12 +724,12 @@ ShellBot.init()
     				shift 2
     				;;
     			-m|--message_id)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				message_id="$2"
     				shift 2
     				;;
     			-n|--disable_notification)
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				disable_notification="$2"
     				shift 2
     				;;	
@@ -793,32 +815,32 @@ ShellBot.init()
     				shift 2
     				;;
     			-u|--user_id)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				user_id="$2"
     				shift 2
     				;;
     			-d|--until_date)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				until_date="$2"
     				shift 2
     				;;
     			-s|--can_send_messages)
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				can_send_messages="$2"
     				shift 2
     				;;
     			-m|--can_send_media_messages)
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				can_send_media_messages="$2"
     				shift 2
     				;;
     			-o|--can_send_other_messages)
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				can_send_other_messages="$2"
     				shift 2
     				;;
     			-w|--can_add_web_page_previews)
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				can_add_web_page_previews="$2"
     				shift 2
     				;;				
@@ -879,47 +901,47 @@ ShellBot.init()
     				shift 2
     				;;
     			-u|--user_id)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				user_id="$2"
     				shift 2
     				;;
     			-i|--can_change_info)
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				can_change_info="$2"
     				shift 2
     				;;
     			-p|--can_post_messages)
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				can_post_messages="$2"
     				shift 2
     				;;
     			-e|--can_edit_messages)
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				can_edit_messages="$2"
     				shift 2
     				;;
     			-d|--can_delete_messages)
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				can_delete_messages="$2"
     				shift 2
     				;;
     			-v|--can_invite_users)
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				can_invite_users="$2"
     				shift 2
     				;;
     			-r|--can_restrict_members)
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				can_restrict_members="$2"
     				shift 2
     				;;
     			-f|--can_pin_messages)
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				can_pin_messages="$2"
     				shift 2
     				;;	
     			-m|--can_promote_members)
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				can_promote_members="$2"
     				shift 2
     				;;
@@ -1015,27 +1037,27 @@ ShellBot.init()
     				shift 2
     				;;
     			-v|--video_note)
-					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					checkArgType file "$1" "$2"
     				video_note="$2"
     				shift 2
     				;;
     			-t|--duration)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				duration="$2"
     				shift 2
     				;;
     			-l|--length)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				length="$2"
     				shift 2
     				;;
     			-n|--disable_notification)
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				disable_notification="$2"
     				shift 2
     				;;
     			-r|--reply_to_message_id)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				reply_to_message_id="$2"
     				shift 2
     				;;
@@ -1100,7 +1122,7 @@ ShellBot.init()
     				shift 2
     				;;
     			-l|--line)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				line="$2"
     				shift 2
     				;;
@@ -1258,7 +1280,7 @@ ShellBot.init()
     				;;
     			-s|--show_alert)
     				# boolean
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				show_alert="$2"
     				shift 2
     				;;
@@ -1268,7 +1290,7 @@ ShellBot.init()
     				;;
     			-e|--cache_time)
     				# inteiro
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				cache_time="$2"
     				shift 2
     				;;
@@ -1327,19 +1349,19 @@ ShellBot.init()
     				;;
     			-r|--resize_keyboard)
     				# Tipo: boolean
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				resize_keyboard="$2"
     				shift 2
     				;;
     			-t|--one_time_keyboard)
     				# Tipo: boolean
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				on_time_keyboard="$2"
     				shift 2
     				;;
     			-s|--selective)
     				# Tipo: boolean
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				selective="$2"
     				shift 2
     				;;
@@ -1404,25 +1426,25 @@ _EOF
     				;;
     			-p|--parse_mode)
     				# Tipo: "markdown" ou "html"
-    				[[ "$2" =~ ^(markdown|html)$ ]] || message_error API "$_ERR_TYPE_PARSE_MODE_" "$1" "$2"
+    				checkArgType parsemode "$1" "$2"
     				parse_mode="$2"
     				shift 2
     				;;
     			-w|--disable_web_page_preview)
     				# Tipo: boolean
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				disable_web_page_preview="$2"
     				shift 2
     				;;
     			-n|--disable_notification)
     				# Tipo: boolean
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				disable_notification="$2"
     				shift 2
     				;;
     			-r|--reply_to_message_id)
     				# Tipo: inteiro
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				reply_to_message_id="$2"
     				shift 2
     				;;
@@ -1493,13 +1515,13 @@ _EOF
     				;;
     			-n|--disable_notification)
     				# Tipo: boolean
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				disable_notification="$2"
     				shift 2
     				;;
     			-m|--message_id)
     				# Tipo: inteiro
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				message_id="$2"
     				shift 2
     				;;
@@ -1559,7 +1581,7 @@ _EOF
     				shift 2
     				;;
     			-p|--photo)
-					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					checkArgType file "$1" "$2"
     				photo="$2"
     				shift 2
     				;;
@@ -1570,13 +1592,13 @@ _EOF
     				;;
     			-n|--disable_notification)
     				# Tipo: boolean
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				disable_notification="$2"
     				shift 2
     				;;
     			-r|--reply_to_message_id)
     				# Tipo: inteiro
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				reply_to_message_id="$2"
     				shift 2
     				;;
@@ -1643,7 +1665,7 @@ _EOF
     				shift 2
     				;;
     			-a|--audio)
-					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					checkArgType file "$1" "$2"
     				audio="$2"
     				shift 2
     				;;
@@ -1653,7 +1675,7 @@ _EOF
     				;;
     			-d|--duration)
     				# Tipo: inteiro
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				duration="$2"
     				shift 2
     				;;
@@ -1667,13 +1689,13 @@ _EOF
     				;;
     			-n|--disable_notification)
     				# Tipo: boolean
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				disable_notification="$2"
     				shift 2
     				;;
     			-r|--reply_to_message_id)
     				# Tipo: inteiro
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				reply_to_message_id="$2"
     				shift 2
     				;;
@@ -1742,7 +1764,7 @@ _EOF
     				shift 2
     				;;
     			-d|--document)
-					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					checkArgType file "$1" "$2"
     				document="$2"
     				shift 2
     				;;
@@ -1751,12 +1773,12 @@ _EOF
     				shift 2
     				;;
     			-n|--disable_notification)
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				disable_notification="$2"
     				shift 2
     				;;
     			-r|--reply_to_message_id)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				reply_to_message_id="$2"
     				shift 2
     				;;
@@ -1820,19 +1842,19 @@ _EOF
     				shift 2
     				;;
     			-s|--sticker)
-					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					checkArgType file "$1" "$2"
     				sticker="$2"
     				shift 2
     				;;
     			-n|--disable_notification)
     				# Tipo: boolean
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				disable_notification="$2"
     				shift 2
     				;;
     			-r|--reply_to_message_id)
     				# Tipo: inteiro
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				reply_to_message_id="$2"
     				shift 2
     				;;
@@ -1922,12 +1944,12 @@ _EOF
 		do
 			case $1 in
 				-u|--user_id)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
 					user_id="$2"
 					shift 2
 					;;
 				-s|--png_sticker)
-					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					checkArgType file "$1" "$2"
 					png_sticker="$2"
 					shift 2
 					;;
@@ -1974,7 +1996,7 @@ _EOF
 					shift 2
 					;;
 				-p|--position)
-					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+					checkArgType int "$1" "$2"
 					position="$2"
 					shift 2
 					;;
@@ -2056,27 +2078,27 @@ _EOF
 		do
 			case $1 in
 				-p|--point)
-					[[ "$2" =~ ^(forehead|eyes|mouth|chin)$ ]] || message_error API "$_ERR_TYPE_POINT_" "$1" "$2"
+					checkArgType point "$1" "$2"
 					point="$2"
 					shift 2
 					;;
 				-x|--x_shift)
-					[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error API "$_ERR_TYPE_FLOAT_" "$1" "$2"
+					checkArgType float "$1" "$2"
 					x_shift="$2"
 					shift 2
 					;;
 				-y|--y_shift)
-					[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error API "$_ERR_TYPE_FLOAT_" "$1" "$2"
+					checkArgType float "$1" "$2"
 					y_shift="$2"
 					shift 2
 					;;
 				-s|--scale)
-					[[ "$2" =~ ^[0-9]+\.[0-9]+$ ]] || message_error API "$_ERR_TYPE_FLOAT_" "$1" "$2"
+					checkArgType float "$1" "$2"
 					scale="$2"
 					shift 2
 					;;
 				-z|--zoom)
-					[[ "$2" =~ ^[0-9]+\.[0-9]+$ ]] || message_error API "$_ERR_TYPE_FLOAT_" "$1" "$2"
+					checkArgType float "$1" "$2"
 					zoom="$2"
 					shift 2
 					;;
@@ -2122,7 +2144,7 @@ _EOF
 		do
 			case $1 in
 				-u|--user_id)
-					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+					checkArgType int "$1" "$2"
 					user_id="$2"
 					shift 2
 					;;
@@ -2135,7 +2157,7 @@ _EOF
 					shift 2
 					;;
 				-s|--png_sticker)
-					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					checkArgType file "$1" "$2"
 					png_sticker="$2"
 					shift 2
 					;;
@@ -2144,7 +2166,7 @@ _EOF
 					shift 2
 					;;
 				-c|--contains_masks)
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
 					contains_masks="$2"
 					shift 2
 					;;
@@ -2200,7 +2222,7 @@ _EOF
 		do
 			case $1 in
 				-u|--user_id)
-					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+					checkArgType int "$1" "$2"
 					user_id="$2"
 					shift 2
 					;;
@@ -2209,7 +2231,7 @@ _EOF
 					shift 2
 					;;
 				-s|--png_sticker)
-					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					checkArgType file "$1" "$2"
 					png_sticker="$2"
 					shift 2
 					;;
@@ -2279,25 +2301,25 @@ _EOF
     				shift 2
     				;;
     			-v|--video)
-					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					checkArgType file "$1" "$2"
     				video="$2"
     				shift 2
     				;;
     			-d|--duration)
     				# Tipo: inteiro
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				duration="$2"
     				shift 2
     				;;
     			-w|--width)
     				# Tipo: inteiro
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				width="$2"
     				shift 2
     				;;
     			-h|--height)
     				# Tipo: inteiro
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				height="$2"
     				shift 2
     				;;
@@ -2307,12 +2329,12 @@ _EOF
     				;;
     			-n|--disable_notification)
     				# Tipo: boolean
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				disable_notification="$2"
     				shift 2
     				;;
     			-r|--reply_to_message_id)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				reply_to_message_id="$2"
     				shift 2
     				;;
@@ -2382,7 +2404,7 @@ _EOF
     				shift 2
     				;;
     			-v|--voice)
-					[[ $2 =~ ^@ && ! -f ${2#@} ]] && message_error API "$_ERR_FILE_NOT_FOUND_" "$1" "$2"
+					checkArgType file "$1" "$2"
     				voice="$2"
     				shift 2
     				;;
@@ -2392,19 +2414,19 @@ _EOF
     				;;
     			-d|--duration)
     				# Tipo: inteiro
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				duration="$2"
     				shift 2
     				;;
     			-n|--disable_notification)
     				# Tipo: boolean
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				disable_notification="$2"
     				shift 2
     				;;
     			-r|--reply_to_message_id)
     				# Tipo: inteiro
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				reply_to_message_id="$2"
     				shift 2
     				;;
@@ -2474,30 +2496,30 @@ _EOF
     				;;
     			-l|--latitude)
     				# Tipo: float
-    				[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error API "$_ERR_TYPE_FLOAT_" "$1" "$2"
+    				checkArgType float "$1" "$2"
     				latitude="$2"
     				shift 2
     				;;
     			-g|--longitude)
     				# Tipo: float
-    				[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error API "$_ERR_TYPE_FLOAT_" "$1" "$2"
+    				checkArgType float "$1" "$2"
     				longitude="$2"
     				shift 2
     				;;
 				-p|--live_period)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
 					live_period="$2"
 					shift 2
 					;;
     			-n|--disable_notification)
     				# Tipo: boolean
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				disable_notification="$2"
     				shift 2
     				;;
     			-r|--reply_to_message_id)
     				# Tipo: inteiro
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				reply_to_message_id="$2"
     				shift 2
     				;;
@@ -2567,13 +2589,13 @@ _EOF
     				;;
     			-l|--latitude)
     				# Tipo: float
-    				[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error API "$_ERR_TYPE_FLOAT_" "$1" "$2"
+    				checkArgType float "$1" "$2"
     				latitude="$2"
     				shift 2
     				;;
     			-g|--longitude)
     				# Tipo: float
-    				[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error API "$_ERR_TYPE_FLOAT_" "$1" "$2"
+    				checkArgType float "$1" "$2"
     				longitude="$2"
     				shift 2
     				;;
@@ -2591,13 +2613,13 @@ _EOF
     				;;
     			-n|--disable_notification)
     				# Tipo: boolean
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				disable_notification="$2"
     				shift 2
     				;;
     			-r|--reply_to_message_id)
     				# Tipo: inteiro
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				reply_to_message_id="$2"
     				shift 2
     				;;
@@ -2682,13 +2704,13 @@ _EOF
     				;;
     			-n|--disable_notification)
     				# Tipo: boolean
-    				[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    				checkArgType bool "$1" "$2"
     				disable_notification="$2"
     				shift 2
     				;;
     			-r|--reply_to_message_id)
     				# Tipo: inteiro
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				reply_to_message_id="$2"
     				shift 2
     				;;
@@ -2802,17 +2824,17 @@ _EOF
     	do
     		case $1 in
     			-u|--user_id)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				user_id="$2"
     				shift 2
     				;;
     			-o|--offset)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				offset="$2"
     				shift 2
     				;;
     			-l|--limit)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				limit="$2"
     				shift 2
     				;;
@@ -2924,12 +2946,12 @@ _EOF
     				shift 2
     				;;
     			-u|--user_id)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				user_id="$2"
     				shift 2
     				;;
     			-d|--until_date)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				until_date="$2"
     				shift 2
     				;;
@@ -3020,7 +3042,7 @@ _EOF
     				shift 2
     				;;
     			-u|--user_id)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				user_id="$2"
     				shift 2
     				;;
@@ -3201,7 +3223,7 @@ _EOF
     				shift 2
     				;;
     			-u|--user_id)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				user_id="$2"
     				shift 2
     				;;
@@ -3251,12 +3273,12 @@ _EOF
     					shift 2
     					;;
     				-m|--message_id)
-    					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    					checkArgType int "$1" "$2"
     					message_id="$2"
     					shift 2
     					;;
     				-i|--inline_message_id)
-    					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    					checkArgType int "$1" "$2"
     					inline_message_id="$2"
     					shift 2
     					;;
@@ -3265,12 +3287,12 @@ _EOF
     					shift 2
     					;;
     				-p|--parse_mode)
-    					[[ "$2" =~ ^(markdown|html)$ ]] || message_error API "$_ERR_TYPE_PARSE_MODE_" "$1" "$2"
+    					checkArgType parsemode "$1" "$2"
     					parse_mode="$2"
     					shift 2
     					;;
     				-w|--disable_web_page_preview)
-    					[[ "$2" =~ ^(true|false)$ ]] || message_error API "$_ERR_TYPE_BOOL_" "$1" "$2"
+    					checkArgType bool "$1" "$2"
     					disable_web_page_preview="$2"
     					shift 2
     					;;
@@ -3332,12 +3354,12 @@ _EOF
     					shift 2
     					;;
     				-m|--message_id)
-    					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    					checkArgType int "$1" "$2"
     					message_id="$2"
     					shift 2
     					;;
     				-i|--inline_message_id)
-    					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    					checkArgType int "$1" "$2"
     					inline_message_id="$2"
     					shift 2
     					;;
@@ -3396,12 +3418,12 @@ _EOF
     					shift 2
     					;;
     				-m|--message_id)
-    					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    					checkArgType int "$1" "$2"
     					message_id="$2"
     					shift 2
     					;;
     				-i|--inline_message_id)
-    					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    					checkArgType int "$1" "$2"
     					inline_message_id="$2"
     					shift 2
     					;;
@@ -3455,7 +3477,7 @@ _EOF
     					shift 2
     					;;
     				-m|--message_id)
-    					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    					checkArgType int "$1" "$2"
     					message_id="$2"
     					shift 2
     					;;
@@ -3561,24 +3583,24 @@ _EOF
 					shift 2
 					;;
 				-m|--message_id)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
 					message_id="$2"
 					shift 2
 					;;
     			-i|--inline_message_id)
-					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+					checkArgType int "$1" "$2"
 					inline_message_id="$2"
 					shift 2
 					;;
     			-l|--latitude)
     				# Tipo: float
-    				[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error API "$_ERR_TYPE_FLOAT_" "$1" "$2"
+    				checkArgType float "$1" "$2"
     				latitude="$2"
     				shift 2
     				;;
     			-g|--longitude)
     				# Tipo: float
-    				[[ "$2" =~ ^-?[0-9]+\.[0-9]+$ ]] || message_error API "$_ERR_TYPE_FLOAT_" "$1" "$2"
+    				checkArgType float "$1" "$2"
     				longitude="$2"
     				shift 2
     				;;
@@ -3635,12 +3657,12 @@ _EOF
 					shift 2
 					;;
 				-m|--message_id)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
 					message_id="$2"
 					shift 2
 					;;
     			-i|--inline_message_id)
-					[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+					checkArgType int "$1" "$2"
 					inline_message_id="$2"
 					shift 2
 					;;
@@ -3768,17 +3790,17 @@ _EOF
     	do
     		case $1 in
     			-o|--offset)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				offset="$2"
     				shift 2
     				;;
     			-l|--limit)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				limit="$2"
     				shift 2
     				;;
     			-t|--timeout)
-    				[[ "$2" =~ ^[0-9]+$ ]] || message_error API "$_ERR_TYPE_INT_" "$1" "$2"
+    				checkArgType int "$1" "$2"
     				timeout="$2"
     				shift 2
     				;;
@@ -3995,4 +4017,5 @@ declare -rf message_error \
 			json_status \
 			getObjVal \
 			flushOffset \
-			createUnitService
+			createUnitService \
+			checkArgType
