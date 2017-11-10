@@ -3556,7 +3556,9 @@ _EOF
 
 			file_remote="$(echo $file_info | cut -d'|' -f3)"
 			file_info="$(echo $file_info | cut -d'|' -f-2)"
-			ext="${file_remote##*.}"
+			filename=${file_remote##*/}
+			ext="${filename##*.}"
+
 			file_path="$(mktemp -u --tmpdir="$dir" "file$(date +%d%m%Y%H%M%S)-XXXXX${ext:+.$ext}")"
 
 			if wget "$uri/$file_remote" -O "$file_path" &>/dev/null; then
@@ -3796,9 +3798,8 @@ _EOF
     										allowed_updates:' \
     						 -- "$@")
     
-    	
-    	eval set -- "$param"
-    	
+		eval set -- "$param"
+
     	while :
     	do
     		case $1 in
