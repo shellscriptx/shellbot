@@ -197,50 +197,7 @@ FlushOffset()
 	return $cod
 }    
 
-<<<<<<< HEAD
-message_error()
-{
-	# Variáveis locais
-	local err_message err_param assert err_line err_func
-	
-	# A variável 'BASH_LINENO' é dinâmica e armazena o número da linha onde foi expandida.
-	# Quando chamada dentro de um subshell, passa ser instanciada como um array, armazenando diversos
-	# valores onde cada índice refere-se a um shell/subshell. As mesmas caracteristicas se aplicam a variável
-	# 'FUNCNAME', onde é armazenado o nome da função onde foi chamada.
-	err_line=${BASH_LINENO[1]}	# Obtem o número da linha no shell pai.
-	err_func=${FUNCNAME[1]}		# Obtem o nome da função no shell pai.
-	
-	# Lê o tipo de ocorrência.
-	# TG - Erro externo retornado pelo core do telegram.
-	# API - Erro interno gerado pela API do ShellBot.
-	case $1 in
-		TG)
-			# arquivo json
-			err_param="$(json '.error_code' ${*:2})"
-			err_message="$(json '.description' ${*:2})"
-			;;
-		API)
-			err_param="${3:--}: ${4:--}"
-			err_message="$2"
-			assert=1
-			;;
-	esac
-
-	# Imprime erro
-	printf "%s: erro: linha %s: %s: %s: %s\n" "${_BOT_SCRIPT_}" \
-												"${err_line:--}" \
-												"${err_func:--}" \
-												"${err_param:--}" \
-												"${err_message:-$_ERR_UNKNOWN_}" 1>&2 
-
-	# Finaliza script/thread em caso de erro interno, caso contrário retorna 1
-	[[ $assert ]] && exit 1 || return 1
-}
-
-createUnitService()
-=======
 CreateUnitService()
->>>>>>> dev
 {
 	local service=${1%.*}.service
 	local ok='\033[0;32m[OK]\033[0;m'
@@ -291,7 +248,7 @@ _eof
 		{ echo -e $fail; MessageError API; }
 
 		sed -i -r '/^\s*ShellBot.init\s/s/\s--?(s(ervice)?|u(ser)?\s+\w+)\b//g' "$1"
-		
+
 		echo -n "Iniciando..."
 		systemctl start $service &>/dev/null && {
 		
