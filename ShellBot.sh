@@ -78,6 +78,7 @@ declare -r _ERR_SERVICE_NOT_ROOT_='Acesso negado: Requer privilégios de root.'
 declare -r _ERR_SERVICE_EXISTS_='Erro ao criar o serviço: O nome do serviço já existe.'
 declare -r _ERR_SERVICE_SYSTEMD_NOT_FOUND_='Erro ao ativar: O sistema não possui suporte ao gerenciamento de serviços "systemd".'
 declare -r _ERR_SERVICE_USER_NOT_FOUND_='Usuário não encontrado: A conta de usuário informada é inválida.'
+declare -r _ERR_VAR_NAME='O nome da variável é um identificador inválido.'
 
 Json() { jq "$1" <<< "${*:2}" 2>/dev/null | sed -r 's/(^"|"$)//g'; }
 GetObjValue(){ sed -nr 's/^\s+"[a-z_]+":\s+"?(.+[^",])*"?,?$/\1/p' | sed ':a;N;s/\n/|/;ta'; }
@@ -153,6 +154,7 @@ CheckArgType(){
 									find_location|
 									record_video_note|
 									upload_video_note)$ ]]			|| MessageError API "$_ERR_ACTION_MODE_" "$param" "$value";;
+		var)		[[ $value =~ ^(_[a-zA-Z0-9]|[a-zA-Z])+[a-zA-Z0-9_]*$ ]] || MessageError API "$_ERR_VAR_NAME" "$param" "$value";;
     esac
 
 	return 0
@@ -3787,12 +3789,11 @@ _EOF
 
 	ShellBot.inputMediaPhoto()
 	{
-		local __type __media __caption __album __delm __array
+		local __media __caption __album __delm __array
 		
 		local __param=$(getopt --name "$FUNCNAME" \
-								--options 'a:t:m:c:' \
+								--options 'a:m:c:' \
 								--longoptions 'album:,
-												type:,
 												media:,
 												caption:' \
 								-- "$@")
@@ -3804,11 +3805,8 @@ _EOF
 		do
 			case $1 in
 				-a|--album)
+					CheckArgType var "$1" "$2"
 					__array="$2"
-					shift 2
-					;;
-				-t|--type)
-					__type="$2"
 					shift 2
 					;;
 				-m|--media)
@@ -3827,7 +3825,6 @@ _EOF
 		done
 
 		[[ $__array ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-a, --album]"
-		[[ $__type ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-t, --type]"
 		[[ $__media ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --media]"
 
 		declare -n __album=$__array
@@ -3837,7 +3834,88 @@ _EOF
     
     	[[ $__album ]] && __delm=','
     
-    	__album+="$__delm{\"type\":\"$__type\",\"media\":\"$__media\"${__caption:+,\"caption\":\"$__caption\"}}" || return 1
+    	__album+="$__delm{\"type\":\"photo\","
+		__album+="\"media\":\"$__media\""
+		__album+="${__caption:+,\"caption\":\"$__caption\"}}"
+    	
+    	__album=${__album/#/[}
+		__album=${__album/%/]}
+
+		return 0
+	}
+	
+	ShellBot.inputMediaVideo()
+	{
+		local __media __album __delm __array
+		local __width __height __duration __caption
+		
+		local __param=$(getopt --name "$FUNCNAME" \
+								--options 'a:m:c:w:h:d:' \
+								--longoptions 'album:,
+												media:,
+												caption:,
+												width:,
+												height:,
+												duration:' \
+								-- "$@")
+	
+	
+		eval set -- "$__param"
+		
+		while :
+		do
+			case $1 in
+				-a|--album)
+					CheckArgType var "$1" "$2"
+					__array="$2"
+					shift 2
+					;;
+				-m|--media)
+					CheckArgType file "$1" "$2"
+					__media="$2"
+					shift 2
+					;;
+				-c|--caption)
+					__caption="$2"
+					shift 2
+					;;
+				-w|--width)
+					CheckArgType int "$1" "$2"
+					__width="$2"
+					shift 2
+					;;
+				-h|--height)
+					CheckArgType int "$1" "$2"
+					__height="$2"
+					shift 2
+					;;
+				-d|--duration)
+					CheckArgType int "$1" "$2"
+					__duration="$2"
+					shift 2
+					;;
+				--)
+					shift
+					break
+			esac
+		done
+
+		[[ $__array ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-a, --album]"
+		[[ $__media ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --media]"
+
+		declare -n __album=$__array
+
+    	__album=${__album#[}
+    	__album=${__album%]}
+    
+    	[[ $__album ]] && __delm=','
+    
+		__album+="$__delm{\"type\":\"video\","
+		__album+="\"media\":\"$__media\""
+		__album+="${__caption:+,\"caption\":\"$__caption\"}"
+		__album+="${__width:+,\"width\":$__width}"
+		__album+="${__height:+,\"height\":$__height}"
+		__album+="${__duration:+,\"duration\":$__duration}}"
     	
     	__album=${__album/#/[}
 		__album=${__album/%/]}
@@ -4134,6 +4212,9 @@ _eof
 				ShellBot.stopMessageLiveLocation \
 				ShellBot.setChatStickerSet \
 				ShellBot.deleteChatStickerSet \
+				ShellBot.sendMediaGroup \
+				ShellBot.inputMediaPhoto \
+				ShellBot.inputMediaVideo \
 				ShellBot.getUpdates
    
 	# Retorna objetos
