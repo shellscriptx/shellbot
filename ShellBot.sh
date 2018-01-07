@@ -271,7 +271,7 @@ ShellBot.init()
 	# Verifica se o bot já foi inicializado.
 	[[ $_SHELLBOT_INIT_ ]] && MessageError API "$_ERR_BOT_ALREADY_INIT_"
 	
-	local enable_service user_unit
+	local enable_service user_unit _jq_bot_info
 	
 	local param=$(getopt --name "$FUNCNAME" \
 						 --options 't:mfsu:' \
@@ -356,8 +356,6 @@ ShellBot.init()
 	_BOT_INFO_[2]=$(Json '.result.first_name' $_jq_bot_info)
 	_BOT_INFO_[3]=$(Json '.result.username' $_jq_bot_info)
 
-	unset _jq_bot_info
-	
 	# Bot inicializado
 	declare -gr _BOT_INFO_
 	declare -gr _SHELLBOT_INIT_=1 
