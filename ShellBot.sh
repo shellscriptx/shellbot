@@ -348,8 +348,8 @@ ShellBot.init()
     	return $?
     }
 
-   	ShellBot.getMe 2>/dev/null || MessageError API "$_ERR_TOKEN_UNAUTHORIZED_" '[-t, --token]'
-	
+   	ShellBot.getMe &>/dev/null || MessageError API "$_ERR_TOKEN_UNAUTHORIZED_" '[-t, --token]'
+
 	# Salva as informações do bot.
 	_BOT_INFO_[0]=$_TOKEN_
 	_BOT_INFO_[1]=$(Json '.result.id' $_jq_bot_info)
