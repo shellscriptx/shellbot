@@ -3,7 +3,7 @@
 #-----------------------------------------------------------------------------------------------------------
 #	DATA:				07 de Março de 2017
 #	SCRIPT:				ShellBot.sh
-#	VERSÃO:				5.2
+#	VERSÃO:				5.3
 #	DESENVOLVIDO POR:	Juliano Santos [SHAMAN]
 #	PÁGINA:				http://www.shellscriptx.blogspot.com.br
 #	FANPAGE:			https://www.facebook.com/shellscriptx
@@ -272,7 +272,7 @@ ShellBot.init()
 	[[ $_SHELLBOT_INIT_ ]] && MessageError API "$_ERR_BOT_ALREADY_INIT_"
 	
 	local enable_service user_unit
-
+	
 	local param=$(getopt --name "$FUNCNAME" \
 						 --options 't:mfsu:' \
 						 --longoptions 'token:,
@@ -331,14 +331,15 @@ ShellBot.init()
 		   
     # Um método simples para testar o token de autenticação do seu bot. 
     # Não requer parâmetros. Retorna informações básicas sobre o bot em forma de um objeto Usuário.
-    ShellBot.getMe()
+    
+	ShellBot.getMe()
     {
-		local jq_obj
-
     	# Chama o método getMe passando o endereço da API, seguido do nome do método.
-    	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.})
-    	
-    	# Verifica o status de retorno do método
+    	local jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.})
+
+    	_jq_bot_info=$jq_obj
+
+		# Verifica o status de retorno do método
     	JsonStatus $jq_obj && {
     		# Retorna as informações armazenadas em "result".
     		Json '.result' $jq_obj | GetObjValue
@@ -347,15 +348,18 @@ ShellBot.init()
     	return $?
     }
 
-   	_BOT_INFO_=$(ShellBot.getMe 2>/dev/null) || MessageError API "$_ERR_TOKEN_UNAUTHORIZED_" '[-t, --token]'
-   	
-   	# Define o delimitador entre os campos.
-   	# Inicializa um array somente leitura contendo as informações do bot.
-   	IFSbkp=$IFS; IFS='|'
-   	declare -gr _BOT_INFO_=($_BOT_INFO_)
-   	IFS=$IFSbkp
-  
+   	ShellBot.getMe 2>/dev/null || MessageError API "$_ERR_TOKEN_UNAUTHORIZED_" '[-t, --token]'
+	
+	# Salva as informações do bot.
+	_BOT_INFO_[0]=$_TOKEN_
+	_BOT_INFO_[1]=$(Json '.result.id' $_jq_bot_info)
+	_BOT_INFO_[2]=$(Json '.result.first_name' $_jq_bot_info)
+	_BOT_INFO_[3]=$(Json '.result.username' $_jq_bot_info)
+
+	unset _jq_bot_info
+	
 	# Bot inicializado
+	declare -gr _BOT_INFO_
 	declare -gr _SHELLBOT_INIT_=1 
 
     # SHELLBOT (FUNÇÕES)
@@ -365,8 +369,8 @@ ShellBot.init()
 	ShellBot.OffsetEnd(){ local -i offset=${update_id[@]: -1}; echo $offset; }
 	ShellBot.OffsetNext(){ echo $(($(ShellBot.OffsetEnd)+1)); }
    	
-	ShellBot.token() { echo "${_TOKEN_}"; }
-	ShellBot.id() { echo "${_BOT_INFO_[0]}"; }
+	ShellBot.token() { echo "${_BOT_INFO_[0]}"; }
+	ShellBot.id() { echo "${_BOT_INFO_[1]}"; }
 	ShellBot.first_name() { echo "${_BOT_INFO_[2]}"; }
 	ShellBot.username() { echo "${_BOT_INFO_[3]}"; }
    
@@ -3789,7 +3793,7 @@ _EOF
 
 	ShellBot.inputMediaPhoto()
 	{
-		local __media __caption __album __delm __array
+		local __media __caption __album __delm __var
 		
 		local __param=$(getopt --name "$FUNCNAME" \
 								--options 'a:m:c:' \
@@ -3806,7 +3810,7 @@ _EOF
 			case $1 in
 				-a|--album)
 					CheckArgType var "$1" "$2"
-					__array="$2"
+					__var="$2"
 					shift 2
 					;;
 				-m|--media)
@@ -3824,10 +3828,10 @@ _EOF
 			esac
 		done
 
-		[[ $__array ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-a, --album]"
+		[[ $__var ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-a, --album]"
 		[[ $__media ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --media]"
 
-		declare -n __album=$__array
+		declare -n __album=$__var
 
     	__album=${__album#[}
     	__album=${__album%]}
@@ -3846,7 +3850,7 @@ _EOF
 	
 	ShellBot.inputMediaVideo()
 	{
-		local __media __album __delm __array
+		local __media __album __delm __var
 		local __width __height __duration __caption
 		
 		local __param=$(getopt --name "$FUNCNAME" \
@@ -3867,7 +3871,7 @@ _EOF
 			case $1 in
 				-a|--album)
 					CheckArgType var "$1" "$2"
-					__array="$2"
+					__var="$2"
 					shift 2
 					;;
 				-m|--media)
@@ -3900,10 +3904,10 @@ _EOF
 			esac
 		done
 
-		[[ $__array ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-a, --album]"
+		[[ $__var ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-a, --album]"
 		[[ $__media ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --media]"
 
-		declare -n __album=$__array
+		declare -n __album=$__var
 
     	__album=${__album#[}
     	__album=${__album%]}
