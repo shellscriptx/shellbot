@@ -3785,6 +3785,124 @@ _EOF
     	return $?
 	}
 
+	ShellBot.inputMediaPhoto()
+	{
+		local __type __media __caption __album __delm __array
+		
+		local __param=$(getopt --name "$FUNCNAME" \
+								--options 'a:t:m:c:' \
+								--longoptions 'album:,
+												type:,
+												media:,
+												caption:' \
+								-- "$@")
+	
+	
+		eval set -- "$__param"
+		
+		while :
+		do
+			case $1 in
+				-a|--album)
+					__array="$2"
+					shift 2
+					;;
+				-t|--type)
+					__type="$2"
+					shift 2
+					;;
+				-m|--media)
+					CheckArgType file "$1" "$2"
+					__media="$2"
+					shift 2
+					;;
+				-c|--caption)
+					__caption="$2"
+					shift 2
+					;;
+				--)
+					shift
+					break
+			esac
+		done
+
+		[[ $__array ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-a, --album]"
+		[[ $__type ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-t, --type]"
+		[[ $__media ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --media]"
+
+		declare -n __album=$__array
+
+    	__album=${__album#[}
+    	__album=${__album%]}
+    
+    	[[ $__album ]] && __delm=','
+    
+    	__album+="$__delm{\"type\":\"$__type\",\"media\":\"$__media\"${__caption:+,\"caption\":\"$__caption\"}}" || return 1
+    	
+    	__album=${__album/#/[}
+		__album=${__album/%/]}
+
+		return 0
+	}
+
+	ShellBot.sendMediaGroup()
+	{
+		local chat_id media disable_notification reply_to_message_id jq_obj
+		
+		local param=$(getopt --name "$FUNCNAME" \
+								--options 'c:m:n:r:' \
+								--longoptions 'chat_id:,
+												media:,
+												disable_notification:,
+												reply_to_message_id:' \
+								-- "$@")
+	
+		eval set -- "$param"
+		
+		while :
+		do
+			case $1 in
+				-c|--chat_id)
+					chat_id="$2"
+					shift 2
+					;;
+				-m|--media)
+					media="$2"
+					shift 2
+					;;
+				-n|--disable_notification)
+    				CheckArgType bool "$1" "$2"
+					disable_notification="$2"
+					shift 2
+					;;
+				-r|--reply_to_message_id)
+    				CheckArgType int "$1" "$2"
+    				reply_to_message_id="$2"
+    				shift 2
+					;;
+				--)
+					shift
+					break
+			esac
+		done
+
+		[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+		[[ $media ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --media]"
+		
+		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
+    								 ${media:+-F media="$media"} \
+    								 ${disable_notification:+-F disable_notification="$disable_notification"} \
+    								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"})
+    
+		# Retorno do método
+    	JsonStatus $jq_obj && {
+    		Json '.result' $jq_obj | GetObjValue
+    	} || MessageError TG $jq_obj
+    
+    	# Status
+    	return $?
+	}
+
     ShellBot.getUpdates()
     {
     	local total_keys offset limit timeout allowed_updates jq_obj
