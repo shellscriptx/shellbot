@@ -137,7 +137,7 @@ CheckArgType(){
 	# É retornado '0' para sucesso, caso contrário uma mensagem
 	# de erro é retornada e o script/thread é finalizado com status '1'.
 	case $ctype in
-		var)		[[ $value =~ ^(_[a-zA-Z0-9]|[a-zA-Z])+[a-zA-Z0-9_]*$ ]] || MessageError API "$_ERR_VAR_NAME" "$param" "$value";;
+		var)		[[ $value =~ ^[a-zA-Z_]+[a-zA-Z0-9_]*$ ]]		|| MessageError API "$_ERR_VAR_NAME" "$param" "$value";;
 		int)		[[ $value =~ ^[0-9]+$ ]]						|| MessageError API "$_ERR_TYPE_INT_" "$param" "$value";;
 		float)		[[ $value =~ ^-?[0-9]+\.[0-9]+$ ]]				|| MessageError API "$_ERR_TYPE_FLOAT_" "$param" "$value";;
 		bool)		[[ $value =~ ^(true|false)$ ]]					|| MessageError API "$_ERR_TYPE_BOOL_" "$param" "$value";;
@@ -3826,6 +3826,7 @@ _EOF
 				--)
 					shift
 					break
+					;;
 			esac
 		done
 
@@ -3902,6 +3903,7 @@ _EOF
 				--)
 					shift
 					break
+					;;
 			esac
 		done
 
@@ -3966,6 +3968,7 @@ _EOF
 				--)
 					shift
 					break
+					;;
 			esac
 		done
 
