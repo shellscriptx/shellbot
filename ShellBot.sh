@@ -4034,7 +4034,7 @@ _EOF
     	done
     	
     	# Seta os parâmetros
-    	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${offset:+-d offset="$offset"} \
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${offset:+-d offset="$offset"} \
     								${limit:+-d limit="$limit"} \
     								${timeout:+-d timeout="$timeout"} \
     								${allowed_updates:+-d allowed_updates="$allowed_updates"})
