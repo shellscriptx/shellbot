@@ -16,7 +16,7 @@ ShellBot.init --token "$bot_token"
 ShellBot.username
 
 # Limpa o array que irá receber a estrutura inline_button e suas configurações.
-unset botao1
+botao1=''
 
 # INLINE_BUTTON - CONFIGURAÇÕES.
 #
