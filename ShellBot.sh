@@ -3,7 +3,7 @@
 #-----------------------------------------------------------------------------------------------------------
 #	DATA:				07 de Março de 2017
 #	SCRIPT:				ShellBot.sh
-#	VERSÃO:				5.3
+#	VERSÃO:				5.4
 #	DESENVOLVIDO POR:	Juliano Santos [SHAMAN]
 #	PÁGINA:				http://www.shellscriptx.blogspot.com.br
 #	FANPAGE:			https://www.facebook.com/shellscriptx
@@ -1033,7 +1033,7 @@ ShellBot.init()
     			reply_to_message_id reply_markup jq_obj
     
     	local param=$(getopt --name "$FUNCNAME" \
-							 --options 'c:v:t:l:n:r:m:' \
+							 --options 'c:v:t:l:n:r:m:s:' \
 							 --longoptions 'chat_id:,
     										video_note:,
     										duration:,
@@ -2293,11 +2293,12 @@ _EOF
     ShellBot.sendVideo()
     {
     	# Variáveis locais
-    	local chat_id video duration width height caption disable_notification reply_to_message_id reply_markup jq_obj
+    	local chat_id video duration width height caption disable_notification \
+				reply_to_message_id reply_markup jq_obj supports_streaming
     
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
-							 --options 'c:v:d:w:h:t:n:r:k:' \
+							 --options 'c:v:d:w:h:t:n:r:k:s:' \
 							 --longoptions 'chat_id:,
     										video:,
     										duration:,
@@ -2306,7 +2307,8 @@ _EOF
     										caption:,
     										disable_notification:,
     										reply_to_message_id:,
-    										reply_markup:' \
+    										reply_markup:,
+											supports_streaming:' \
     						 -- "$@")
     
     	
@@ -2362,6 +2364,11 @@ _EOF
     				reply_markup="$2"
     				shift 2
     				;;
+				-s|--supports_streaming)
+    				CheckArgType bool "$1" "$2"
+					supports_streaming=$2
+					shift 2
+					;;
     			--)
     				shift
     				break
@@ -2382,7 +2389,8 @@ _EOF
     								 ${caption:+-F caption="$caption"} \
     								 ${disable_notification:+-F disable_notification="$disable_notification"} \
     								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
-    								 ${reply_markup:+-F reply_markup="$reply_markup"})
+    								 ${reply_markup:+-F reply_markup="$reply_markup"} \
+									 ${supports_streaming:+-F supports_streaming="$supports_streaming"})
     
     	# Testa o retorno do método
     	JsonStatus $jq_obj && {
@@ -3853,16 +3861,17 @@ _EOF
 	ShellBot.inputMediaVideo()
 	{
 		local __media __album __delm
-		local __width __height __duration __caption
+		local __width __height __duration __caption __supports_streaming
 		
 		local __param=$(getopt --name "$FUNCNAME" \
-								--options 'a:m:c:w:h:d:' \
+								--options 'a:m:c:w:h:d:s:' \
 								--longoptions 'album:,
 												media:,
 												caption:,
 												width:,
 												height:,
-												duration:' \
+												duration:,
+												supports_streaming:' \
 								-- "$@")
 	
 	
@@ -3900,6 +3909,11 @@ _EOF
 					__duration="$2"
 					shift 2
 					;;
+				-s|--supports_streaming)
+					CheckArgType bool "$1" "$2"
+					__supports_streaming="$2"
+					shift 2
+					;;
 				--)
 					shift
 					break
@@ -3922,8 +3936,9 @@ _EOF
 		__album+="${__caption:+,\"caption\":\"$__caption\"}"
 		__album+="${__width:+,\"width\":$__width}"
 		__album+="${__height:+,\"height\":$__height}"
-		__album+="${__duration:+,\"duration\":$__duration}}"
-    	
+		__album+="${__duration:+,\"duration\":$__duration}"
+    	__album+="${__supports_streaming:+,\"supports_streaming\":$__supports_streaming}}"
+
     	__album=${__album/#/[}
 		__album=${__album/%/]}
 

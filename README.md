@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # **ShellBot API v5.3**
+=======
+# **ShellBot API v5.4**
+>>>>>>> dev
 ![ShellBot](https://github.com/shellscriptx/ShellBot/blob/master/ShellBot.png)
 
 ## Sobre
