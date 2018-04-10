@@ -3,7 +3,7 @@
 #-----------------------------------------------------------------------------------------------------------
 #	DATA:				07 de Março de 2017
 #	SCRIPT:				ShellBot.sh
-#	VERSÃO:				5.4
+#	VERSÃO:				5.5
 #	DESENVOLVIDO POR:	Juliano Santos [SHAMAN]
 #	PÁGINA:				http://www.shellscriptx.blogspot.com.br
 #	FANPAGE:			https://www.facebook.com/shellscriptx
@@ -32,8 +32,11 @@
 #						reduzindo o nível de dependências de pacotes externos.
 #-----------------------------------------------------------------------------------------------------------
 
-# Verifica se a API já foi instanciada.
-[[ $_SHELLBOT_SH_ ]] && return 1
+if [[ "${BASH_VERSINFO[0]},${BASH_VERSINFO[1]}" -lt 4,3 ]]; then
+    echo "ShellBot: erro: requer 'bash v4.3.0' ou superior" 1>&2
+    echo "atual: bash $BASH_VERSION" 1>&2
+    exit 1
+fi
 
 # Verifica se os pacotes necessários estão instalados.
 for _pkg_ in curl jq getopt; do
@@ -43,6 +46,9 @@ for _pkg_ in curl jq getopt; do
 		exit 1	# Status
 	fi
 done
+
+# Verifica se a API já foi instanciada.
+[[ $_SHELLBOT_SH_ ]] && return 1
 
 # Script que importou a API.
 declare -r _BOT_SCRIPT_=$(basename "$0")
@@ -57,32 +63,110 @@ set -f
 declare -r _CURL_OPT_='--silent --request'
 
 # Erros registrados da API (Parâmetros/Argumentos)
-declare -r _ERR_TYPE_BOOL_='Tipo incompatível: Suporta somente "true" ou "false".'
-declare -r _ERR_TYPE_PARSE_MODE_='Formatação inválida: Suporta somente "markdown" ou "html".'
-declare -r _ERR_TYPE_INT_='Tipo incompatível: Suporta somente inteiro.'
-declare -r _ERR_TYPE_FLOAT_='Tipo incompatível: Suporta somente float.'
-declare -r _ERR_TYPE_POINT_='Máscara inválida: Deve ser “forehead”, “eyes”, “mouth” ou “chin”.'
-declare -r _ERR_ACTION_MODE_='Ação inválida: A definição da ação não é suportada.'
-declare -r _ERR_PARAM_REQUIRED_='Opção requerida: Verique se o(s) parâmetro(s) ou argumento(s) obrigatório(s) estão presente(s).'
-declare -r _ERR_TOKEN_UNAUTHORIZED_='Não autorizado: Verifique se possui permissões para utilizar o token.'
-declare -r _ERR_TOKEN_INVALID_='TOKEN inválido: Verique o número do token e tente novamente.'
-declare -r _ERR_FUNCTION_NOT_FOUND_='Função inválida: Verique se o nome está correto ou se a função existe.'
-declare -r _ERR_BOT_ALREADY_INIT_='Ação não permitida: O bot já foi inicializado.'
-declare -r _ERR_FILE_NOT_FOUND_='Arquivo não encontrado: Não foi possível ler o arquivo especificado.'
-declare -r _ERR_DIR_WRITE_DENIED_='Permissão negada: Não é possível gravar no diretório.'
-declare -r _ERR_DIR_NOT_FOUND_='Não foi possível acessar: Diretório não encontrado.'
+declare -r _ERR_TYPE_BOOL_='Tipo incompatível: suporta somente "true" ou "false".'
+declare -r _ERR_TYPE_PARSE_MODE_='Formatação inválida: suporta somente "markdown" ou "html".'
+declare -r _ERR_TYPE_INT_='Tipo incompatível: suporta somente inteiro.'
+declare -r _ERR_TYPE_FLOAT_='Tipo incompatível: suporta somente float.'
+declare -r _ERR_TYPE_POINT_='Máscara inválida: deve ser “forehead”, “eyes”, “mouth” ou “chin”.'
+declare -r _ERR_ACTION_MODE_='Ação inválida: a definição da ação não é suportada.'
+declare -r _ERR_PARAM_REQUIRED_='Opção requerida: verique se o(s) parâmetro(s) ou argumento(s) obrigatório(s) estão presente(s).'
+declare -r _ERR_TOKEN_UNAUTHORIZED_='Não autorizado: verifique se possui permissões para utilizar o token.'
+declare -r _ERR_TOKEN_INVALID_='Token inválido: verique o número do token e tente novamente.'
+declare -r _ERR_FUNCTION_NOT_FOUND_='Função inválida: verique se o nome está correto ou se a função existe.'
+declare -r _ERR_BOT_ALREADY_INIT_='Ação não permitida: o bot já foi inicializado.'
+declare -r _ERR_FILE_NOT_FOUND_='Arquivo não encontrado: não foi possível ler o arquivo especificado.'
+declare -r _ERR_DIR_WRITE_DENIED_='Permissão negada: não é possível gravar no diretório.'
+declare -r _ERR_DIR_NOT_FOUND_='Não foi possível acessar: diretório não encontrado.'
 declare -r _ERR_FILE_DOWNLOAD_='Falha no download: Arquivo não encontrado.'
-declare -r _ERR_FILE_INVALID_ID_='ID inválido: Arquivo não encontrado.'
-declare -r _ERR_UNKNOWN_='Erro desconhecido: Ocorreu uma falha inesperada. Reporte o problema ao desenvolvedor.'
-declare -r _ERR_SERVICE_NOT_ROOT_='Acesso negado: Requer privilégios de root.'
-declare -r _ERR_SERVICE_EXISTS_='Erro ao criar o serviço: O nome do serviço já existe.'
-declare -r _ERR_SERVICE_SYSTEMD_NOT_FOUND_='Erro ao ativar: O sistema não possui suporte ao gerenciamento de serviços "systemd".'
-declare -r _ERR_SERVICE_USER_NOT_FOUND_='Usuário não encontrado: A conta de usuário informada é inválida.'
-declare -r _ERR_VAR_NAME='O identificador da variável é inválido.'
+declare -r _ERR_FILE_INVALID_ID_='Id inválido: arquivo não encontrado.'
+declare -r _ERR_UNKNOWN_='Erro desconhecido: ocorreu uma falha inesperada. Reporte o problema ao desenvolvedor.'
+declare -r _ERR_SERVICE_NOT_ROOT_='Acesso negado: requer privilégios de root.'
+declare -r _ERR_SERVICE_EXISTS_='Erro ao criar o serviço: o nome do serviço já existe.'
+declare -r _ERR_SERVICE_SYSTEMD_NOT_FOUND_='Erro ao ativar: o sistema não possui suporte ao gerenciamento de serviços "systemd".'
+declare -r _ERR_SERVICE_USER_NOT_FOUND_='Usuário não encontrado: a conta de usuário informada é inválida.'
+declare -r _ERR_VAR_NAME_='o identificador da variável é inválido.'
+declare -r _ERR_FLAG_TYPE_RETURN_='Tipo inválido: somente "var", "val" ou "json".'
+declare -r _ERR_WRITE_LOG_FILE_='Permissão negada: não foi possível gravar no arquivo de log.'
 
-Json() { jq "$1" <<< "${*:2}" 2>/dev/null | sed -r 's/(^"|"$)//g'; }
-GetObjValue(){ sed -nr 's/^\s+"[a-z_]+":\s+"?(.+[^",])*"?,?$/\1/p' | sed ':a;N;s/\n/|/;ta'; }
-JsonStatus(){ [[ $(jq '.ok' <<< "$*") == true ]] && return 0 || return 1; }
+Json() { local obj=$(jq "$1" <<< "${*:2}"); obj=${obj#\"}; echo "${obj%\"}"; }
+JsonStatus(){ [[ $(jq -r '.ok' <<< "$*") == true ]] && return 0 || return 1; }
+
+GetAllValues(){ 
+	local obj=$(jq "[..|select(type == \"number\" or type == \"string\" or type == \"boolean\")|tostring]|join(\"${_BOT_DELM_/\"/\\\"}\")" <<< $*)
+	obj=${obj#\"}; echo "${obj%\"}"
+}
+
+GetAllKeys(){
+	local key; jq -r 'path(..)|map(if type == "number" then .|tostring|"["+.+"]" else . end)|join(".")|gsub(".\\[";"[")' <<< $* | \
+	while read key; do [[ $(jq -r ".$key|type" <<< $*) == @(string|number|boolean) ]] && echo $key; done
+}
+
+CreateLog()
+{
+	local i fmt
+
+	for i in ${!update_id[@]}; do
+		printf -v fmt "$_BOT_LOG_FORMAT_" || MessageError API
+
+		# FLAGS
+		fmt=${fmt//\{OK\}/$ok}
+		fmt=${fmt//\{UPDATE_ID\}/${update_id[$i]}}
+		fmt=${fmt//\{MESSAGE_ID\}/${message_message_id[$i]:-${callback_query_id[$i]}}}
+		fmt=${fmt//\{FROM_ID\}/${message_from_id[$i]:-${callback_query_from_id[$i]}}}
+		fmt=${fmt//\{FROM_IS_BOT\}/${message_from_is_bot[$i]:-${callback_query_from_is_bot[$i]}}}
+		fmt=${fmt//\{FROM_FIRST_NAME\}/${message_from_firstname[$i]:-${callback_query_from_first_name[$i]}}}
+		fmt=${fmt//\{FROM_USERNAME\}/${message_from_username[$i]:-${callback_query_from_username[$i]}}}
+		fmt=${fmt//\{FROM_LANGUAGE_CODE\}/${message_from_language_code[$i]:-${callback_query_from_language_code[$i]}}}
+		fmt=${fmt//\{CHAT_ID\}/${message_chat_id[$i]:-${callback_query_message_chat_id[$i]}}}
+		fmt=${fmt//\{CHAT_TITLE\}/${message_chat_title[$i]:-${callback_query_message_chat_title[$i]}}}
+		fmt=${fmt//\{CHAT_TYPE\}/${message_chat_type[$i]:-${callback_query_message_chat_type[$i]}}}
+		fmt=${fmt//\{MESSAGE_DATE\}/${message_date[$i]:-${callback_query_message_date[$i]}}}
+		fmt=${fmt//\{MESSAGE_TEXT\}/${message_text[$i]:-${callback_query_message_text[$i]}}}
+		fmt=${fmt//\{ENTITIES_TYPE\}/${message_entities_type[$i]:-${callback_query_data[$i]}}}
+		fmt=${fmt//\{BOT_TOKEN\}/${_BOT_INFO_[0]}}
+		fmt=${fmt//\{BOT_ID\}/${_BOT_INFO_[1]}}
+		fmt=${fmt//\{BOT_FIRST_NAME\}/${_BOT_INFO_[2]}}
+		fmt=${fmt//\{BOT_USERNAME\}/${_BOT_INFO_[3]}}
+		fmt=${fmt//\{BASENAME\}/$_BOT_SCRIPT_}
+		fmt=${fmt//\{METHOD\}/${FUNCNAME[2]/main/ShellBot.getUpdates}}
+		fmt=${fmt//\{RETURN\}/$(GetAllValues $*)}
+
+		# log
+		echo "$fmt" >> $_BOT_LOG_FILE_ || MessageError API "$_ERR_WRITE_LOG_FILE_" "$_BOT_LOG_FILE_"
+	done
+
+	return $?
+}
+
+MethodReturn()
+{
+	shopt -s extglob
+
+	# Retorno
+	case $_BOT_TYPE_RETURN_ in
+		json) echo "$*";;
+		value) GetAllValues $*;;
+		map)
+			local key val obj
+			declare -Ag return=() || MessageError API
+
+			for obj in $(GetAllKeys $*); do
+				key=${obj//\[+([0-9])\]/}
+				key=${key#result.}
+				key=${key//./_}
+
+				val=$(Json ".$obj" $*)
+				
+				[[ ${return[$key]} ]] && return[$key]+=${_BOT_DELM_}${val} || return[$key]=$val
+				[[ $_BOT_MONITOR_ ]] && printf "[%s]: return[%s] = '%s'\n" "${FUNCNAME[1]}" "$key" "$val"
+			done
+			;;
+	esac
+	
+	[[ $_BOT_LOG_FILE_ ]] && CreateLog $* &
+
+	return 0
+}
 
 MessageError()
 {
@@ -136,8 +220,9 @@ CheckArgType(){
 	# o dado recebido com o tipo suportado pelo parâmetro.
 	# É retornado '0' para sucesso, caso contrário uma mensagem
 	# de erro é retornada e o script/thread é finalizado com status '1'.
+	
 	case $ctype in
-		var)		[[ $value =~ ^[a-zA-Z_]+[a-zA-Z0-9_]*$ ]]		|| MessageError API "$_ERR_VAR_NAME" "$param" "$value";;
+		var)		[[ $value =~ ^[a-zA-Z_]+[a-zA-Z0-9_]*$ ]]		|| MessageError API "$_ERR_VAR_NAME_" "$param" "$value";;
 		int)		[[ $value =~ ^[0-9]+$ ]]						|| MessageError API "$_ERR_TYPE_INT_" "$param" "$value";;
 		float)		[[ $value =~ ^-?[0-9]+\.[0-9]+$ ]]				|| MessageError API "$_ERR_TYPE_FLOAT_" "$param" "$value";;
 		bool)		[[ $value =~ ^(true|false)$ ]]					|| MessageError API "$_ERR_TYPE_BOOL_" "$param" "$value";;
@@ -145,16 +230,10 @@ CheckArgType(){
 		file)		[[ $value =~ ^@ && ! -f ${value#@} ]]			&& MessageError API "$_ERR_FILE_NOT_FOUND_" "$param" "$value";;
 		parsemode)	[[ $value =~ ^(markdown|html)$ ]]				|| MessageError API "$_ERR_TYPE_PARSE_MODE_" "$param" "$value";;
 		point)		[[ $value =~ ^(forehead|eyes|mouth|chin)$ ]]	|| MessageError API "$_ERR_TYPE_POINT_" "$param" "$value";;
-		action)		[[ $value =~ ^(typing|
-									upload_photo|
-									record_video|
-									upload_video|
-									record_audio|
-									upload_audio|
-									upload_document|
-									find_location|
-									record_video_note|
-									upload_video_note)$ ]]			|| MessageError API "$_ERR_ACTION_MODE_" "$param" "$value";;
+		action)		[[ $value =~ ^(typing|upload_photo|record_video)$ ]] || 
+					[[ $value =~ ^(upload_video|record_audio|upload_audio)$ ]] || 
+					[[ $value =~ ^(upload_document|find_location)$ ]] ||
+					[[ $value =~ ^(record_video_note|upload_video_note)$ ]]	|| MessageError API "$_ERR_ACTION_MODE_" "$param" "$value";;
     esac
 
 	return 0
@@ -209,7 +288,7 @@ CreateUnitService()
 
 	# O modo 'service' requer que o sistema de gerenciamento de processos 'systemd'
 	# esteja presente para que o Unit target seja linkado ao serviço.
-	if ! which systemd &>/dev/null; then
+	if ! which systemctl &>/dev/null; then
 		MessageError API "$_ERR_SERVICE_SYSTEMD_NOT_FOUND_"; fi
 
 
@@ -271,15 +350,19 @@ ShellBot.init()
 	# Verifica se o bot já foi inicializado.
 	[[ $_SHELLBOT_INIT_ ]] && MessageError API "$_ERR_BOT_ALREADY_INIT_"
 	
-	local enable_service user_unit _jq_bot_info
+	local enable_service user_unit _jq_bot_info method_return delm ret logfmt
 	
 	local param=$(getopt --name "$FUNCNAME" \
-						 --options 't:mfsu:' \
+						 --options 't:mfsu:l:o:r:d:' \
 						 --longoptions 'token:,
 										monitor,
 										flush,
 										service,
-										user:' \
+										user:,
+										log_file:,
+										log_format:,
+										return:,
+										delimiter:' \
     					 -- "$@")
     
     # Define os parâmetros posicionais
@@ -316,7 +399,24 @@ ShellBot.init()
 
 				user_unit="$2"
 				shift 2
-				;;				
+				;;
+			-l|--log_file)
+				declare -gr _BOT_LOG_FILE_=$2
+				shift 2
+				;;
+			-o|--log_format)
+				logfmt=$2
+				shift 2
+				;;
+			-r|--return)
+				[[ $2 == @(json|map|value) ]] || MessageError API "$_ERR_FLAG_TYPE_RETURN_" '[-r, --return]' "$2"
+				ret=$2
+				shift 2
+				;;
+			-d|--delimiter)
+				delm=$2
+				shift 2
+				;;
    			--)
    				shift
    				break
@@ -340,10 +440,7 @@ ShellBot.init()
     	_jq_bot_info=$jq_obj
 
 		# Verifica o status de retorno do método
-    	JsonStatus $jq_obj && {
-    		# Retorna as informações armazenadas em "result".
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	return $?
     }
@@ -356,10 +453,13 @@ ShellBot.init()
 	_BOT_INFO_[2]=$(Json '.result.first_name' $_jq_bot_info)
 	_BOT_INFO_[3]=$(Json '.result.username' $_jq_bot_info)
 
-	# Bot inicializado
+	# Configuração. (padrão)
+	declare -gr _BOT_LOG_FORMAT_=${logfmt:-"%(%d/%m/%Y %H:%M:%S)T: {BASENAME}: {BOT_USERNAME}: {UPDATE_ID}: {METHOD}: {FROM_USERNAME}: {MESSAGE_TEXT}"}
+	declare -gr _BOT_TYPE_RETURN_=${ret:-value}
+	declare -gr _BOT_DELM_=${delm:-|}
 	declare -gr _BOT_INFO_
 	declare -gr _SHELLBOT_INIT_=1 
-
+	
     # SHELLBOT (FUNÇÕES)
 	# Inicializa as funções para chamadas aos métodos da API do telegram.
 	ShellBot.ListUpdates(){ echo ${!update_id[@]}; }
@@ -371,7 +471,7 @@ ShellBot.init()
 	ShellBot.id() { echo "${_BOT_INFO_[1]}"; }
 	ShellBot.first_name() { echo "${_BOT_INFO_[2]}"; }
 	ShellBot.username() { echo "${_BOT_INFO_[3]}"; }
-   
+  
     ShellBot.regHandleFunction()
     {
     	local function callback_data handle args
@@ -415,26 +515,15 @@ ShellBot.init()
     	[[ $function ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-f, --function]"
     	[[ $callback_data ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-d, --callback_data]"
     
-    	# Testa se o indentificador armazenado em handle já existe. Caso já exista, repete
-    	# o procedimento até que um handle válido seja gerado; Evitando sobreescrever handle's existentes.
-    	until ! declare -fp $handle &>/dev/null; do
-			handle=$(mktemp --dry-run HandleID:XXXXXXXXXXXXXXX)
-    	done
-    
-    	# Cria a função com o nome gerado e adiciona a chamada com os argumentos especificados.
-    	# Anexa o novo handle a lista no índice associativo definindo em callback_data	
-    	function="$handle(){ $function $args; }"
-    	eval "$function"
-    	
     	declare -Ag _reg_func_handle_list_
-    	_reg_func_handle_list_[$callback_data]+="$handle "
-    
+    	_reg_func_handle_list_[$callback_data]+="$function $args|"
+
     	return 0
     }
     
     ShellBot.watchHandle()
     {
-    	local 	callback_data func_handle \
+    	local 	callback_data func func_handle \
     			param=$(getopt --name "$FUNCNAME" \
 								--options 'd' \
 								--longoptions 'callback_data' \
@@ -459,12 +548,9 @@ ShellBot.init()
     	# O parâmetro callback_data é parcial, ou seja, Se o handle for válido, os elementos
     	# serão listados. Caso contrário a função é finalizada.
     	[[ $callback_data ]] || return 1
-    
-    	# Lista todos os handles no índice callback_data  e executa-os
-    	# consecutivamente. A ordem de execução das funções é determinada
-    	# pela ordem de declaração.
-    	for func_handle in ${_reg_func_handle_list_[$callback_data]}; do 
-    		$func_handle; done	# executa
+   	
+		while read -d'|' func; do $func
+		done <<< ${_reg_func_handle_list_[$callback_data]}
     
     	# retorno
     	return 0
@@ -479,9 +565,7 @@ ShellBot.init()
     	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.})
     	
     	# Verifica o status de retorno do método
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	return $?
     }
@@ -495,7 +579,7 @@ ShellBot.init()
     	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.})
     	
     	# Verifica o status de retorno do método
-    	JsonStatus $jq_obj || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	return $?
     }
@@ -550,7 +634,7 @@ ShellBot.init()
     								 ${allowed_updates:+-d allowed_updates="$allowed_updates"})
     
     	# Testa o retorno do método.
-    	JsonStatus $jq_obj || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	# Status
     	return $?
@@ -627,9 +711,9 @@ ShellBot.init()
     	
     	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"})
     
-    	JsonStatus $jq_obj || MessageError TG $jq_obj
-    		
-    	# Status
+		JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	
+		# Status
     	return $?
     
     }
@@ -670,9 +754,9 @@ ShellBot.init()
     	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
     								 ${title:+-d title="$title"})
     
-    	JsonStatus $jq_obj || MessageError TG $jq_obj
-    		
-    	# Status
+		JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	
+		# Status
     	return $?
     }
     
@@ -713,7 +797,7 @@ ShellBot.init()
     	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
     								 ${description:+-d description="$description"})
     
-    	JsonStatus $jq_obj || MessageError TG $jq_obj
+		JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     		
     	# Status
     	return $?
@@ -764,7 +848,7 @@ ShellBot.init()
     								 ${message_id:+-d message_id="$message_id"} \
     								 ${disable_notification:+-d disable_notification="$disable_notification"})
     
-    	JsonStatus $jq_obj || MessageError TG $jq_obj
+		JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     		
     	# Status
     	return $?
@@ -799,7 +883,7 @@ ShellBot.init()
     	
     	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"})
     
-    	JsonStatus $jq_obj || MessageError TG $jq_obj
+		JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     		
     	# Status
     	return $?
@@ -879,7 +963,7 @@ ShellBot.init()
     								 ${can_send_other_messages:+-d can_send_other_messages="$can_send_other_messages"} \
     								 ${can_add_web_page_previews:+-d can_add_web_page_previews="$can_add_web_page_previews"})
     
-    	JsonStatus $jq_obj || MessageError TG $jq_obj
+		JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     		
     	# Status
     	return $?
@@ -983,7 +1067,7 @@ ShellBot.init()
     								 ${can_pin_messages:+-d can_pin_messages="$can_pin_messages"} \
     								 ${can_promote_members:+-d can_promote_members="$can_promote_members"})
     
-    	JsonStatus $jq_obj || MessageError TG $jq_obj
+		JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     		
     	# Status
     	return $?
@@ -1019,9 +1103,7 @@ ShellBot.init()
     	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"})
     	
     	# Testa o retorno do método.
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     		
     	# Status
     	return $?
@@ -1101,9 +1183,7 @@ ShellBot.init()
     								 ${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Testa o retorno do método.
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	# Status
     	return $?
@@ -1328,7 +1408,7 @@ ShellBot.init()
     								 ${url:+-d url="$url"} \
     								 ${cache_time:+-d cache_time="$cache_time"})
     
-    	JsonStatus $jq_obj || MessageError TG $jq_obj
+		JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	return $?
     }
@@ -1495,9 +1575,7 @@ _EOF
     								 ${reply_markup:+-d reply_markup="$reply_markup"})
    
     	# Testa o retorno do método.
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	# Status
     	return $?
@@ -1564,9 +1642,7 @@ _EOF
     								 ${message_id:+-d message_id="$message_id"})
     	
     	# Retorno do método
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# status
     	return $?
@@ -1646,9 +1722,7 @@ _EOF
     								 ${reply_markup:+-F reply_markup="$reply_markup"})
     	
     	# Retorno do método
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -1746,9 +1820,7 @@ _EOF
     								 ${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Retorno do método
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -1826,9 +1898,7 @@ _EOF
     								 ${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Retorno do método
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -1901,9 +1971,7 @@ _EOF
     								 ${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Testa o retorno do método
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -1938,11 +2006,9 @@ _EOF
 		[[ $name ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-n, --name]"
     	
 		jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${name:+-d name="$name"})
-    	
+    
 		# Testa o retorno do método
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -1987,9 +2053,7 @@ _EOF
 									 ${png_sticker:+-F png_sticker="$png_sticker"})
     	
 		# Testa o retorno do método
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -2034,8 +2098,8 @@ _EOF
 									 ${position:+-d position="$position"})
     	
 		# Testa o retorno do método
-    	JsonStatus $jq_obj || MessageError TG $jq_obj
-    	
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    
 		# Status
     	return $?
 				
@@ -2071,7 +2135,7 @@ _EOF
 		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${sticker:+-d sticker="$sticker"})
     	
 		# Testa o retorno do método
-    	JsonStatus $jq_obj || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     	
 		# Status
     	return $?
@@ -2216,7 +2280,7 @@ _EOF
 									 ${mask_position:+-F mask_position="$mask_position"})
     	
 		# Testa o retorno do método
-    	JsonStatus $jq_obj || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     	
 		# Status
     	return $?
@@ -2282,7 +2346,7 @@ _EOF
 									 ${mask_position:+-F mask_position="$mask_position"})
     	
 		# Testa o retorno do método
-    	JsonStatus $jq_obj || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     	
 		# Status
     	return $?
@@ -2393,9 +2457,7 @@ _EOF
 									 ${supports_streaming:+-F supports_streaming="$supports_streaming"})
     
     	# Testa o retorno do método
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -2483,9 +2545,7 @@ _EOF
     								 ${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Testa o retorno do método
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -2577,9 +2637,7 @@ _EOF
     								 ${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Testa o retorno do método
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	return $?
     	
@@ -2681,9 +2739,7 @@ _EOF
     								 ${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Testa o retorno do método
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -2768,9 +2824,7 @@ _EOF
     								 ${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Testa o retorno do método
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -2800,11 +2854,7 @@ _EOF
     				shift 2
     				;;
     			-a|--action)
-    				[[ $2 =~ ^(typing|upload_photo|record_video|upload_video|
-    							record_audio|upload_audio|upload_document|
-    							find_location|record_video_note|upload_video_note)$ ]] || \
-    							# erro
-    							MessageError API "$_ERR_ACTION_MODE_" "$1" "$2"
+    				CheckArgType action "$1" "$2"
     				action="$2"
     				shift 2
     				;;
@@ -2824,7 +2874,7 @@ _EOF
     													${action:+-d action="$action"})
     	
     	# Testa o retorno do método
-    	JsonStatus $jq_obj || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -2880,24 +2930,9 @@ _EOF
     	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${user_id:+-d user_id="$user_id"} \
     													${offset:+-d offset="$offset"} \
     													${limit:+-d limit="$limit"})
-    
+  
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj && {
-    
-    		total=$(Json '.result.total_count' $jq_obj)
-    
-    		if [[ $total -gt 0 ]]; then	
-    			for index in $(seq 0 $((total-1)))
-    			do
-    				max=$(Json ".result.photos[$index]|length" $jq_obj)
-    				for item in $(seq 0 $((max-1)))
-    				do
-    					Json ".result.photos[$index][$item]" $jq_obj | GetObjValue
-    				done
-    			done
-    		fi	
-    
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	# Status
     	return $?
@@ -2940,9 +2975,7 @@ _EOF
     	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${file_id:+-d file_id="$file_id"})
     
     	# Testa o retorno do método.
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -3000,7 +3033,7 @@ _EOF
     								 ${until_date:+-d until_date="$until_date"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -3041,7 +3074,7 @@ _EOF
     	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	return $?
     	
@@ -3088,7 +3121,7 @@ _EOF
     								 ${user_id:+-d user_id="$user_id"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	return $?
     }
@@ -3127,9 +3160,7 @@ _EOF
     	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	# Status
     	return $?
@@ -3168,20 +3199,7 @@ _EOF
     	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj && {
-    
-    		# Total de administratores
-    		declare -i total=$(Json '.result|length' $jq_obj)
-    
-    		# Lê os administradores do grupo se houver.
-    		if [ $total -gt 0 ]; then
-    			for index in $(seq 0 $((total-1)))
-    			do
-    				Json ".result[$index]" $jq_obj | GetObjValue
-    			done
-    		fi
-    
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status	
     	return $?
@@ -3220,9 +3238,7 @@ _EOF
     	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	return $?
     }
@@ -3269,9 +3285,7 @@ _EOF
     								${user_id:+-d user_id="$user_id"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	return $?
     }
@@ -3351,9 +3365,7 @@ _EOF
     								 ${reply_markup:+-d reply_markup="$reply_markup"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	return $?
     	
@@ -3416,9 +3428,7 @@ _EOF
     								 ${reply_markup:+-d reply_markup="$reply_markup"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	return $?
     	
@@ -3477,9 +3487,7 @@ _EOF
     								 ${reply_markup:+-d reply_markup="$reply_markup"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	return $?
     	
@@ -3523,7 +3531,7 @@ _EOF
     								 ${message_id:+-d message_id="$message_id"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	return $?
     
@@ -3531,12 +3539,12 @@ _EOF
    
 	ShellBot.downloadFile() {
 	
-		local file_id file_info file_remote file_path filename dir opt ext
+		local path_remote file_path dir
 		local uri="https://api.telegram.org/file/bot$_TOKEN_"
 
 		local param=$(getopt --name "$FUNCNAME" \
-								--options 'f:d:' \
-								--longoptions 'file_id:,
+								--options 'r:d:' \
+								--longoptions 'path_remote:,
 												dir:' \
 								-- "$@")
 		
@@ -3545,9 +3553,8 @@ _EOF
 		while :
 		do
 			case $1 in
-				-f|--file_id)
-					opt="$1"
-					file_id="$2"
+				-r|--path_remote)
+					path_remote="$2"
 					shift 2
 					;;
 				-d|--dir)
@@ -3564,26 +3571,11 @@ _EOF
 			esac
 		done
 
-		[[ $file_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-f, --file_id]"
+		[[ $path_remote ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-r, --path_remote]"
 		[[ $dir ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-d, --dir]"
 
-		if file_info=$(ShellBot.getFile --file_id "$file_id" 2>/dev/null); then
-
-			file_remote="$(echo $file_info | cut -d'|' -f3)"
-			file_info="$(echo $file_info | cut -d'|' -f-2)"
-			filename=${file_remote##*/}
-			ext="${filename##*.}"
-
-			file_path="$(mktemp -u --tmpdir="$dir" "file$(date +%d%m%Y%H%M%S)-XXXXX${ext:+.$ext}")"
-
-			if wget "$uri/$file_remote" -O "$file_path" &>/dev/null; then
-				echo "$file_info|$file_path"
-			else
-				MessageError API "$_ERR_FILE_DOWNLOAD_" "$opt" "$file_remote"
-			fi
-		else
-			MessageError API "$_ERR_FILE_INVALID_ID_" "$opt" "$file_id"
-		fi
+		file_path="$(mktemp -u --tmpdir="$dir" "file$(date +%d%m%Y%H%M%S)-XXXXX${ext:+.$ext}")"
+		wget "$uri/$path_remote" -O "$file_path" &>/dev/null || MessageError API "$_ERR_FILE_DOWNLOAD_" "$opt" "$file_remote"
 				
 		return $?
 	}
@@ -3658,9 +3650,7 @@ _EOF
     								 ${reply_markup:+-d reply_markup="$reply_markup"})
     
     	# Testa o retorno do método
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	return $?
 	}	
@@ -3718,9 +3708,7 @@ _EOF
     								 ${reply_markup:+-d reply_markup="$reply_markup"})
     
     	# Testa o retorno do método
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	return $?
 	}
@@ -3761,9 +3749,9 @@ _EOF
 		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
 																		${sticker_set_name:+-d sticker_set_name="$sticker_set_name"})
 		
-    	JsonStatus $jq_obj || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     	
-    	return $?
+		return $?
 	}
 
 	ShellBot.deleteChatStickerSet()
@@ -3795,7 +3783,7 @@ _EOF
 		
 		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"})
 		
-    	JsonStatus $jq_obj || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	return $?
 	}
@@ -3995,9 +3983,7 @@ _EOF
     								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"})
     
 		# Retorno do método
-    	JsonStatus $jq_obj && {
-    		Json '.result' $jq_obj | GetObjValue
-    	} || MessageError TG $jq_obj
+    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -4006,7 +3992,7 @@ _EOF
     ShellBot.getUpdates()
     {
     	local total_keys offset limit timeout allowed_updates jq_obj
-    
+
     	# Define os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
 							 --options 'o:l:t:a:' \
@@ -4048,121 +4034,83 @@ _EOF
     		esac
     	done
     	
-    	# Seta os parâmetros
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${offset:+-d offset="$offset"} \
-    								${limit:+-d limit="$limit"} \
-    								${timeout:+-d timeout="$timeout"} \
-    								${allowed_updates:+-d allowed_updates="$allowed_updates"})
+		# Seta os parâmetros
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} 	${offset:+-d offset="$offset"} \
+    																	${limit:+-d limit="$limit"} \
+    																	${timeout:+-d timeout="$timeout"} \
+    																	${allowed_updates:+-d allowed_updates="$allowed_updates"})
 
-		# Limpa as variáveis inicializadas.
-		unset ${_var_init_list_[@]}
-		unset _var_init_list_
-
-		declare -ag _var_init_list_
-		
     	# Verifica se ocorreu erros durante a chamada do método	
     	JsonStatus $jq_obj && {
 		
+			# Habilita extensão globbing
+			shopt -s extglob
+
+			# Limpa as variáveis inicializadas.
+			unset ${_var_init_list_//|/ }
+			_var_init_list_=''
+	
 			# Se o modo flush estiver ativado, retorna uma coleção de objetos Json contendo as atualizações.
-			((_FLUSH_OFFSET_)) && { echo "$jq_obj"; return 0; }
+			[[ $_FLUSH_OFFSET_ ]] && { echo "$jq_obj"; return 0; }
     		
-			local key key_list obj obj_cur obj_type var_name i
-    
-    		# Total de atualizações
-    		total_keys=$(Json '.result|length' $jq_obj)
-    		
-    		if [[ $total_keys -gt 0 ]]; then
-    			
-    			# Modo monitor
-				((_BOT_MONITOR_)) && cat << _eof
-=================== MONITOR ===================
+			[[ $(jq -r '.result|length' <<< $jq_obj) -eq 0 ]] && return 0
+
+			local vet val var obj oldv bar ini
+			
+			printf -v bar '=%.s' {1..50}
+
+			# Modo monitor
+			[[ $_BOT_MONITOR_ ]] && cat << _eof
+$bar
 Data: $(date '+%d/%m/%Y %T')
 Script: $_BOT_SCRIPT_
-Bot (nome): $(ShellBot.first_name)
-Bot (usuario): $(ShellBot.username)
-Bot (id): $(ShellBot.id)
+Bot (nome): ${_BOT_INFO_[2]}
+Bot (usuario): ${_BOT_INFO_[3]}
+Bot (id): ${_BOT_INFO_[1]}
 _eof
     
-    			# Salva e fecha o descritor de erro
-    			exec 5<&2
-    			exec 2<&-
-    	
-    			for index in $(seq 0 $((total_keys-1)))
-    			do
-    				# Imprime a mensagem em fila
-					((_BOT_MONITOR_)) && cat << _eof
------------------------------------------------
-Mensagem: $((index + 1))
------------------------------------------------
-_eof
-					# Insere o primeiro elemento da consulta.	
-    				unset key_list
-    				key_list[0]=".result[$index]"
-    					
-    				# Lê recursivamente todos os objetos.
-    				while [[ ${key_list[@]} ]]
-    				do
-    				    i=0
-    					
-    				    # Lista objetos.
-    					for key in ${key_list[@]}
-    				    do
-    						# Limpa o buffer
-    				        unset key_list
-    	
-    						# Lê as chaves do atual objeto
-    				        for obj in $(Json "$key|keys[]" $jq_obj)
-    				        do
-    							# Se o tipo da chave for string, number ou boolean, imprime o valor armazenado.
-    							# Se for object salva o nível atual em key_list. Caso contrário, lê o próximo
-    							# elemento da lista.
-       	         				obj_cur="$key.$obj"
-    				            obj_type=$(Json "$obj_cur|type" $jq_obj)
+   			# Salva e fecha o descritor de erro
+			exec 5<&2
+			exec 2<&-
 
-       	         			if [[ $obj_type =~ (string|number|boolean) ]]; then
-    
-    								# Define a nomenclatura válida para a variável que irá armazenar o valor da chave.
-    	   	         				var_name=${obj_cur#.result\[$index\].}
-    								var_name=${var_name//[]/}
-    								var_name=${var_name//./_}
-    							
-    								# Cria um ponteiro para a variável armazenada em 'var_name'.
-									declare -g $var_name
-    								declare -n byref=$var_name
-    								
-    								[[ ${byref[$index]} ]] || {
-    									
-										# Atribui o valor de 'var_name', se a mesma não foi inicializada.
-    									byref[$index]="$(Json "$obj_cur" $jq_obj)"
-    								
-    									# Exibe a inicialização das variáveis.
-										((_BOT_MONITOR_)) && sed ':a;N;s/\n/ /;ta' <<< "$var_name = '${byref[$index]}'"
-    								}
-									
-									# Remove ponteiro
-									declare +n byref
-									unset byref
+			for obj in $(GetAllKeys $jq_obj); do
+					
+				vet=${obj%%.*}
+				vet=${vet//[^0-9]/}
+					
+				var=${obj#result\[$vet\].}
+				var=${var//\[+([0-9])\]/}
+				var=${var//./_}
+					
+				declare -g $var
+				local -n byref=$var # ponteiro
+					
+				val=$(Json ".$obj" $jq_obj)
+				[[ ${byref[$vet]} ]] && byref[$vet]+=${_BOT_DELM_}${val} || byref[$vet]=$val
+
+				[[ $_BOT_MONITOR_ ]] && {
+					[[ $vet -ne $oldv || ! $ini ]] && cat << _eof
+$bar
+Mensagem: $((vet+1))
+$bar
+_eof
+					printf "[ShellBot.getUpdates]: %s = '%s'\n" "$var" "$val"
+				}
+
+				unset -n byref
 	
-    								# Anexa a variável a lista caso não exista.
-									if ! grep -qw $var_name <<< ${_var_init_list_[@]}; then
-										_var_init_list_+=($var_name); fi
-
-    							elif [[ $obj_type = object ]]; then
-    				                key_list[$((i++))]=$obj_cur
-    							elif [[ $obj_type = array ]]; then
-    								key_list[$((i++))]=$obj_cur[]
-       	         				fi
-    				        done
-    				    done
-    				done
-    			done
+				[[ $var != @(${_var_init_list_%|}) ]] && _var_init_list_+="$var|"
+				oldv=$vet
+				ini=1
+			done
     		
-    			# restaura o descritor de erro
-    			exec 2<&5
-    		fi
-    	
+			exec 2<&5
+			
+			[[ $_BOT_MONITOR_ ]] && echo $bar
+			[[ $_BOT_LOG_FILE_ ]] && CreateLog $jq_obj &
+
     	} || MessageError TG $jq_obj
-    
+
     	# Status
     	return $?
     }
@@ -4250,7 +4198,10 @@ _eof
 declare -rf MessageError \
 			Json \
 			JsonStatus \
-			GetObjValue \
 			FlushOffset \
 			CreateUnitService \
-			CheckArgType
+			GetAllKeys \
+			GetAllValues \
+			MethodReturn \
+			CheckArgType \
+			CreateLog 
