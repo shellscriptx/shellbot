@@ -104,31 +104,31 @@ CreateLog()
 {
 	local i fmt
 
-	for i in ${!update_id[@]}; do
+	for ((i=0; i < $1; i++)); do
 		printf -v fmt "$_BOT_LOG_FORMAT_" || MessageError API
 
 		# FLAGS
-		fmt=${fmt//\{OK\}/$ok}
+		fmt=${fmt//\{OK\}/${return[ok]:-$ok}}
 		fmt=${fmt//\{UPDATE_ID\}/${update_id[$i]}}
-		fmt=${fmt//\{MESSAGE_ID\}/${message_message_id[$i]:-${callback_query_id[$i]}}}
-		fmt=${fmt//\{FROM_ID\}/${message_from_id[$i]:-${callback_query_from_id[$i]}}}
-		fmt=${fmt//\{FROM_IS_BOT\}/${message_from_is_bot[$i]:-${callback_query_from_is_bot[$i]}}}
-		fmt=${fmt//\{FROM_FIRST_NAME\}/${message_from_firstname[$i]:-${callback_query_from_first_name[$i]}}}
-		fmt=${fmt//\{FROM_USERNAME\}/${message_from_username[$i]:-${callback_query_from_username[$i]}}}
+		fmt=${fmt//\{MESSAGE_ID\}/${return[message_id]:-${message_message_id[$i]:-${callback_query_id[$i]}}}}
+		fmt=${fmt//\{FROM_ID\}/${return[from_id]:-${message_from_id[$i]:-${callback_query_from_id[$i]}}}}
+		fmt=${fmt//\{FROM_IS_BOT\}/${return[from_is_bot]:-${message_from_is_bot[$i]:-${callback_query_from_is_bot[$i]}}}}
+		fmt=${fmt//\{FROM_FIRST_NAME\}/${return[from_first_name]:-${message_from_firstname[$i]:-${callback_query_from_first_name[$i]}}}}
+		fmt=${fmt//\{FROM_USERNAME\}/${return[from_username]:-${message_from_username[$i]:-${callback_query_from_username[$i]}}}}
 		fmt=${fmt//\{FROM_LANGUAGE_CODE\}/${message_from_language_code[$i]:-${callback_query_from_language_code[$i]}}}
-		fmt=${fmt//\{CHAT_ID\}/${message_chat_id[$i]:-${callback_query_message_chat_id[$i]}}}
-		fmt=${fmt//\{CHAT_TITLE\}/${message_chat_title[$i]:-${callback_query_message_chat_title[$i]}}}
-		fmt=${fmt//\{CHAT_TYPE\}/${message_chat_type[$i]:-${callback_query_message_chat_type[$i]}}}
-		fmt=${fmt//\{MESSAGE_DATE\}/${message_date[$i]:-${callback_query_message_date[$i]}}}
-		fmt=${fmt//\{MESSAGE_TEXT\}/${message_text[$i]:-${callback_query_message_text[$i]}}}
-		fmt=${fmt//\{ENTITIES_TYPE\}/${message_entities_type[$i]:-${callback_query_data[$i]}}}
+		fmt=${fmt//\{CHAT_ID\}/${return[chat_id]:-${message_chat_id[$i]:-${callback_query_message_chat_id[$i]}}}}
+		fmt=${fmt//\{CHAT_TITLE\}/${return[chat_title]:-${message_chat_title[$i]:-${callback_query_message_chat_title[$i]}}}}
+		fmt=${fmt//\{CHAT_TYPE\}/${return[chat_type]:-${message_chat_type[$i]:-${callback_query_message_chat_type[$i]}}}}
+		fmt=${fmt//\{MESSAGE_DATE\}/${return[date]:-${message_date[$i]:-${callback_query_message_date[$i]}}}}
+		fmt=${fmt//\{MESSAGE_TEXT\}/${return[text]:-${message_text[$i]:-${callback_query_message_text[$i]}}}}
+		fmt=${fmt//\{ENTITIES_TYPE\}/${return[entities_type]:-${message_entities_type[$i]:-${callback_query_data[$i]}}}}
 		fmt=${fmt//\{BOT_TOKEN\}/${_BOT_INFO_[0]}}
 		fmt=${fmt//\{BOT_ID\}/${_BOT_INFO_[1]}}
 		fmt=${fmt//\{BOT_FIRST_NAME\}/${_BOT_INFO_[2]}}
 		fmt=${fmt//\{BOT_USERNAME\}/${_BOT_INFO_[3]}}
 		fmt=${fmt//\{BASENAME\}/$_BOT_SCRIPT_}
 		fmt=${fmt//\{METHOD\}/${FUNCNAME[2]/main/ShellBot.getUpdates}}
-		fmt=${fmt//\{RETURN\}/$(GetAllValues $*)}
+		fmt=${fmt//\{RETURN\}/$(GetAllValues ${*:2})}
 
 		# log
 		echo "$fmt" >> $_BOT_LOG_FILE_ || MessageError API
@@ -162,7 +162,7 @@ MethodReturn()
 			;;
 	esac
 	
-	[[ $_BOT_LOG_FILE_ ]] && CreateLog $* &
+	[[ $_BOT_LOG_FILE_ ]] && CreateLog 1 $*
 
 	return 0
 }
@@ -4106,7 +4106,7 @@ _eof
 			exec 2<&5
 			
 			[[ $_BOT_MONITOR_ ]] && echo $bar
-			[[ $_BOT_LOG_FILE_ ]] && CreateLog $jq_obj &
+			[[ $_BOT_LOG_FILE_ ]] && CreateLog ${#update_id[@]} $jq_obj 
 
     	} || MessageError TG $jq_obj
 
