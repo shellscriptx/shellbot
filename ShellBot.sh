@@ -319,15 +319,12 @@ _eof
 	[[ $? -eq 0 ]] && {	
 		
 		printf '%s foi criado com sucesso !!\n' $service	
-	
-		ln -s /lib/systemd/system/$service /etc/systemd/system/$service
-		systemctl daemon-reload
-		
 		echo -n "Habilitando..."
  		systemctl enable $service &>/dev/null && echo -e $ok || \
 		{ echo -e $fail; MessageError API; }
 
 		sed -i -r '/^\s*ShellBot.init\s/s/\s--?(s(ervice)?|u(ser)?\s+\w+)\b//g' "$1"
+		systemctl daemon-reload
 
 		echo -n "Iniciando..."
 		systemctl start $service &>/dev/null && {
