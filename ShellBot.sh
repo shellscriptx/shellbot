@@ -77,7 +77,7 @@ declare -r _ERR_BOT_ALREADY_INIT_='Ação não permitida: o bot já foi iniciali
 declare -r _ERR_FILE_NOT_FOUND_='Arquivo não encontrado: não foi possível ler o arquivo especificado.'
 declare -r _ERR_DIR_WRITE_DENIED_='Permissão negada: não é possível gravar no diretório.'
 declare -r _ERR_DIR_NOT_FOUND_='Não foi possível acessar: diretório não encontrado.'
-declare -r _ERR_FILE_DOWNLOAD_='Falha no download: Arquivo não encontrado.'
+declare -r _ERR_FILE_DOWNLOAD_='Falha no download: arquivo não encontrado.'
 declare -r _ERR_FILE_INVALID_ID_='Id inválido: arquivo não encontrado.'
 declare -r _ERR_UNKNOWN_='Erro desconhecido: ocorreu uma falha inesperada. Reporte o problema ao desenvolvedor.'
 declare -r _ERR_SERVICE_NOT_ROOT_='Acesso negado: requer privilégios de root.'
@@ -85,8 +85,7 @@ declare -r _ERR_SERVICE_EXISTS_='Erro ao criar o serviço: o nome do serviço j�
 declare -r _ERR_SERVICE_SYSTEMD_NOT_FOUND_='Erro ao ativar: o sistema não possui suporte ao gerenciamento de serviços "systemd".'
 declare -r _ERR_SERVICE_USER_NOT_FOUND_='Usuário não encontrado: a conta de usuário informada é inválida.'
 declare -r _ERR_VAR_NAME_='o identificador da variável é inválido.'
-declare -r _ERR_FLAG_TYPE_RETURN_='Tipo inválido: somente "var", "val" ou "json".'
-declare -r _ERR_WRITE_LOG_FILE_='Permissão negada: não foi possível gravar no arquivo de log.'
+declare -r _ERR_FLAG_TYPE_RETURN_='Tipo inválido: somente "json", "map" ou "value".'
 
 Json() { local obj=$(jq "$1" <<< "${*:2}"); obj=${obj#\"}; echo "${obj%\"}"; }
 JsonStatus(){ [[ $(jq -r '.ok' <<< "$*") == true ]] && return 0 || return 1; }
@@ -132,7 +131,7 @@ CreateLog()
 		fmt=${fmt//\{RETURN\}/$(GetAllValues $*)}
 
 		# log
-		echo "$fmt" >> $_BOT_LOG_FILE_ || MessageError API "$_ERR_WRITE_LOG_FILE_" "$_BOT_LOG_FILE_"
+		echo "$fmt" >> $_BOT_LOG_FILE_ || MessageError API
 	done
 
 	return $?
@@ -3539,12 +3538,12 @@ _EOF
    
 	ShellBot.downloadFile() {
 	
-		local path_remote file_path dir
+		local file_path dir
 		local uri="https://api.telegram.org/file/bot$_TOKEN_"
 
 		local param=$(getopt --name "$FUNCNAME" \
-								--options 'r:d:' \
-								--longoptions 'path_remote:,
+								--options 'f:d:' \
+								--longoptions 'file_path:,
 												dir:' \
 								-- "$@")
 		
@@ -3553,8 +3552,8 @@ _EOF
 		while :
 		do
 			case $1 in
-				-r|--path_remote)
-					path_remote="$2"
+				-f|--file_path)
+					file_path="$2"
 					shift 2
 					;;
 				-d|--dir)
@@ -3571,11 +3570,11 @@ _EOF
 			esac
 		done
 
-		[[ $path_remote ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-r, --path_remote]"
+		[[ $file_path ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-f, --file_path]"
 		[[ $dir ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-d, --dir]"
 
-		file_path="$(mktemp -u --tmpdir="$dir" "file$(date +%d%m%Y%H%M%S)-XXXXX${ext:+.$ext}")"
-		wget "$uri/$path_remote" -O "$file_path" &>/dev/null || MessageError API "$_ERR_FILE_DOWNLOAD_" "$opt" "$file_remote"
+		dir=$(mktemp -u --tmpdir="$dir" "file$(date +%d%m%Y%H%M%S)-XXXXX${ext:+.$ext}")
+		wget "$uri/$file_path" -O "$dir" &>/dev/null || MessageError API "$_ERR_FILE_DOWNLOAD_" "$file_path"
 				
 		return $?
 	}
