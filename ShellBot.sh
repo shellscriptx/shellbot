@@ -162,7 +162,7 @@ MethodReturn()
 			;;
 	esac
 	
-	[[ $_BOT_LOG_FILE_ ]] && CreateLog 1 $*
+	[[ $_BOT_LOG_FILE_ ]] && CreateLog 1 $* &
 
 	return 0
 }
@@ -4103,7 +4103,7 @@ _eof
 			exec 2<&5
 			
 			[[ $_BOT_MONITOR_ ]] && echo $bar
-			[[ $_BOT_LOG_FILE_ ]] && CreateLog ${#update_id[@]} $jq_obj 
+			[[ $_BOT_LOG_FILE_ ]] && CreateLog ${#update_id[@]} $jq_obj &
 
     	} || MessageError TG $jq_obj
 
