@@ -114,7 +114,7 @@ GetAllValues(){
 
 GetAllKeys(){
 	local key; jq -r 'path(..)|map(if type == "number" then .|tostring|"["+.+"]" else . end)|join(".")' <<< $* | \
-	while read key; do [[ $(jq -r ".${key//.[/[}|type" <<< $*) == @(string|number|boolean) ]] && echo ${key//.[/[}; done
+	while read key; do [[ $(jq -r ".${key//.\[/\[}|type" <<< $*) == @(string|number|boolean) ]] && echo ${key//.\[/\[}; done
 }
 
 CreateLog()
