@@ -3,7 +3,7 @@
 #-----------------------------------------------------------------------------------------------------------
 #	DATA:				07 de Março de 2017
 #	SCRIPT:				ShellBot.sh
-#	VERSÃO:				5.5
+#	VERSÃO:				5.6
 #	DESENVOLVIDO POR:	Juliano Santos [SHAMAN]
 #	PÁGINA:				http://www.shellscriptx.blogspot.com.br
 #	FANPAGE:			https://www.facebook.com/shellscriptx
@@ -26,69 +26,86 @@
 #						API original (Telegram), assim como seus campos e valores. Os métodos
 #						requerem parâmetros e argumentos para a chamada e execução. Parâmetros
 #						obrigatórios retornam uma mensagem de erro caso o argumento seja omitido.
-#						
+#					
 #	NOTAS:				Desenvolvida na linguagem Shell Script, utilizando o interpretador de 
 #						comandos BASH e explorando ao máximo os recursos built-in do mesmo,
 #						reduzindo o nível de dependências de pacotes externos.
 #-----------------------------------------------------------------------------------------------------------
 
-if [[ "${BASH_VERSINFO[0]},${BASH_VERSINFO[1]}" -lt 4,3 ]]; then
-    echo "ShellBot: erro: requer 'bash v4.3.0' ou superior" 1>&2
-    echo "atual: bash $BASH_VERSION" 1>&2
-    exit 1
-fi
+# Informações
+readonly -A _SHELLBOT_=(
+[name]='ShellBot'
+[keywords]='Shell Script Telegram API'
+[description]='API não-oficial para criação de bots na plataforma Telegram.'
+[version]='5.6'
+[language]='shellscript'
+[shell]=${SHELL}
+[shell_version]=${BASH_VERSION}
+[author]='Juliano Santos [SHAMAN]'
+[email]='shellscriptx@gmail.com'
+[wiki]='https://github.com/shellscriptx/shellbot/wiki'
+[github]='https://github.com/shellscriptx/shellbot'
+[packages]='bash >= 4.3, curl >= 7.0, getopt >= 2.0, jq >= 1.5'
+)
 
-# Verifica se os pacotes necessários estão instalados.
-for _pkg_ in curl jq getopt; do
-	# Se estiver ausente, trata o erro e finaliza o script.
-	if ! which $_pkg_ &>/dev/null; then
-		echo "ShellBot.sh: erro: '$_pkg_' O pacote requerido não está instalado." 1>&2
-		exit 1	# Status
+# Verifica dependências.
+while read _pkg_ _op_ _ver_; do 
+	if command -v $_pkg_ &>/dev/null; then
+		if [[ $($_pkg_ --version 2>&1) =~ [0-9]+\.[0-9]+ ]]; then
+			if [[ $(bc <<< "$BASH_REMATCH $_op_ $_ver_") -eq 0 ]]; then
+				printf "%s: erro: '%s' a versão atual é incompatível. (versão requerida: %s %s)\n" \
+							${_SHELLBOT_[name]} \
+							$_pkg_ 	\
+							$_op_ 	\
+							$_ver_ 1>&2
+				exit 1
+			fi
+		else
+			printf "%s: erro: '%s' não foi possível obter a versão.\n" ${_SHELLBOT_[name]} $_pkg_ 1>&2
+			exit 1
+		fi
+	else
+		printf "%s: erro: '%s' o pacote requerido está ausente.\n" ${_SHELLBOT_[name]} $_pkg_ 1>&2
+		exit 1
 	fi
-done
+done < <(echo -e ${_SHELLBOT_[packages]//,/\\n})
 
-# Verifica se a API já foi instanciada.
 [[ $_SHELLBOT_SH_ ]] && return 1
 
-# Script que importou a API.
-declare -r _BOT_SCRIPT_=$(basename "$0")
-
-# API inicializada.
-declare -r _SHELLBOT_SH_=1
-
-# Desabilitar globbing
+# SHELL (opções).
 set -f
+shopt -s extglob
 
-# curl parâmetros
-declare -r _CURL_OPT_='--silent --request'
+readonly _SHELLBOT_SH_=1					# Inicialização
+readonly _BOT_SCRIPT_=$(basename "$0")		# Script
+readonly _CURL_OPT_='--silent --request'	# CURL (opções)
 
-# Erros registrados da API (Parâmetros/Argumentos)
-declare -r _ERR_TYPE_BOOL_='Tipo incompatível: suporta somente "true" ou "false".'
-declare -r _ERR_TYPE_PARSE_MODE_='Formatação inválida: suporta somente "markdown" ou "html".'
-declare -r _ERR_TYPE_INT_='Tipo incompatível: suporta somente inteiro.'
-declare -r _ERR_TYPE_FLOAT_='Tipo incompatível: suporta somente float.'
-declare -r _ERR_TYPE_POINT_='Máscara inválida: deve ser “forehead”, “eyes”, “mouth” ou “chin”.'
-declare -r _ERR_ACTION_MODE_='Ação inválida: a definição da ação não é suportada.'
-declare -r _ERR_PARAM_REQUIRED_='Opção requerida: verique se o(s) parâmetro(s) ou argumento(s) obrigatório(s) estão presente(s).'
-declare -r _ERR_TOKEN_UNAUTHORIZED_='Não autorizado: verifique se possui permissões para utilizar o token.'
-declare -r _ERR_TOKEN_INVALID_='Token inválido: verique o número do token e tente novamente.'
-declare -r _ERR_FUNCTION_NOT_FOUND_='Função inválida: verique se o nome está correto ou se a função existe.'
-declare -r _ERR_BOT_ALREADY_INIT_='Ação não permitida: o bot já foi inicializado.'
-declare -r _ERR_FILE_NOT_FOUND_='Arquivo não encontrado: não foi possível ler o arquivo especificado.'
-declare -r _ERR_DIR_WRITE_DENIED_='Permissão negada: não é possível gravar no diretório.'
-declare -r _ERR_DIR_NOT_FOUND_='Não foi possível acessar: diretório não encontrado.'
-declare -r _ERR_FILE_DOWNLOAD_='Falha no download: arquivo não encontrado.'
-declare -r _ERR_FILE_INVALID_ID_='Id inválido: arquivo não encontrado.'
-declare -r _ERR_UNKNOWN_='Erro desconhecido: ocorreu uma falha inesperada. Reporte o problema ao desenvolvedor.'
-declare -r _ERR_SERVICE_NOT_ROOT_='Acesso negado: requer privilégios de root.'
-declare -r _ERR_SERVICE_EXISTS_='Erro ao criar o serviço: o nome do serviço já existe.'
-declare -r _ERR_SERVICE_SYSTEMD_NOT_FOUND_='Erro ao ativar: o sistema não possui suporte ao gerenciamento de serviços "systemd".'
-declare -r _ERR_SERVICE_USER_NOT_FOUND_='Usuário não encontrado: a conta de usuário informada é inválida.'
-declare -r _ERR_VAR_NAME_='o identificador da variável é inválido.'
-declare -r _ERR_FLAG_TYPE_RETURN_='Tipo inválido: somente "json", "map" ou "value".'
+# Erros
+readonly _ERR_TYPE_BOOL_='Tipo incompatível: suporta somente "true" ou "false".'
+readonly _ERR_TYPE_PARSE_MODE_='Formatação inválida: suporta somente "markdown" ou "html".'
+readonly _ERR_TYPE_INT_='Tipo incompatível: suporta somente inteiro.'
+readonly _ERR_TYPE_FLOAT_='Tipo incompatível: suporta somente float.'
+readonly _ERR_TYPE_POINT_='Máscara inválida: deve ser “forehead”, “eyes”, “mouth” ou “chin”.'
+readonly _ERR_ACTION_MODE_='Ação inválida: a definição da ação não é suportada.'
+readonly _ERR_PARAM_REQUIRED_='Opção requerida: verique se o(s) parâmetro(s) ou argumento(s) obrigatório(s) estão presente(s).'
+readonly _ERR_TOKEN_UNAUTHORIZED_='Não autorizado: verifique se possui permissões para utilizar o token.'
+readonly _ERR_TOKEN_INVALID_='Token inválido: verique o número do token e tente novamente.'
+readonly _ERR_FUNCTION_NOT_FOUND_='Função inválida: verique se o nome está correto ou se a função existe.'
+readonly _ERR_BOT_ALREADY_INIT_='Ação não permitida: o bot já foi inicializado.'
+readonly _ERR_FILE_NOT_FOUND_='Arquivo não encontrado: não foi possível ler o arquivo especificado.'
+readonly _ERR_DIR_WRITE_DENIED_='Permissão negada: não é possível gravar no diretório.'
+readonly _ERR_DIR_NOT_FOUND_='Não foi possível acessar: diretório não encontrado.'
+readonly _ERR_FILE_DOWNLOAD_='Falha no download: arquivo não encontrado.'
+readonly _ERR_FILE_INVALID_ID_='Id inválido: arquivo não encontrado.'
+readonly _ERR_UNKNOWN_='Erro desconhecido: ocorreu uma falha inesperada. Reporte o problema ao desenvolvedor.'
+readonly _ERR_SERVICE_NOT_ROOT_='Acesso negado: requer privilégios de root.'
+readonly _ERR_SERVICE_EXISTS_='Erro ao criar o serviço: o nome do serviço já existe.'
+readonly _ERR_SERVICE_SYSTEMD_NOT_FOUND_='Erro ao ativar: o sistema não possui suporte ao gerenciamento de serviços "systemd".'
+readonly _ERR_SERVICE_USER_NOT_FOUND_='Usuário não encontrado: a conta de usuário informada é inválida.'
+readonly _ERR_VAR_NAME_='o identificador da variável é inválido.'
+readonly _ERR_FLAG_TYPE_RETURN_='Tipo inválido: somente "json", "map" ou "value".'
 
 Json() { local obj=$(jq "$1" <<< "${*:2}"); obj=${obj#\"}; echo "${obj%\"}"; }
-JsonStatus(){ [[ $(jq -r '.ok' <<< "$*") == true ]] && return 0 || return 1; }
 
 GetAllValues(){ 
 	local obj=$(jq "[..|select(type == \"number\" or type == \"string\" or type == \"boolean\")|tostring]|join(\"${_BOT_DELM_/\"/\\\"}\")" <<< $*)
@@ -96,8 +113,8 @@ GetAllValues(){
 }
 
 GetAllKeys(){
-	local key; jq -r 'path(..)|map(if type == "number" then .|tostring|"["+.+"]" else . end)|join(".")|gsub(".\\[";"[")' <<< $* | \
-	while read key; do [[ $(jq -r ".$key|type" <<< $*) == @(string|number|boolean) ]] && echo $key; done
+	local key; jq -r 'path(..)|map(if type == "number" then .|tostring|"["+.+"]" else . end)|join(".")' <<< $* | \
+	while read key; do [[ $(jq -r ".${key//.[/[}|type" <<< $*) == @(string|number|boolean) ]] && echo ${key//.[/[}; done
 }
 
 CreateLog()
@@ -106,7 +123,7 @@ CreateLog()
 
 	for ((i=0; i < $1; i++)); do
 		printf -v fmt "$_BOT_LOG_FORMAT_" || MessageError API
-
+	
 		# FLAGS
 		fmt=${fmt//\{OK\}/${return[ok]:-$ok}}
 		fmt=${fmt//\{UPDATE_ID\}/${update_id[$i]}}
@@ -139,8 +156,6 @@ CreateLog()
 
 MethodReturn()
 {
-	shopt -s extglob
-
 	# Retorno
 	case $_BOT_TYPE_RETURN_ in
 		json) echo "$*";;
@@ -150,7 +165,7 @@ MethodReturn()
 			declare -Ag return=() || MessageError API
 
 			for obj in $(GetAllKeys $*); do
-				key=${obj//\[+([0-9])\]/}
+				key=${obj//[0-9\[\]]/}
 				key=${key#result.}
 				key=${key//./_}
 
@@ -163,8 +178,9 @@ MethodReturn()
 	esac
 	
 	[[ $_BOT_LOG_FILE_ ]] && CreateLog 1 $* &
+	[[ $(jq -r '.ok' <<< $*) == true ]]
 
-	return 0
+	return $?
 }
 
 MessageError()
@@ -199,11 +215,12 @@ MessageError()
 	esac
 
 	# Imprime erro
-	printf "%s: erro: linha %s: %s: %s: %s\n" "${_BOT_SCRIPT_}" \
-												"${err_line:--}" \
-												"${err_func:--}" \
-												"${err_param:--}" \
-												"${err_message:-$_ERR_UNKNOWN_}" 1>&2 
+	printf "%s: erro: linha %s: %s: %s: %s\n"	\
+							"${_BOT_SCRIPT_}"	\
+							"${err_line:--}" 	\
+							"${err_func:--}" 	\
+							"${err_param:--}" 	\
+							"${err_message:-$_ERR_UNKNOWN_}" 1>&2 
 
 	# Finaliza script/thread em caso de erro interno, caso contrário retorna 1
 	[[ $assert ]] && exit 1 || return 1
@@ -219,20 +236,22 @@ CheckArgType(){
 	# o dado recebido com o tipo suportado pelo parâmetro.
 	# É retornado '0' para sucesso, caso contrário uma mensagem
 	# de erro é retornada e o script/thread é finalizado com status '1'.
-	
 	case $ctype in
-		var)		[[ $value =~ ^[a-zA-Z_]+[a-zA-Z0-9_]*$ ]]		|| MessageError API "$_ERR_VAR_NAME_" "$param" "$value";;
-		int)		[[ $value =~ ^[0-9]+$ ]]						|| MessageError API "$_ERR_TYPE_INT_" "$param" "$value";;
-		float)		[[ $value =~ ^-?[0-9]+\.[0-9]+$ ]]				|| MessageError API "$_ERR_TYPE_FLOAT_" "$param" "$value";;
-		bool)		[[ $value =~ ^(true|false)$ ]]					|| MessageError API "$_ERR_TYPE_BOOL_" "$param" "$value";;
-		token)		[[ $value =~ ^[0-9]+:[a-zA-Z0-9_-]+$ ]]			|| MessageError API "$_ERR_TOKEN_INVALID_" "$param" "$value";;
-		file)		[[ $value =~ ^@ && ! -f ${value#@} ]]			&& MessageError API "$_ERR_FILE_NOT_FOUND_" "$param" "$value";;
-		parsemode)	[[ $value =~ ^(markdown|html)$ ]]				|| MessageError API "$_ERR_TYPE_PARSE_MODE_" "$param" "$value";;
-		point)		[[ $value =~ ^(forehead|eyes|mouth|chin)$ ]]	|| MessageError API "$_ERR_TYPE_POINT_" "$param" "$value";;
-		action)		[[ $value =~ ^(typing|upload_photo|record_video)$ ]] || 
-					[[ $value =~ ^(upload_video|record_audio|upload_audio)$ ]] || 
-					[[ $value =~ ^(upload_document|find_location)$ ]] ||
-					[[ $value =~ ^(record_video_note|upload_video_note)$ ]]	|| MessageError API "$_ERR_ACTION_MODE_" "$param" "$value";;
+		user)		id "$value" &>/dev/null									|| MessageError API "$_ERR_SERVICE_USER_NOT_FOUND_" "$param" "$value";;
+		var)		[[ $value =~ ^[a-zA-Z_]+[a-zA-Z0-9_]*$ ]]				|| MessageError API "$_ERR_VAR_NAME_" "$param" "$value";;
+		int)		[[ $value =~ ^[0-9]+$ ]]								|| MessageError API "$_ERR_TYPE_INT_" "$param" "$value";;
+		float)		[[ $value =~ ^-?[0-9]+\.[0-9]+$ ]]						|| MessageError API "$_ERR_TYPE_FLOAT_" "$param" "$value";;
+		bool)		[[ $value =~ ^(true|false)$ ]]							|| MessageError API "$_ERR_TYPE_BOOL_" "$param" "$value";;
+		token)		[[ $value =~ ^[0-9]+:[a-zA-Z0-9_-]+$ ]]					|| MessageError API "$_ERR_TOKEN_INVALID_" "$param" "$value";;
+		file)		[[ $value =~ ^@ && ! -f ${value#@} ]]					&& MessageError API "$_ERR_FILE_NOT_FOUND_" "$param" "$value";;
+		return)		[[ $value == @(json|map|value) ]] 						|| MessageError API "$_ERR_FLAG_TYPE_RETURN_" "$param" "$value";;
+		parsemode)	[[ $value == @(markdown|html) ]]						|| MessageError API "$_ERR_TYPE_PARSE_MODE_" "$param" "$value";;
+		point)		[[ $value == @(forehead|eyes|mouth|chin) ]]				|| MessageError API "$_ERR_TYPE_POINT_" "$param" "$value";;
+		action)		[[ $value == @(typing|upload_photo) ]]					||
+					[[ $value == @(record_video|upload_video) ]]			||
+					[[ $value == @(record_audio|upload_audio) ]] 			||
+					[[ $value == @(upload_document|find_location) ]] 		||
+					[[ $value == @(record_video_note|upload_video_note) ]] 	|| MessageError API "$_ERR_ACTION_MODE_" "$param" "$value";;
     esac
 
 	return 0
@@ -240,42 +259,21 @@ CheckArgType(){
 
 FlushOffset()
 {    
-	local first_id last_id cod end jq_obj
-	
-	# Sem erro
-	cod=0
-	update_id=0
-	
-	while [[ $update_id ]]
-	do
-		# Lê as atualizações do offset atual. É possível listar no máximo 100 objetos por offset.
-		if jq_obj=$(ShellBot.getUpdates --limit 100 --offset $(ShellBot.OffsetNext))
-		then
-			# Lê os IDs das atualizações disponíveis, salva o primeiro e último elemento da lista.
-			# Interrompe o laço se não houver mais atualizações.
-			unset update_id
-			update_id=($(Json '.result|.[]|.update_id' $jq_obj))
+	local sid eid jq_obj
 
-			first_id=${first_id:-$update_id}
-			end=$(ShellBot.OffsetEnd)
-			((end > 0)) && last_id=$end
-		else
-			# Seta o erro e finaliza o laço em caso de falha na chamada do método.
-			cod=1
-			break
-		fi	
+	while :; do
+		jq_obj=$(ShellBot.getUpdates --limit 100 --offset $(ShellBot.OffsetNext) --timeout 5)
+		mapfile -t update_id < <(jq -r '.result|.[]|.update_id' <<< $jq_obj)
+		[[ $update_id ]] || break
+		sid=${sid:-${update_id[0]}}
+		eid=${update_id[-1]}
 	done
 	
-	# Retorna '0' se não houver registro.
-	# Saída: 0|0
-	echo "${first_id:-0}|${last_id:-0}"
-
-	# Desativa a flag
+	echo "${sid:-0}|${eid:-0}"
 	unset _FLUSH_OFFSET_
 
-	# Status
-	return $cod
-}    
+	return 0
+}
 
 CreateUnitService()
 {
@@ -361,74 +359,71 @@ ShellBot.init()
 										delimiter:' \
     					 -- "$@")
     
-    # Define os parâmetros posicionais
-    eval set -- "$param"
+	# Define os parâmetros posicionais
+	eval set -- "$param"
    
 	while :
-    do
-    	case $1 in
-    		-t|--token)
-    			CheckArgType token "$1" "$2"
-    			declare -gr _TOKEN_="$2"												# TOKEN
-    			declare -gr _API_TELEGRAM_="https://api.telegram.org/bot$_TOKEN_"		# API
-    			shift 2
-   				;;
-   			-m|--monitor)
-				# Ativa modo monitor
-   				declare -gr _BOT_MONITOR_=1
-   				shift
-   				;;
-			-f|--flush)
-				# Define a FLAG flush para o método 'ShellBot.getUpdates'. Se ativada, faz com que
-				# o método obtenha somente as atualizações disponíveis, ignorando a extração dos
-				# objetos JSON e a inicialização das variáveis.
-				declare -x _FLUSH_OFFSET_=1
-				shift
-				;;
-			-s|--service)
-				enable_service=1
-				shift
-				;;
-			-u|--user)
-				if ! id "$2" &>/dev/null; then
-					MessageError API "$_ERR_SERVICE_USER_NOT_FOUND_" "[-u, --user]" "$2"; fi
-
-				user_unit="$2"
-				shift 2
-				;;
-			-l|--log_file)
-				declare -gr _BOT_LOG_FILE_=$2
-				shift 2
-				;;
-			-o|--log_format)
-				logfmt=$2
-				shift 2
-				;;
-			-r|--return)
-				[[ $2 == @(json|map|value) ]] || MessageError API "$_ERR_FLAG_TYPE_RETURN_" '[-r, --return]' "$2"
-				ret=$2
-				shift 2
-				;;
-			-d|--delimiter)
-				delm=$2
-				shift 2
-				;;
-   			--)
-   				shift
-   				break
-   				;;
-   		esac
-   	done
+    	do
+			case $1 in
+				-t|--token)
+	    			CheckArgType token "$1" "$2"
+	    			declare -gr _TOKEN_="$2"												# TOKEN
+	    			declare -gr _API_TELEGRAM_="https://api.telegram.org/bot$_TOKEN_"		# API
+	    			shift 2
+	   				;;
+	   			-m|--monitor)
+					# Ativa modo monitor
+	   				declare -gr _BOT_MONITOR_=1
+	   				shift
+	   				;;
+				-f|--flush)
+					# Define a FLAG flush para o método 'ShellBot.getUpdates'. Se ativada, faz com que
+					# o método obtenha somente as atualizações disponíveis, ignorando a extração dos
+					# objetos JSON e a inicialização das variáveis.
+					declare -x _FLUSH_OFFSET_=1
+					shift
+					;;
+				-s|--service)
+					enable_service=1
+					shift
+					;;
+				-u|--user)
+					CheckArgType user "$1" "$2"
+					user_unit="$2"
+					shift 2
+					;;
+				-l|--log_file)
+					declare -gr _BOT_LOG_FILE_=$2
+					shift 2
+					;;
+				-o|--log_format)
+					logfmt=$2
+					shift 2
+					;;
+				-r|--return)
+					CheckArgType return "$1" "$2"
+					ret=$2
+					shift 2
+					;;
+				-d|--delimiter)
+					delm=$2
+					shift 2
+					;;
+	   			--)
+	   				shift
+	   				break
+	   				;;
+	   		esac
+	   	done
   
-   	# Parâmetro obrigatório.	
-   	[[ $_TOKEN_ ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-t, --token]"
-	[[ $user_unit && ! $enable_service ]] && MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --service]" 
-	[[ $enable_service ]] && CreateUnitService "$_BOT_SCRIPT_" "${user_unit:-$USER}"
+	# Parâmetro obrigatório.	
+	[[ $_TOKEN_ ]] 							|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-t, --token]"
+	[[ $user_unit && ! $enable_service ]] 	&& MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --service]" 
+	[[ $enable_service ]] 					&& CreateUnitService "$_BOT_SCRIPT_" "${user_unit:-$USER}"
 		   
     # Um método simples para testar o token de autenticação do seu bot. 
     # Não requer parâmetros. Retorna informações básicas sobre o bot em forma de um objeto Usuário.
-    
-	ShellBot.getMe()
+    ShellBot.getMe()
     {
     	# Chama o método getMe passando o endereço da API, seguido do nome do método.
     	local jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.})
@@ -436,7 +431,7 @@ ShellBot.init()
     	_jq_bot_info=$jq_obj
 
 		# Verifica o status de retorno do método
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	return $?
     }
@@ -461,7 +456,7 @@ ShellBot.init()
 	ShellBot.ListUpdates(){ echo ${!update_id[@]}; }
 	ShellBot.TotalUpdates(){ echo ${#update_id[@]}; }
 	ShellBot.OffsetEnd(){ local -i offset=${update_id[@]: -1}; echo $offset; }
-	ShellBot.OffsetNext(){ echo $(($(ShellBot.OffsetEnd)+1)); }
+	ShellBot.OffsetNext(){ echo $((${update_id[@]: -1}+1)); }
    	
 	ShellBot.token() { echo "${_BOT_INFO_[0]}"; }
 	ShellBot.id() { echo "${_BOT_INFO_[1]}"; }
@@ -472,49 +467,49 @@ ShellBot.init()
     {
     	local function callback_data handle args
     
-    	local param=$(getopt --name "$FUNCNAME" \
-							 --options 'f:a:d:' \
-							 --longoptions 'function:,
-											args:,
-											callback_data:' \
-							 -- "$@")
+		local param=$(getopt	--name "$FUNCNAME" \
+								--options 'f:a:d:' \
+								--longoptions	'function:,
+												args:,
+												callback_data:' \
+								-- "$@")
     
-    	eval set -- "$param"
+		eval set -- "$param"
     		
-    	while :
-    	do
-    		case $1 in
-    			-f|--function)
-    				# Verifica se a função especificada existe.
-    				if ! declare -fp $2 &>/dev/null; then
-    					MessageError API "$_ERR_FUNCTION_NOT_FOUND_" "$1" "$2"
-    					return 1
-    				fi
-    				function="$2"
-    				shift 2
-    				;;
+		while :
+		do
+   			case $1 in
+   				-f|--function)
+   					# Verifica se a função especificada existe.
+   					if ! declare -fp $2 &>/dev/null; then
+   						MessageError API "$_ERR_FUNCTION_NOT_FOUND_" "$1" "$2"
+   						return 1
+   					fi
+   					function="$2"
+   					shift 2
+   					;;
     			-a|--args)
-    				args="$2"
-    				shift 2
-    				;;
-    			-d|--callback_data)
-    				callback_data="$2"
-    				shift 2
-    				;;
-    			--)
-    				shift
-    				break
-    				;;
-    		esac
-    	done
-    	
-    	[[ $function ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-f, --function]"
-    	[[ $callback_data ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-d, --callback_data]"
-    
-    	declare -Ag _reg_func_handle_list_
-    	_reg_func_handle_list_[$callback_data]+="$function $args|"
+   					args="$2"
+   					shift 2
+   					;;
+   				-d|--callback_data)
+   					callback_data="$2"
+   					shift 2
+   					;;
+   				--)
+   					shift
+   					break
+   					;;
+   			esac
+   		done
 
-    	return 0
+		[[ $function ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-f, --function]"
+   		[[ $callback_data ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-d, --callback_data]"
+    
+   		declare -Ag _reg_func_handle_list_
+   		_reg_func_handle_list_[$callback_data]+="$function $args|"
+
+   		return 0
     }
     
     ShellBot.watchHandle()
@@ -561,7 +556,7 @@ ShellBot.init()
     	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.})
     	
     	# Verifica o status de retorno do método
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	return $?
     }
@@ -575,7 +570,7 @@ ShellBot.init()
     	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.})
     	
     	# Verifica o status de retorno do método
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	return $?
     }
@@ -624,13 +619,14 @@ ShellBot.init()
     	
     	[[ $url ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-u, --url]"
     
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${url:+-d url="$url"} \
-    								 ${certificate:+-d certificate="$certificate"} \
-    								 ${max_connections:+-d max_connections="$max_connections"} \
-    								 ${allowed_updates:+-d allowed_updates="$allowed_updates"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${url:+-d url="$url"} \
+									${certificate:+-d certificate="$certificate"} \
+									${max_connections:+-d max_connections="$max_connections"} \
+									${allowed_updates:+-d allowed_updates="$allowed_updates"})
     
     	# Testa o retorno do método.
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	# Status
     	return $?
@@ -666,13 +662,14 @@ ShellBot.init()
     		esac
     	done
     	
-    	[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-    	[[ $photo ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-p, --photo]"
+    	[[ $chat_id ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+    	[[ $photo ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-p, --photo]"
     	
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
-    								 ${photo:+-F photo="$photo"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-F chat_id="$chat_id"} \
+ 									${photo:+-F photo="$photo"})
     
-    	JsonStatus $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     		
     	# Status
     	return $?
@@ -707,7 +704,7 @@ ShellBot.init()
     	
     	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"})
     
-		JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+		MethodReturn $jq_obj || MessageError TG $jq_obj
     	
 		# Status
     	return $?
@@ -744,13 +741,14 @@ ShellBot.init()
     		esac
     	done
     	
-    	[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-    	[[ $title ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-t, --title]"
+    	[[ $chat_id ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+    	[[ $title ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-t, --title]"
     	
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
-    								 ${title:+-d title="$title"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-d chat_id="$chat_id"} \
+ 									${title:+-d title="$title"})
     
-		JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+		MethodReturn $jq_obj || MessageError TG $jq_obj
     	
 		# Status
     	return $?
@@ -787,13 +785,14 @@ ShellBot.init()
     		esac
     	done
     	
-    	[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-    	[[ $description ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-d, --description]"
+    	[[ $chat_id ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+    	[[ $description ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-d, --description]"
     	
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
-    								 ${description:+-d description="$description"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-d chat_id="$chat_id"} \
+ 									${description:+-d description="$description"})
     
-		JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+		MethodReturn $jq_obj || MessageError TG $jq_obj
     		
     	# Status
     	return $?
@@ -837,14 +836,15 @@ ShellBot.init()
     		esac
     	done
     	
-    	[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-    	[[ $message_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
+    	[[ $chat_id ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+    	[[ $message_id ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
     	
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
-    								 ${message_id:+-d message_id="$message_id"} \
-    								 ${disable_notification:+-d disable_notification="$disable_notification"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-d chat_id="$chat_id"} \
+ 									${message_id:+-d message_id="$message_id"} \
+ 									${disable_notification:+-d disable_notification="$disable_notification"})
     
-		JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+		MethodReturn $jq_obj || MessageError TG $jq_obj
     		
     	# Status
     	return $?
@@ -879,7 +879,7 @@ ShellBot.init()
     	
     	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"})
     
-		JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+		MethodReturn $jq_obj || MessageError TG $jq_obj
     		
     	# Status
     	return $?
@@ -951,15 +951,16 @@ ShellBot.init()
     	[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
     	[[ $user_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --user_id]"
     	
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
-    								 ${user_id:+-d user_id="$user_id"} \
-    								 ${until_date_:+-d until_date="$until_date"} \
-    								 ${can_send_messages:+-d can_send_messages="$can_send_messages"} \
-    								 ${can_send_media_messages:+-d can_send_media_messages="$can_send_media_messages"} \
-    								 ${can_send_other_messages:+-d can_send_other_messages="$can_send_other_messages"} \
-    								 ${can_add_web_page_previews:+-d can_add_web_page_previews="$can_add_web_page_previews"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-d chat_id="$chat_id"} \
+									${user_id:+-d user_id="$user_id"} \
+									${until_date_:+-d until_date="$until_date"} \
+									${can_send_messages:+-d can_send_messages="$can_send_messages"} \
+									${can_send_media_messages:+-d can_send_media_messages="$can_send_media_messages"} \
+									${can_send_other_messages:+-d can_send_other_messages="$can_send_other_messages"} \
+									${can_add_web_page_previews:+-d can_add_web_page_previews="$can_add_web_page_previews"})
     
-		JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+		MethodReturn $jq_obj || MessageError TG $jq_obj
     		
     	# Status
     	return $?
@@ -1052,18 +1053,19 @@ ShellBot.init()
     	[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
     	[[ $user_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --user_id]"
     	
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
-    								 ${user_id:+-d user_id="$user_id"} \
-    								 ${can_change_info:+-d can_change_info="$can_change_info"} \
-    								 ${can_post_messages:+-d can_post_messages="$can_post_messages"} \
-    								 ${can_edit_messages:+-d can_edit_messages="$can_edit_messages"} \
-    								 ${can_delete_messages:+-d can_delete_messages="$can_delete_messages"} \
-    								 ${can_invite_users:+-d can_invite_users="$can_invite_users"} \
-    								 ${can_restrict_members:+-d can_restrict_members="$can_restrict_members"} \
-    								 ${can_pin_messages:+-d can_pin_messages="$can_pin_messages"} \
-    								 ${can_promote_members:+-d can_promote_members="$can_promote_members"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-d chat_id="$chat_id"} \
+									${user_id:+-d user_id="$user_id"} \
+									${can_change_info:+-d can_change_info="$can_change_info"} \
+									${can_post_messages:+-d can_post_messages="$can_post_messages"} \
+									${can_edit_messages:+-d can_edit_messages="$can_edit_messages"} \
+									${can_delete_messages:+-d can_delete_messages="$can_delete_messages"} \
+									${can_invite_users:+-d can_invite_users="$can_invite_users"} \
+									${can_restrict_members:+-d can_restrict_members="$can_restrict_members"} \
+									${can_pin_messages:+-d can_pin_messages="$can_pin_messages"} \
+									${can_promote_members:+-d can_promote_members="$can_promote_members"})
     
-		JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+		MethodReturn $jq_obj || MessageError TG $jq_obj
     		
     	# Status
     	return $?
@@ -1099,7 +1101,7 @@ ShellBot.init()
     	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"})
     	
     	# Testa o retorno do método.
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     		
     	# Status
     	return $?
@@ -1167,19 +1169,20 @@ ShellBot.init()
     		esac
     	done
     	
-    	[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-    	[[ $video_note ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-v, --video_note]"
+    	[[ $chat_id ]]		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+    	[[ $video_note ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-v, --video_note]"
     	
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
-    								 ${video_note:+-F video_note="$video_note"} \
-    								 ${duration:+-F duration="$duration"} \
-    								 ${length:+-F length="$length"} \
-    								 ${disable_notification:+-F disable_notification="$disable_notification"} \
-    								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
-    								 ${reply_markup:+-F reply_markup="$reply_markup"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-F chat_id="$chat_id"} \
+									${video_note:+-F video_note="$video_note"} \
+									${duration:+-F duration="$duration"} \
+									${length:+-F length="$length"} \
+									${disable_notification:+-F disable_notification="$disable_notification"} \
+									${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
+									${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Testa o retorno do método.
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	# Status
     	return $?
@@ -1192,16 +1195,16 @@ ShellBot.init()
                 __switch_inline_query __switch_inline_query_current_chat \
     			__delm
     
-        local __param=$(getopt --name "$FUNCNAME" \
-							 --options 'b:l:t:u:c:q:s:' \
-							 --longoptions 'button:,
-											line:,
-											text:,
-											url:,
-											callback_data:,
-											switch_inline_query:,
-											switch_inline_query_chat:' \
-							 -- "$@")
+        local __param=$(getopt 	--name "$FUNCNAME" \
+							 	--options 'b:l:t:u:c:q:s:' \
+							 	--longoptions 'button:,
+												line:,
+												text:,
+												url:,
+												callback_data:,
+												switch_inline_query:,
+												switch_inline_query_chat:' \
+							 	-- "$@")
     
     	eval set -- "$__param"
     
@@ -1247,10 +1250,10 @@ ShellBot.init()
     		esac
     	done
     
-    	[[ $__button ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-b, --button]"
-    	[[ $__text ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-t, --text]"
-    	[[ $__callback_data ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --callback_data]"
-    	[[ $__line ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-l, --line]"
+    	[[ $__button ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-b, --button]"
+    	[[ $__text ]] 			|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-t, --text]"
+    	[[ $__callback_data ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --callback_data]"
+    	[[ $__line ]] 			|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-l, --line]"
     	
     	# Inicializa a variável armazenada em button, definindo seu
     	# escopo como global, tornando-a visível em todo o projeto (source)
@@ -1288,10 +1291,10 @@ ShellBot.init()
     {
     	local __button __keyboard
 
-        local __param=$(getopt --name "$FUNCNAME" \
-							 --options 'b:' \
-							 --longoptions 'button:' \
-							 -- "$@")
+        local __param=$(getopt 	--name "$FUNCNAME" \
+							 	--options 'b:' \
+							 	--longoptions 'button:' \
+							 	-- "$@")
     
     	eval set -- "$__param"
     
@@ -1398,13 +1401,14 @@ ShellBot.init()
     	
     	[[ $callback_query_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --callback_query_id]"
     	
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${callback_query_id:+-d callback_query_id="$callback_query_id"} \
-    								 ${text:+-d text="$text"} \
-    								 ${show_alert:+-d show_alert="$show_alert"} \
-    								 ${url:+-d url="$url"} \
-    								 ${cache_time:+-d cache_time="$cache_time"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${callback_query_id:+-d callback_query_id="$callback_query_id"} \
+									${text:+-d text="$text"} \
+									${show_alert:+-d show_alert="$show_alert"} \
+									${url:+-d url="$url"} \
+									${cache_time:+-d cache_time="$cache_time"})
     
-		JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+		MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	return $?
     }
@@ -1416,13 +1420,13 @@ ShellBot.init()
     	local __button __resize_keyboard __on_time_keyboard __selective
     	
     	# Lê os parâmetros da função.
-    	local __param=$(getopt --name "$FUNCNAME" \
-							 --options 'b:r:t:s:' \
-    						 --longoptions 'button:,
+    	local __param=$(getopt 	--name "$FUNCNAME" \
+							 	--options 'b:r:t:s:' \
+    						 	--longoptions 'button:,
     										resize_keyboard:,
     										one_time_keyboard:,
     										selective:' \
-    						 -- "$@")
+    						 	-- "$@")
     	
     	# Transforma os parâmetros da função em parâmetros posicionais
     	#
@@ -1556,22 +1560,23 @@ _EOF
     	done
     
     	# Parâmetros obrigatórios.
-    	[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-    	[[ $text ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-t, --text]"
+    	[[ $chat_id ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+    	[[ $text ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-t, --text]"
     
     	# Chama o método da API, utilizando o comando request especificado; Os parâmetros 
     	# e valores são passados no form e lidos pelo método. O retorno do método é redirecionado para o arquivo 'update.Json'.
     	# Variáveis com valores nulos são ignoradas e consequentemente os respectivos parâmetros omitidos.
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
-    								 ${text:+-d text="$text"} \
-    								 ${parse_mode:+-d parse_mode="$parse_mode"} \
-    								 ${disable_web_page_preview:+-d disable_web_page_preview="$disable_web_page_preview"} \
-    								 ${disable_notification:+-d disable_notification="$disable_notification"} \
-    								 ${reply_to_message_id:+-d reply_to_message_id="$reply_to_message_id"} \
-    								 ${reply_markup:+-d reply_markup="$reply_markup"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-d chat_id="$chat_id"} \
+									${text:+-d text="$text"} \
+									${parse_mode:+-d parse_mode="$parse_mode"} \
+									${disable_web_page_preview:+-d disable_web_page_preview="$disable_web_page_preview"} \
+									${disable_notification:+-d disable_notification="$disable_notification"} \
+									${reply_to_message_id:+-d reply_to_message_id="$reply_to_message_id"} \
+									${reply_markup:+-d reply_markup="$reply_markup"})
    
     	# Testa o retorno do método.
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	# Status
     	return $?
@@ -1627,18 +1632,19 @@ _EOF
     	done
     	
     	# Parâmetros obrigatórios.
-    	[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+    	[[ $chat_id ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
     	[[ $from_chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-f, --from_chat_id]"
-    	[[ $message_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
+    	[[ $message_id ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
     
     	# Chama o método
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
-    		 						 ${from_chat_id:+-d from_chat_id="$from_chat_id"} \
-    								 ${disable_notification:+-d disable_notification="$disable_notification"} \
-    								 ${message_id:+-d message_id="$message_id"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-d chat_id="$chat_id"} \
+									${from_chat_id:+-d from_chat_id="$from_chat_id"} \
+									${disable_notification:+-d disable_notification="$disable_notification"} \
+									${message_id:+-d message_id="$message_id"})
     	
     	# Retorno do método
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# status
     	return $?
@@ -1706,19 +1712,20 @@ _EOF
     	done
     	
     	# Parâmetros obrigatórios
-    	[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-    	[[ $photo ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-p, --photo]"
+    	[[ $chat_id ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+    	[[ $photo ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-p, --photo]"
     	
     	# Chama o método
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
-    								 ${photo:+-F photo="$photo"} \
-    								 ${caption:+-F caption="$caption"} \
-    								 ${disable_notification:+-F disable_notification="$disable_notification"} \
-    								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
-    								 ${reply_markup:+-F reply_markup="$reply_markup"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-F chat_id="$chat_id"} \
+									${photo:+-F photo="$photo"} \
+									${caption:+-F caption="$caption"} \
+									${disable_notification:+-F disable_notification="$disable_notification"} \
+									${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
+									${reply_markup:+-F reply_markup="$reply_markup"})
     	
     	# Retorno do método
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -1801,22 +1808,23 @@ _EOF
     	done
     	
     	# Parâmetros obrigatórios
-    	[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-    	[[ $audio ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-a, --audio]"
+    	[[ $chat_id ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+    	[[ $audio ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-a, --audio]"
     	
     	# Chama o método
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
-    								 ${audio:+-F audio="$audio"} \
-    								 ${caption:+-F caption="$caption"} \
-    								 ${duration:+-F duration="$duration"} \
-    								 ${performer:+-F performer="$performer"} \
-    								 ${title:+-F title="$title"} \
-    								 ${disable_notification:+-F disable_notification="$disable_notification"} \
-    								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
-    								 ${reply_markup:+-F reply_markup="$reply_markup"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-F chat_id="$chat_id"} \
+									${audio:+-F audio="$audio"} \
+									${caption:+-F caption="$caption"} \
+									${duration:+-F duration="$duration"} \
+									${performer:+-F performer="$performer"} \
+									${title:+-F title="$title"} \
+									${disable_notification:+-F disable_notification="$disable_notification"} \
+									${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
+									${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Retorno do método
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -1886,15 +1894,16 @@ _EOF
     	[[ $document ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-d, --document]"
     	
     	# Chama o método
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
-    								 ${document:+-F document="$document"} \
-    								 ${caption:+-F caption="$caption"} \
-    								 ${disable_notification:+-F disable_notification="$disable_notification"} \
-    								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
-    								 ${reply_markup:+-F reply_markup="$reply_markup"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-F chat_id="$chat_id"} \
+									${document:+-F document="$document"} \
+									${caption:+-F caption="$caption"} \
+									${disable_notification:+-F disable_notification="$disable_notification"} \
+									${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
+									${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Retorno do método
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -1960,14 +1969,15 @@ _EOF
     	[[ $sticker ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --sticker]"
     
     	# Chama o método
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
-    								 ${sticker:+-F sticker="$sticker"} \
-    								 ${disable_notification:+-F disable_notification="$disable_notification"} \
-    								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
-    								 ${reply_markup:+-F reply_markup="$reply_markup"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-F chat_id="$chat_id"} \
+									${sticker:+-F sticker="$sticker"} \
+									${disable_notification:+-F disable_notification="$disable_notification"} \
+									${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
+									${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Testa o retorno do método
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -2004,7 +2014,7 @@ _EOF
 		jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${name:+-d name="$name"})
     
 		# Testa o retorno do método
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -2045,11 +2055,12 @@ _EOF
 		[[ $user_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
 		[[ $png_sticker ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --png_sticker]"
     	
-		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${user_id:+-F user_id="$user_id"} \
-									 ${png_sticker:+-F png_sticker="$png_sticker"})
+		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${user_id:+-F user_id="$user_id"} \
+									${png_sticker:+-F png_sticker="$png_sticker"})
     	
 		# Testa o retorno do método
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -2087,14 +2098,15 @@ _EOF
 			esac
 		done
 		
-		[[ $sticker ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --sticker]"
+		[[ $sticker ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --sticker]"
 		[[ $position ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-p, --position]"
     	
-		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${sticker:+-d sticker="$sticker"} \
-									 ${position:+-d position="$position"})
+		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${sticker:+-d sticker="$sticker"} \
+									${position:+-d position="$position"})
     	
 		# Testa o retorno do método
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
 		# Status
     	return $?
@@ -2131,7 +2143,7 @@ _EOF
 		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${sticker:+-d sticker="$sticker"})
     	
 		# Testa o retorno do método
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     	
 		# Status
     	return $?
@@ -2189,11 +2201,11 @@ _EOF
 			esac
 		done
 		
-		[[ $point ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-p, --point]"
-		[[ $x_shift ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-x, --x_shift]"
-		[[ $y_shift ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-y, --y_shift]"
-		[[ $scale ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --scale]"
-		[[ $zoom ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-z, --zoom]"
+		[[ $point ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-p, --point]"
+		[[ $x_shift ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-x, --x_shift]"
+		[[ $y_shift ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-y, --y_shift]"
+		[[ $scale ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --scale]"
+		[[ $zoom ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-z, --zoom]"
 		
 		cat << _EOF
 { "point": "$point", "x_shift": $x_shift, "y_shift": $y_shift, "scale": $scale, "zoom": $zoom }
@@ -2261,22 +2273,23 @@ _EOF
 			esac
 		done
 		
-		[[ $user_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
-		[[ $name ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-n, --name]"
-		[[ $title ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-t, --title]"
-		[[ $png_sticker ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --png_sticker]"
-		[[ $emojis ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-e, --emojis]"
+		[[ $user_id ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
+		[[ $name ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-n, --name]"
+		[[ $title ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-t, --title]"
+		[[ $png_sticker ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --png_sticker]"
+		[[ $emojis ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-e, --emojis]"
 	
-		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${user_id:+-F user_id="$user_id"} \
-									 ${name:+-F name="$name"} \
-									 ${title:+-F title="$title"} \
-									 ${png_sticker:+-F png_sticker="$png_sticker"} \
-									 ${emojis:+-F emojis="$emojis"} \
-									 ${contains_masks:+-F contains_masks="$contains_masks"} \
-									 ${mask_position:+-F mask_position="$mask_position"})
+		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${user_id:+-F user_id="$user_id"} \
+									${name:+-F name="$name"} \
+									${title:+-F title="$title"} \
+									${png_sticker:+-F png_sticker="$png_sticker"} \
+									${emojis:+-F emojis="$emojis"} \
+									${contains_masks:+-F contains_masks="$contains_masks"} \
+									${mask_position:+-F mask_position="$mask_position"})
     	
 		# Testa o retorno do método
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     	
 		# Status
     	return $?
@@ -2330,19 +2343,20 @@ _EOF
 			esac
 		done
 		
-		[[ $user_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
-		[[ $name ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-n, --name]"
-		[[ $png_sticker ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --png_sticker]"
-		[[ $emojis ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-e, --emojis]"
+		[[ $user_id ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
+		[[ $name ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-n, --name]"
+		[[ $png_sticker ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --png_sticker]"
+		[[ $emojis ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-e, --emojis]"
 	
-		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${user_id:+-F user_id="$user_id"} \
-									 ${name:+-F name="$name"} \
-									 ${png_sticker:+-F png_sticker="$png_sticker"} \
-									 ${emojis:+-F emojis="$emojis"} \
-									 ${mask_position:+-F mask_position="$mask_position"})
+		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${user_id:+-F user_id="$user_id"} \
+									${name:+-F name="$name"} \
+									${png_sticker:+-F png_sticker="$png_sticker"} \
+									${emojis:+-F emojis="$emojis"} \
+									${mask_position:+-F mask_position="$mask_position"})
     	
 		# Testa o retorno do método
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     	
 		# Status
     	return $?
@@ -2437,23 +2451,24 @@ _EOF
     	done
     	
     	# Parâmetros obrigatórios.
-    	[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-    	[[ $video ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-v, --video]"
+    	[[ $chat_id ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+    	[[ $video ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-v, --video]"
     
     	# Chama o método
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
-    								 ${video:+-F video="$video"} \
-    								 ${duration:+-F duration="$duration"} \
-    								 ${width:+-F width="$width"} \
-    								 ${height:+-F height="$height"} \
-    								 ${caption:+-F caption="$caption"} \
-    								 ${disable_notification:+-F disable_notification="$disable_notification"} \
-    								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
-    								 ${reply_markup:+-F reply_markup="$reply_markup"} \
-									 ${supports_streaming:+-F supports_streaming="$supports_streaming"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-F chat_id="$chat_id"} \
+									${video:+-F video="$video"} \
+									${duration:+-F duration="$duration"} \
+									${width:+-F width="$width"} \
+									${height:+-F height="$height"} \
+									${caption:+-F caption="$caption"} \
+									${disable_notification:+-F disable_notification="$disable_notification"} \
+    								${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
+    								${reply_markup:+-F reply_markup="$reply_markup"} \
+									${supports_streaming:+-F supports_streaming="$supports_streaming"})
     
     	# Testa o retorno do método
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -2528,20 +2543,21 @@ _EOF
     	done
     	
     	# Parâmetros obrigatórios.
-    	[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-    	[[ $voice ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-v, --voice]"
+    	[[ $chat_id ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+    	[[ $voice ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-v, --voice]"
     	
     	# Chama o método
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
-    								 ${voice:+-F voice="$voice"} \
-    								 ${caption:+-F caption="$caption"} \
-    								 ${duration:+-F duration="$duration"} \
-    								 ${disable_notification:+-F disable_notification="$disable_notification"} \
-    								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
-    								 ${reply_markup:+-F reply_markup="$reply_markup"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-F chat_id="$chat_id"} \
+    								${voice:+-F voice="$voice"} \
+    								${caption:+-F caption="$caption"} \
+    								${duration:+-F duration="$duration"} \
+    								${disable_notification:+-F disable_notification="$disable_notification"} \
+    								${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
+    								${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Testa o retorno do método
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -2619,21 +2635,22 @@ _EOF
     	done
     	
     	# Parâmetros obrigatórios
-    	[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-    	[[ $latitude ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-l, --latitude]"
-    	[[ $longitude ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-g, --longitude]"
+    	[[ $chat_id ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+    	[[ $latitude ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-l, --latitude]"
+    	[[ $longitude ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-g, --longitude]"
     			
     	# Chama o método
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
-    								 ${latitude:+-F latitude="$latitude"} \
-    								 ${longitude:+-F longitude="$longitude"} \
-									 ${live_period:+-F live_period="$live_period"} \
-    								 ${disable_notification:+-F disable_notification="$disable_notification"} \
-    								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
-    								 ${reply_markup:+-F reply_markup="$reply_markup"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-F chat_id="$chat_id"} \
+    								${latitude:+-F latitude="$latitude"} \
+    								${longitude:+-F longitude="$longitude"} \
+									${live_period:+-F live_period="$live_period"} \
+    								${disable_notification:+-F disable_notification="$disable_notification"} \
+    								${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
+    								${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Testa o retorno do método
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	return $?
     	
@@ -2717,25 +2734,26 @@ _EOF
     	done
     			
     	# Parâmetros obrigatórios.
-    	[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-    	[[ $latitude ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-l, --latitude]"
-    	[[ $longitude ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-g, --longitude]"
-    	[[ $title ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-i, --title]"
-    	[[ $address ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-a, --address]"
+    	[[ $chat_id ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+    	[[ $latitude ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-l, --latitude]"
+    	[[ $longitude ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-g, --longitude]"
+    	[[ $title ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-i, --title]"
+    	[[ $address ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-a, --address]"
     	
     	# Chama o método
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
-    								 ${latitude:+-F latitude="$latitude"} \
-    								 ${longitude:+-F longitude="$longitude"} \
-    								 ${title:+-F title="$title"} \
-    								 ${address:+-F address="$address"} \
-    								 ${foursquare_id:+-F foursquare_id="$foursquare_id"} \
-    								 ${disable_notification:+-F disable_notification="$disable_notification"} \
-    								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
-    								 ${reply_markup:+-F reply_markup="$reply_markup"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-F chat_id="$chat_id"} \
+    								${latitude:+-F latitude="$latitude"} \
+    								${longitude:+-F longitude="$longitude"} \
+    								${title:+-F title="$title"} \
+    								${address:+-F address="$address"} \
+    								${foursquare_id:+-F foursquare_id="$foursquare_id"} \
+    								${disable_notification:+-F disable_notification="$disable_notification"} \
+    								${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
+    								${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Testa o retorno do método
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -2806,21 +2824,22 @@ _EOF
     	done
     	
     	# Parâmetros obrigatórios.	
-    	[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+    	[[ $chat_id ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
     	[[ $phone_number ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-p, --phone_number]"
-    	[[ $first_name ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-f, --first_name]"
+    	[[ $first_name ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-f, --first_name]"
     	
     	# Chama o método
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
-    								 ${phone_number:+-F phone_number="$phone_number"} \
-    								 ${first_name:+-F first_name="$first_name"} \
-    								 ${last_name:+-F last_name="$last_name"} \
-    								 ${disable_notification:+-F disable_notification="$disable_notification"} \
-    								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
-    								 ${reply_markup:+-F reply_markup="$reply_markup"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-F chat_id="$chat_id"} \
+    								${phone_number:+-F phone_number="$phone_number"} \
+    								${first_name:+-F first_name="$first_name"} \
+    								${last_name:+-F last_name="$last_name"} \
+    								${disable_notification:+-F disable_notification="$disable_notification"} \
+    								${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
+    								${reply_markup:+-F reply_markup="$reply_markup"})
     
     	# Testa o retorno do método
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -2862,15 +2881,16 @@ _EOF
     	done
     
     	# Parâmetros obrigatórios.		
-    	[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-    	[[ $action ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-a, --action]"
+    	[[ $chat_id ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+    	[[ $action ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-a, --action]"
     	
     	# Chama o método
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
-    													${action:+-d action="$action"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-d chat_id="$chat_id"} \
+									${action:+-d action="$action"})
     	
     	# Testa o retorno do método
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -2923,12 +2943,13 @@ _EOF
     	[[ $user_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
     	
     	# Chama o método
-    	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${user_id:+-d user_id="$user_id"} \
-    													${offset:+-d offset="$offset"} \
-    													${limit:+-d limit="$limit"})
+    	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${user_id:+-d user_id="$user_id"} \
+									${offset:+-d offset="$offset"} \
+									${limit:+-d limit="$limit"})
   
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	# Status
     	return $?
@@ -2971,7 +2992,7 @@ _EOF
     	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${file_id:+-d file_id="$file_id"})
     
     	# Testa o retorno do método.
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -3024,12 +3045,13 @@ _EOF
     	[[ $user_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
     	
     	# Chama o método
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
-    								 ${user_id:+-d user_id="$user_id"} \
-    								 ${until_date:+-d until_date="$until_date"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-d chat_id="$chat_id"} \
+    								${user_id:+-d user_id="$user_id"} \
+    								${until_date:+-d until_date="$until_date"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -3070,7 +3092,7 @@ _EOF
     	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	return $?
     	
@@ -3113,11 +3135,12 @@ _EOF
     	[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
     	[[ $user_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
     	
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
-    								 ${user_id:+-d user_id="$user_id"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-d chat_id="$chat_id"} \
+    								${user_id:+-d user_id="$user_id"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	return $?
     }
@@ -3156,7 +3179,7 @@ _EOF
     	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	# Status
     	return $?
@@ -3195,7 +3218,7 @@ _EOF
     	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status	
     	return $?
@@ -3234,7 +3257,7 @@ _EOF
     	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	return $?
     }
@@ -3277,11 +3300,12 @@ _EOF
     	[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
     	[[ $user_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
     	
-    	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
+    	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-d chat_id="$chat_id"} \
     								${user_id:+-d user_id="$user_id"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	return $?
     }
@@ -3345,23 +3369,24 @@ _EOF
     			esac
     	done
     	
-    	[[ $text ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-t, --text]"
+    	[[ $text ]] 			|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-t, --text]"
 		[[ $inline_message_id ]] && unset chat_id message_id || {
-			[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-			[[ $message_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
+			[[ $chat_id ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+			[[ $message_id ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
 		}
     	
     
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
-    								 ${message_id:+-d message_id="$message_id"} \
-    								 ${inline_message_id:+-d inline_message_id="$inline_message_id"} \
-    								 ${text:+-d text="$text"} \
-    								 ${parse_mode:+-d parse_mode="$parse_mode"} \
-    								 ${disable_web_page_preview:+-d disable_web_page_preview="$disable_web_page_preview"} \
-    								 ${reply_markup:+-d reply_markup="$reply_markup"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-d chat_id="$chat_id"} \
+    								${message_id:+-d message_id="$message_id"} \
+    								${inline_message_id:+-d inline_message_id="$inline_message_id"} \
+    								${text:+-d text="$text"} \
+    								${parse_mode:+-d parse_mode="$parse_mode"} \
+    								${disable_web_page_preview:+-d disable_web_page_preview="$disable_web_page_preview"} \
+    								${reply_markup:+-d reply_markup="$reply_markup"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	return $?
     	
@@ -3414,17 +3439,18 @@ _EOF
     			esac
     	done
     				
-    	[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-    	[[ $message_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
+    	[[ $chat_id ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+    	[[ $message_id ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
     	
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
-    								 ${message_id:+-d message_id="$message_id"} \
-    								 ${inline_message_id:+-d inline_message_id="$inline_message_id"} \
-    								 ${caption:+-d caption="$caption"} \
-    								 ${reply_markup:+-d reply_markup="$reply_markup"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-d chat_id="$chat_id"} \
+    								${message_id:+-d message_id="$message_id"} \
+    								${inline_message_id:+-d inline_message_id="$inline_message_id"} \
+    								${caption:+-d caption="$caption"} \
+    								${reply_markup:+-d reply_markup="$reply_markup"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	return $?
     	
@@ -3473,17 +3499,18 @@ _EOF
     	done
 		
 		[[ $inline_message_id ]] && unset chat_id message_id || {
-			[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-			[[ $message_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
+			[[ $chat_id ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+			[[ $message_id ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
 		}
     
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
-    								 ${message_id:+-d message_id="$message_id"} \
-     								 ${inline_message_id:+-d inline_message_id="$inline_message_id"} \
-    								 ${reply_markup:+-d reply_markup="$reply_markup"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-d chat_id="$chat_id"} \
+    								${message_id:+-d message_id="$message_id"} \
+     								${inline_message_id:+-d inline_message_id="$inline_message_id"} \
+    								${reply_markup:+-d reply_markup="$reply_markup"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	return $?
     	
@@ -3520,14 +3547,15 @@ _EOF
     			esac
     	done
     	
-    	[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-    	[[ $message_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
+    	[[ $chat_id ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+    	[[ $message_id ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
     
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
-    								 ${message_id:+-d message_id="$message_id"})
+    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-d chat_id="$chat_id"} \
+    								${message_id:+-d message_id="$message_id"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	return $?
     
@@ -3567,8 +3595,8 @@ _EOF
 			esac
 		done
 
-		[[ $file_path ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-f, --file_path]"
-		[[ $dir ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-d, --dir]"
+		[[ $file_path ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-f, --file_path]"
+		[[ $dir ]] 			|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-d, --dir]"
 
 		dir=$(mktemp -u --tmpdir="$dir" "file$(date +%d%m%Y%H%M%S)-XXXXX${ext:+.$ext}")
 		wget "$uri/$file_path" -O "$dir" &>/dev/null || MessageError API "$_ERR_FILE_DOWNLOAD_" "$file_path"
@@ -3634,19 +3662,20 @@ _EOF
 		done
 	
 		[[ $inline_message_id ]] && unset chat_id message_id || {
-			[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-			[[ $message_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
+			[[ $chat_id ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+			[[ $message_id ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
 		}
     	
-		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
-									 ${message_id:+-d message_id="$message_id"} \
-									 ${inline_message_id:+-d inline_message_id="$inline_message_id"} \
-    								 ${latitude:+-d latitude="$latitude"} \
-    								 ${longitude:+-d longitude="$longitude"} \
-    								 ${reply_markup:+-d reply_markup="$reply_markup"})
+		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-d chat_id="$chat_id"} \
+									${message_id:+-d message_id="$message_id"} \
+									${inline_message_id:+-d inline_message_id="$inline_message_id"} \
+    								${latitude:+-d latitude="$latitude"} \
+    								${longitude:+-d longitude="$longitude"} \
+    								${reply_markup:+-d reply_markup="$reply_markup"})
     
     	# Testa o retorno do método
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	return $?
 	}	
@@ -3694,17 +3723,18 @@ _EOF
 		done
 	
 		[[ $inline_message_id ]] && unset chat_id message_id || {
-			[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-			[[ $message_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
+			[[ $chat_id ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+			[[ $message_id ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --message_id]"
 		}
     	
-		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
-									 ${message_id:+-d message_id="$message_id"} \
-									 ${inline_message_id:+-d inline_message_id="$inline_message_id"} \
-    								 ${reply_markup:+-d reply_markup="$reply_markup"})
+		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-d chat_id="$chat_id"} \
+									${message_id:+-d message_id="$message_id"} \
+									${inline_message_id:+-d inline_message_id="$inline_message_id"} \
+    								${reply_markup:+-d reply_markup="$reply_markup"})
     
     	# Testa o retorno do método
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	return $?
 	}
@@ -3739,13 +3769,14 @@ _EOF
 			esac
 		done
 
-		[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+		[[ $chat_id ]] 			|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
 		[[ $sticker_set_name ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --sticker_set_name]"
 		
-		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"} \
-																		${sticker_set_name:+-d sticker_set_name="$sticker_set_name"})
+		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-d chat_id="$chat_id"} \
+									${sticker_set_name:+-d sticker_set_name="$sticker_set_name"})
 		
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     	
 		return $?
 	}
@@ -3779,7 +3810,7 @@ _EOF
 		
 		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-d chat_id="$chat_id"})
 		
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     	
     	return $?
 	}
@@ -3970,16 +4001,17 @@ _EOF
 			esac
 		done
 
-		[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-		[[ $media ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --media]"
+		[[ $chat_id ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+		[[ $media ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --media]"
 		
-		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${chat_id:+-F chat_id="$chat_id"} \
-    								 ${media:+-F media="$media"} \
-    								 ${disable_notification:+-F disable_notification="$disable_notification"} \
-    								 ${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"})
+		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-F chat_id="$chat_id"} \
+    								${media:+-F media="$media"} \
+    								${disable_notification:+-F disable_notification="$disable_notification"} \
+    								${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"})
     
 		# Retorno do método
-    	JsonStatus $jq_obj && MethodReturn $jq_obj || MessageError TG $jq_obj
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
     
     	# Status
     	return $?
@@ -3988,15 +4020,16 @@ _EOF
     ShellBot.getUpdates()
     {
     	local total_keys offset limit timeout allowed_updates jq_obj
+		local vet val var obj oldv bar
 
-    	# Define os parâmetros da função
-    	local param=$(getopt --name "$FUNCNAME" \
-							 --options 'o:l:t:a:' \
-    						 --longoptions 'offset:,
-    										limit:,
-    										timeout:,
-    										allowed_updates:' \
-    						 -- "$@")
+		# Define os parâmetros da função
+		local param=$(getopt 	--name "$FUNCNAME" \
+								--options 'o:l:t:a:' \
+								--longoptions 'offset:,
+												limit:,
+												timeout:,
+												allowed_updates:' \
+								-- "$@")
     
 		eval set -- "$param"
 
@@ -4030,89 +4063,73 @@ _EOF
     		esac
     	done
     	
-		# Seta os parâmetros
-    	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} 	${offset:+-d offset="$offset"} \
-    																	${limit:+-d limit="$limit"} \
-    																	${timeout:+-d timeout="$timeout"} \
-    																	${allowed_updates:+-d allowed_updates="$allowed_updates"})
+	# Seta os parâmetros
+	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+								${offset:+-d offset="$offset"} \
+								${limit:+-d limit="$limit"} \
+								${timeout:+-d timeout="$timeout"} \
+								${allowed_updates:+-d allowed_updates="$allowed_updates"})
 
-    	# Verifica se ocorreu erros durante a chamada do método	
-    	JsonStatus $jq_obj && {
+
+	# Limpa as variáveis inicializadas.
+	unset ${_var_init_list_//|/ }
+	_var_init_list_=''
+	
+    [[ $(jq -r '.result|length' <<< $jq_obj) -eq 0 ]] && return 0
+	[[ $_FLUSH_OFFSET_ ]] && { echo "$jq_obj"; return 0; } # flush
+
+	if [[ $_BOT_MONITOR_ ]]; then
+		printf -v bar '=%.s' {1..50}
+		printf "$bar\nData: %(%d/%m/%Y %T)T\n"
+		printf 'Script: %s\nBot (nome): %s\nBot (usuario): %s\nBot (id): %s\n' \
+				"${_BOT_SCRIPT_}" 	\
+				"${_BOT_INFO_[2]}" 	\
+				"${_BOT_INFO_[3]}" 	\
+				"${_BOT_INFO_[1]}"
+	fi
+
+	# Salva e fecha o descritor de erro
+	exec 5<&2
+	exec 2<&-
+
+	for obj in $(GetAllKeys $jq_obj); do
+	
+		[[ $obj =~ [0-9]+ ]]
+		vet=${BASH_REMATCH:-0}
 		
-			# Habilita extensão globbing
-			shopt -s extglob
-
-			# Limpa as variáveis inicializadas.
-			unset ${_var_init_list_//|/ }
-			_var_init_list_=''
-	
-			# Se o modo flush estiver ativado, retorna uma coleção de objetos Json contendo as atualizações.
-			[[ $_FLUSH_OFFSET_ ]] && { echo "$jq_obj"; return 0; }
-    		
-			[[ $(jq -r '.result|length' <<< $jq_obj) -eq 0 ]] && return 0
-
-			local vet val var obj oldv bar ini
+		var=${obj//[0-9\[\]]/}
+		var=${var#result.}
+		var=${var//./_}
 			
-			printf -v bar '=%.s' {1..50}
-
-			# Modo monitor
-			[[ $_BOT_MONITOR_ ]] && cat << _eof
-$bar
-Data: $(date '+%d/%m/%Y %T')
-Script: $_BOT_SCRIPT_
-Bot (nome): ${_BOT_INFO_[2]}
-Bot (usuario): ${_BOT_INFO_[3]}
-Bot (id): ${_BOT_INFO_[1]}
-_eof
-    
-   			# Salva e fecha o descritor de erro
-			exec 5<&2
-			exec 2<&-
-
-			for obj in $(GetAllKeys $jq_obj); do
+		declare -g $var
+		local -n byref=$var # ponteiro
 					
-				vet=${obj%%.*}
-				vet=${vet//[^0-9]/}
-					
-				var=${obj#result\[$vet\].}
-				var=${var//\[+([0-9])\]/}
-				var=${var//./_}
-					
-				declare -g $var
-				local -n byref=$var # ponteiro
-					
-				val=$(Json ".$obj" $jq_obj)
-				[[ ${byref[$vet]} ]] && byref[$vet]+=${_BOT_DELM_}${val} || byref[$vet]=$val
+		val=$(Json ".$obj" $jq_obj)
+		[[ ${byref[$vet]} ]] && byref[$vet]+=${_BOT_DELM_}${val} || byref[$vet]=$val
 
-				[[ $_BOT_MONITOR_ ]] && {
-					[[ $vet -ne $oldv || ! $ini ]] && cat << _eof
-$bar
-Mensagem: $((vet+1))
-$bar
-_eof
-					printf "[ShellBot.getUpdates]: %s = '%s'\n" "$var" "$val"
-				}
+		if [[ $_BOT_MONITOR_ ]]; then
+			[[ $vet -ne ${oldv:--1} ]] && printf "$bar\nMensagem: %d\n$bar\n" $((vet+1))
+			printf "[ShellBot.getUpdates]: %s = '%s'\n" "$var" "$val"
+			oldv=$vet
+		fi
 
-				unset -n byref
+		unset -n byref
+		[[ $var != @(${_var_init_list_%|}) ]] && _var_init_list_+="$var|"
+	done
+
+	# Restaura o descritor de erro.
+	exec 2<&5
 	
-				[[ $var != @(${_var_init_list_%|}) ]] && _var_init_list_+="$var|"
-				oldv=$vet
-				ini=1
-			done
-    		
-			exec 2<&5
-			
-			[[ $_BOT_MONITOR_ ]] && echo $bar
-			[[ $_BOT_LOG_FILE_ ]] && CreateLog ${#update_id[@]} $jq_obj &
+	# Log (thread)	
+	[[ $_BOT_LOG_FILE_ ]] && CreateLog ${#update_id[@]} $jq_obj &
 
-    	} || MessageError TG $jq_obj
-
-    	# Status
-    	return $?
+    # Status
+    return $?
+		
     }
    
 	# Bot métodos (somente leitura)
-	declare -rf ShellBot.token \
+	readonly -f ShellBot.token \
 				ShellBot.id \
 				ShellBot.username \
 				ShellBot.first_name \
@@ -4182,22 +4199,25 @@ _eof
 				ShellBot.inputMediaPhoto \
 				ShellBot.inputMediaVideo \
 				ShellBot.getUpdates
-   
-	# Retorna objetos
-	echo "$(ShellBot.id)|$(ShellBot.username)|$(ShellBot.first_name)|$(((_FLUSH_OFFSET_)) && FlushOffset)"
+
+   	# Retorna objetos
+	printf '%s|%s|%s|%s\n'	"${_BOT_INFO_[1]}" \
+							"${_BOT_INFO_[2]}" \
+							"${_BOT_INFO_[3]}" \
+							"${_FLUSH_OFFSET_:+$(FlushOffset)}"
 
 	# status
    	return 0
 }
 
 # Funções (somente leitura)
-declare -rf MessageError \
+readonly -f MessageError \
 			Json \
-			JsonStatus \
 			FlushOffset \
 			CreateUnitService \
 			GetAllKeys \
 			GetAllValues \
 			MethodReturn \
 			CheckArgType \
-			CreateLog 
+			CreateLog
+# /* SHELLBOT */
