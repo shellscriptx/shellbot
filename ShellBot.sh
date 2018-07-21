@@ -32,6 +32,8 @@
 #						reduzindo o nível de dependências de pacotes externos.
 #-----------------------------------------------------------------------------------------------------------
 
+[[ $_SHELLBOT_SH_ ]] && return 1
+
 # Informações
 readonly -A _SHELLBOT_=(
 [name]='ShellBot'
@@ -70,8 +72,6 @@ while read _pkg_ _op_ _ver_; do
 	fi
 done < <(echo -e ${_SHELLBOT_[packages]//,/\\n})
 
-[[ $_SHELLBOT_SH_ ]] && return 1
-
 # SHELL (opções).
 set -f
 shopt -s extglob
@@ -81,29 +81,42 @@ readonly _BOT_SCRIPT_=$(basename "$0")		# Script
 readonly _CURL_OPT_='--silent --request'	# CURL (opções)
 
 # Erros
-readonly _ERR_TYPE_BOOL_='Tipo incompatível: suporta somente "true" ou "false".'
-readonly _ERR_TYPE_PARSE_MODE_='Formatação inválida: suporta somente "markdown" ou "html".'
-readonly _ERR_TYPE_INT_='Tipo incompatível: suporta somente inteiro.'
-readonly _ERR_TYPE_FLOAT_='Tipo incompatível: suporta somente float.'
-readonly _ERR_TYPE_POINT_='Máscara inválida: deve ser “forehead”, “eyes”, “mouth” ou “chin”.'
-readonly _ERR_ACTION_MODE_='Ação inválida: a definição da ação não é suportada.'
-readonly _ERR_PARAM_REQUIRED_='Opção requerida: verique se o(s) parâmetro(s) ou argumento(s) obrigatório(s) estão presente(s).'
-readonly _ERR_TOKEN_UNAUTHORIZED_='Não autorizado: verifique se possui permissões para utilizar o token.'
-readonly _ERR_TOKEN_INVALID_='Token inválido: verique o número do token e tente novamente.'
-readonly _ERR_FUNCTION_NOT_FOUND_='Função inválida: verique se o nome está correto ou se a função existe.'
-readonly _ERR_BOT_ALREADY_INIT_='Ação não permitida: o bot já foi inicializado.'
-readonly _ERR_FILE_NOT_FOUND_='Arquivo não encontrado: não foi possível ler o arquivo especificado.'
-readonly _ERR_DIR_WRITE_DENIED_='Permissão negada: não é possível gravar no diretório.'
+readonly _ERR_TYPE_BOOL_='tipo incompatível: suporta somente "true" ou "false".'
+readonly _ERR_TYPE_PARSE_MODE_='formatação inválida: suporta somente "markdown" ou "html".'
+readonly _ERR_TYPE_INT_='tipo incompatível: suporta somente inteiro.'
+readonly _ERR_TYPE_FLOAT_='tipo incompatível: suporta somente float.'
+readonly _ERR_TYPE_POINT_='máscara inválida: deve ser “forehead”, “eyes”, “mouth” ou “chin”.'
+readonly _ERR_ACTION_MODE_='ação inválida: a definição da ação não é suportada.'
+readonly _ERR_PARAM_REQUIRED_='opção requerida: verique se o(s) parâmetro(s) ou argumento(s) obrigatório(s) estão presente(s).'
+readonly _ERR_TOKEN_UNAUTHORIZED_='não autorizado: verifique se possui permissões para utilizar o token.'
+readonly _ERR_TOKEN_INVALID_='token inválido: verique o número do token e tente novamente.'
+readonly _ERR_BOT_ALREADY_INIT_='ação não permitida: o bot já foi inicializado.'
+readonly _ERR_FILE_NOT_FOUND_='arquivo não encontrado: não foi possível ler o arquivo especificado.'
+readonly _ERR_DIR_WRITE_DENIED_='permissão negada: não é possível gravar no diretório.'
 readonly _ERR_DIR_NOT_FOUND_='Não foi possível acessar: diretório não encontrado.'
-readonly _ERR_FILE_DOWNLOAD_='Falha no download: arquivo não encontrado.'
-readonly _ERR_FILE_INVALID_ID_='Id inválido: arquivo não encontrado.'
-readonly _ERR_UNKNOWN_='Erro desconhecido: ocorreu uma falha inesperada. Reporte o problema ao desenvolvedor.'
-readonly _ERR_SERVICE_NOT_ROOT_='Acesso negado: requer privilégios de root.'
-readonly _ERR_SERVICE_EXISTS_='Erro ao criar o serviço: o nome do serviço já existe.'
-readonly _ERR_SERVICE_SYSTEMD_NOT_FOUND_='Erro ao ativar: o sistema não possui suporte ao gerenciamento de serviços "systemd".'
-readonly _ERR_SERVICE_USER_NOT_FOUND_='Usuário não encontrado: a conta de usuário informada é inválida.'
+readonly _ERR_FILE_DOWNLOAD_='falha no download: arquivo não encontrado.'
+readonly _ERR_FILE_INVALID_ID_='id inválido: arquivo não encontrado.'
+readonly _ERR_UNKNOWN_='erro desconhecido: ocorreu uma falha inesperada. Reporte o problema ao desenvolvedor.'
+readonly _ERR_SERVICE_NOT_ROOT_='acesso negado: requer privilégios de root.'
+readonly _ERR_SERVICE_EXISTS_='erro ao criar o serviço: o nome do serviço já existe.'
+readonly _ERR_SERVICE_SYSTEMD_NOT_FOUND_='erro ao ativar: o sistema não possui suporte ao gerenciamento de serviços "systemd".'
+readonly _ERR_SERVICE_USER_NOT_FOUND_='usuário não encontrado: a conta de usuário informada é inválida.'
 readonly _ERR_VAR_NAME_='o identificador da variável é inválido.'
-readonly _ERR_FLAG_TYPE_RETURN_='Tipo inválido: somente "json", "map" ou "value".'
+readonly _ERR_FLAG_TYPE_RETURN_='tipo inválido: somente "json", "map" ou "value".'
+readonly _ERR_FUNCTION_NOT_FOUND_='função não encontrada: o identificador especificado é inválido ou não existe.'
+readonly _ERR_CMD_INVALID_='comando inválido: o identificador do comando não pode conter espaços.'
+readonly _ERR_CHAT_TYPE_='chat inválido: o tipo especificado para o chat não existe.'
+readonly _ERR_TIME_INVERVAL_='hora inválida: o formato para o intervalo de tempo não é suportado.'
+readonly _ERR_DATE_INVERVAL_='data inválida: o formato para o intervalo de datas não é suportado.'
+readonly _ERR_USERNAME_='usuário inválido: somente caracteres [a-zA-Z0-9_] são suportados.'
+readonly _ERR_LANGUAGE_TAG='tag de idioma inválido: somente caracteres [a-z-] são suportados.'
+readonly _ERR_ENTITIE_TYPE_='entidade inválida: a entidade especificada não é suportada.'
+
+# hash
+declare -A _BOT_FUNCTION_LIST_
+declare -a _BOT_COMMAND_RULES_LIST_
+
+SortList(){ local list; printf -v list "%s|" $(printf '%s\n' ${1//|/ } | sort | uniq); echo ${list%|}; }
 
 Json() { local obj=$(jq "$1" <<< "${*:2}"); obj=${obj#\"}; echo "${obj%\"}"; }
 
@@ -238,12 +251,15 @@ CheckArgType(){
 	# de erro é retornada e o script/thread é finalizado com status '1'.
 	case $ctype in
 		user)		id "$value" &>/dev/null									|| MessageError API "$_ERR_SERVICE_USER_NOT_FOUND_" "$param" "$value";;
+		func)		[[ $(type -t "$value") == function ]]					|| MessageError API "$_ERR_FUNCTION_NOT_FOUND_" "$param" "$value";;
+		cmd)		[[ $value =~ ^[^\ ]+$ ]]								|| MessageError API "$_ERR_CMD_INVALID_" "$param" "$value";;
 		var)		[[ $value =~ ^[a-zA-Z_]+[a-zA-Z0-9_]*$ ]]				|| MessageError API "$_ERR_VAR_NAME_" "$param" "$value";;
-		int)		[[ $value =~ ^[0-9]+$ ]]								|| MessageError API "$_ERR_TYPE_INT_" "$param" "$value";;
+		int)		[[ $value =~ ^-?[0-9]+$ ]]								|| MessageError API "$_ERR_TYPE_INT_" "$param" "$value";;
 		float)		[[ $value =~ ^-?[0-9]+\.[0-9]+$ ]]						|| MessageError API "$_ERR_TYPE_FLOAT_" "$param" "$value";;
 		bool)		[[ $value =~ ^(true|false)$ ]]							|| MessageError API "$_ERR_TYPE_BOOL_" "$param" "$value";;
 		token)		[[ $value =~ ^[0-9]+:[a-zA-Z0-9_-]+$ ]]					|| MessageError API "$_ERR_TOKEN_INVALID_" "$param" "$value";;
 		file)		[[ $value =~ ^@ && ! -f ${value#@} ]]					&& MessageError API "$_ERR_FILE_NOT_FOUND_" "$param" "$value";;
+		chattype)	[[ $value == @(private|group|supergroup|channel) ]]		|| MessageError API "$_ERR_CHAT_TYPE_" "$param" "$value";;
 		return)		[[ $value == @(json|map|value) ]] 						|| MessageError API "$_ERR_FLAG_TYPE_RETURN_" "$param" "$value";;
 		parsemode)	[[ $value == @(markdown|html) ]]						|| MessageError API "$_ERR_TYPE_PARSE_MODE_" "$param" "$value";;
 		point)		[[ $value == @(forehead|eyes|mouth|chin) ]]				|| MessageError API "$_ERR_TYPE_POINT_" "$param" "$value";;
@@ -252,6 +268,15 @@ CheckArgType(){
 					[[ $value == @(record_audio|upload_audio) ]] 			||
 					[[ $value == @(upload_document|find_location) ]] 		||
 					[[ $value == @(record_video_note|upload_video_note) ]] 	|| MessageError API "$_ERR_ACTION_MODE_" "$param" "$value";;
+		username)	[[ $value =~ ^[a-zA-Z0-9_]+$ ]] 						|| MessageError API "$_ERR_USERNAME_" "$param" "$value";;
+		tagcode)	[[ $value =~ ^[a-z-]+$ ]] 								|| MessageError API "$_ERR_LANGUAGE_TAG_" "$param" "$value";;
+		entitie)	[[ $value == @(mention|hashtag|bot_command) ]]			||
+					[[ $value == @(url|email|bold|italic|code) ]]			||
+					[[ $value == @(pre|text_link|text_mention) ]]			|| MessageError API "$_ERR_ENTITIE_TYPE_" "$param" "$value";;
+		itime)		[[ $value =~ ^([01][0-9]|2[0-3]):[0-5][0-9]-([01][0-9]|2[0-3]):[0-5][0-9]$ ]] \
+																			|| MessageError API "$_ERR_TIME_INVERVAL_" "$param" "$value";;
+		idate)		[[ $value =~ ^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/([0-9]{4,})-(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/([0-9]{4,})$ ]] \
+																			|| MessageError API "$_ERR_DATE_INVERVAL_" "$param" "$value";;
     esac
 
 	return 0
@@ -439,16 +464,17 @@ ShellBot.init()
    	ShellBot.getMe &>/dev/null || MessageError API "$_ERR_TOKEN_UNAUTHORIZED_" '[-t, --token]'
 	
 	# Salva as informações do bot.
-	_BOT_INFO_[0]=$_TOKEN_
-	_BOT_INFO_[1]=$(Json '.result.id' $_jq_bot_info)
-	_BOT_INFO_[2]=$(Json '.result.first_name' $_jq_bot_info)
-	_BOT_INFO_[3]=$(Json '.result.username' $_jq_bot_info)
+	declare -gr _BOT_INFO_=(
+		[0]=$_TOKEN_
+		[1]=$(Json '.result.id' $_jq_bot_info)
+		[2]=$(Json '.result.first_name' $_jq_bot_info)
+		[3]=$(Json '.result.username' $_jq_bot_info)
+	)
 
 	# Configuração. (padrão)
 	declare -gr _BOT_LOG_FORMAT_=${logfmt:-"%(%d/%m/%Y %H:%M:%S)T: {BASENAME}: {BOT_USERNAME}: {UPDATE_ID}: {METHOD}: {FROM_USERNAME}: {MESSAGE_TEXT}"}
 	declare -gr _BOT_TYPE_RETURN_=${ret:-value}
 	declare -gr _BOT_DELM_=${delm:-|}
-	declare -gr _BOT_INFO_
 	declare -gr _SHELLBOT_INIT_=1 
 	
     # SHELLBOT (FUNÇÕES)
@@ -480,11 +506,7 @@ ShellBot.init()
 		do
    			case $1 in
    				-f|--function)
-   					# Verifica se a função especificada existe.
-   					if ! declare -fp $2 &>/dev/null; then
-   						MessageError API "$_ERR_FUNCTION_NOT_FOUND_" "$1" "$2"
-   						return 1
-   					fi
+					CheckArgType func "$1" "$2"
    					function="$2"
    					shift 2
    					;;
@@ -506,8 +528,7 @@ ShellBot.init()
 		[[ $function ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-f, --function]"
    		[[ $callback_data ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-d, --callback_data]"
     
-   		declare -Ag _reg_func_handle_list_
-   		_reg_func_handle_list_[$callback_data]+="$function $args|"
+   		_BOT_FUNCTION_LIST_[$callback_data]+="$function $args|"
 
    		return 0
     }
@@ -541,7 +562,7 @@ ShellBot.init()
     	[[ $callback_data ]] || return 1
    	
 		while read -d'|' func; do $func
-		done <<< ${_reg_func_handle_list_[$callback_data]}
+		done <<< ${_BOT_FUNCTION_LIST_[$callback_data]}
     
     	# retorno
     	return 0
@@ -3964,7 +3985,7 @@ _EOF
 	{
 		local chat_id media disable_notification reply_to_message_id jq_obj
 		
-		local param=$(getopt --name "$FUNCNAME" \
+		local param=$(getopt 	--name "$FUNCNAME" \
 								--options 'c:m:n:r:' \
 								--longoptions 'chat_id:,
 												media:,
@@ -3998,6 +4019,7 @@ _EOF
 				--)
 					shift
 					break
+					;;
 			esac
 		done
 
@@ -4015,6 +4037,237 @@ _EOF
     
     	# Status
     	return $?
+	}
+	
+	ShellBot.setMessageRules()
+	{
+		local action command user_id username chat_id 
+		local chat_type time date language message_id 
+		local is_bot text entities_type file_name file_type
+
+		local param=$(getopt	--name "$FUNCNAME" \
+								--options 'a:c:i:u:h:w:l:m:b:t:n:f:p:e:d:' \
+								--longoptions	'action:,
+												command:,
+												user_id:,
+												username:,
+												chat_id:,
+												chat_type:,
+												language_code:,
+												message_id:,
+												is_bot:,
+												text:,
+												entitie_type:,
+												file_name:,
+												file_type:,
+												time:,
+												date:' \
+								-- "$@")
+		
+		eval set -- "$param"
+	
+		while :
+		do
+			case $1 in
+				-a|--action)
+					CheckArgType func "$1" "$2"
+					action=$2
+					shift 2
+					;;
+				-c|--command)
+					CheckArgType cmd "$1" "$2"
+					command=${command:+$command,}${2}
+					shift 2
+					;;
+				-i|--user_id)
+					CheckArgType int "$1" "$2"
+					user_id=${user_id:+$user_id,}${2}
+					shift 2
+					;;
+				-u|--username)
+					CheckArgType username "$1" "$2"
+					username=${username:+$username,}${2}
+					shift 2
+					;;
+				-h|--chat_id)
+					CheckArgType int "$1" "$2"
+					chat_id=${chat_id:+$chat_id,}${2}
+					shift 2
+					;;
+				-w|--chat_type)
+					CheckArgType chattype "$1" "$2"
+					chat_type=${chat_type:+$chat_type,}${2}
+					shift 2
+					;;
+				-e|--time)
+					CheckArgType itime "$1" "$2"
+					time=${time:+$time,}${2}
+					shift 2
+					;;
+				-d|--date)
+					CheckArgType idate "$1" "$2"
+					date=${date:+$date,}${2}
+					shift 2
+					;;
+				-l|--laguage_code)
+					CheckArgType tagcode "$1" "$2"
+					language=${language:+$language,}${2}
+					shift 2
+					;;
+				-m|--message_id)
+					CheckArgType int "$1" "$2"
+					message_id=${message_id:+$message_id,}${2}
+					shift 2
+					;;
+				-b|--is_bot)
+					CheckArgType bool "$1" "$2"
+					is_bot=${is_bot:+$is_bot,}${2}
+					shift 2
+					;;
+				-t|--text)
+					text=${2//|/\\|}
+					shift 2
+					;;
+				-n|--entitie_type)
+					CheckArgType entitie "$1" "$2"
+					entities_type=${entities_type:+$entities_type,}${2}
+					shift 2
+					;;
+				-f|--file_name)
+					file_name=${file_name:+$file_name,}${2}
+					shift 2
+					;;
+				-p|--file_type)
+					file_type=${file_type:+$file_type,}${2}
+					shift 2
+					;;
+				--)
+					shift
+					break
+					;;
+			esac
+		done
+		
+		[[ $action ]]	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-a, --action]"
+		
+		_BOT_COMMAND_RULES_LIST_+=("$action|${message_id:-+any}|${is_bot:-+any}|${command:-+any}|${user_id:-+any}|${username:-+any}|${chat_id:-+any}|${chat_type:-+any}|${language:-+any}|${text:-+any}|${entities_type:-+any}|${file_name:-+any}|${file_type:-+any}|${time:-+any}|${date:-+any}")
+		
+		return $?
+	}
+
+	ShellBot.watchRules()
+	{
+		local __uid __rule __action __command 
+		local __user_id __username
+		local __message_id __is_bot __text 
+		local __entities_type __file_name __file_type
+		local __chat_id __chat_type __language __time __date
+		local __botcmd __err __tm __stime __etime __ctime 
+		local __dt __sdate __edate __cdate 
+
+		local 	__param=$(getopt	--name "$FUNCNAME" \
+									--options 'u:' \
+									--longoptions 'update_id:' \
+									-- "$@")
+
+				
+		eval set -- "$__param"
+		
+		while :
+		do
+			case $1 in
+				-u|--update_id)
+					CheckArgType int "$1" "$2"
+					__uid=$2
+					shift 2
+					;;
+				--)
+					shift
+					break
+					;;
+			esac			
+		done
+		
+		[[ $__uid ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-u, --update_id]"
+		
+		for __rule in "${_BOT_COMMAND_RULES_LIST_[@]}"; do
+
+				IFS='|' read	__action \
+								__message_id \
+								__is_bot \
+								__command \
+								__user_id \
+								__username \
+								__chat_id \
+								__chat_type \
+								__language \
+								__text \
+								__entities_type \
+								__file_name \
+								__file_type \
+								__time \
+								__date <<< $__rule
+		
+				# Obrigatórios
+				__message_id=${__message_id/+any/${message_message_id[$__uid]}}				# Mensagem (id)
+				__is_bot=${__is_bot/+any/${message_from_is_bot[$__uid]}}					# Usuário  (tipo)
+				__command=${__command/+any/${message_text[$__uid]%% *}}						# Mensagem (commando)
+				__user_id=${__user_id/+any/${message_from_id[$__uid]}}						# Usuário	(id)
+				__username=${__username/+any/${message_from_username[$__uid]}}				# Usuário	(nome)
+				__chat_id=${__chat_id/+any/${message_chat_id[$__uid]}}						# Bate-papo (id)
+				__chat_type=${__chat_type/+any/${message_chat_type[$__uid]}}				# Bate-papo (tipo)
+				__language=${__language/+any/${message_from_language_code[$__uid]}}			# Idioma
+				__text=${__text/+any/${message_text[$__uid]}}								# Mensagem (texto)
+
+				# Opcionais
+				__entities_type=${__entities_type/+any/${message_entities_type[$__uid]}} 	# Mensagem (entidade)
+				__file_name=${__file_name/+any/${message_document_file_name[$__uid]}}		# Arquivo (nome)
+				__file_type=${__file_type/+any/${message_document_mime_type[$__uid]:-${message_video_mime_type[$__uid]:-${message_audio_mime_type[$__uid]:-${message_voice_mime_type[$__uid]}}}}}	# Arquivo (tipo)
+
+				# Valida regras.
+				if 	[[ ${message_message_id[$__uid]}			== @(${__message_id//,/|})										]] 	&&
+					[[ ${message_from_is_bot[$__uid]}			== @(${__is_bot//,/|})											]]	&&
+					[[ ${message_text[$__uid]%% *}				== @(${__command//,/|})?(@${_BOT_INFO_[3]}) 					]] 	&&
+					[[ ${message_from_id[$__uid]} 				== @(${__user_id//,/|}) 										]]	&&
+					[[ ${message_from_username[$__uid]} 		== @(${__username//,/|}) 										]]	&&
+					[[ ${message_from_language_code[$__uid]} 	== @(${__language//,/|}) 										]]	&&
+					[[ ${message_chat_id[$__uid]} 				== @(${__chat_id//,/|}) 										]] 	&&
+					[[ ${message_chat_type[$__uid]}				== @(${__chat_type//,/|}) 										]]	&&
+					[[ ${message_text[$__uid]}					=~ $__text														]]	&&
+					[[ $(SortList ${message_entities_type[$__uid]//$_BOT_DELM_/|})	== $(SortList ${__entities_type//,/|})		]]	&&
+					[[ ${message_document_file_name[$__uid]}	== @(${__file_name//,/|})										]]	&&
+					[[ 	${message_document_mime_type[$__uid]}	== @(${__file_type//,/|}) ||
+						${message_video_mime_type[$__uid]}		== @(${__file_type//,/|}) ||
+						${message_audio_mime_type[$__uid]}		== @(${__file_type//,/|}) ||
+						${message_voice_mime_type[$__uid]}		== @(${__file_type//,/|})										]]; then
+
+					for __tm in ${__time//,/ }; do
+
+						IFS='-' read __stime __etime <<< $__tm
+						printf -v __ctime '%(%H:%M)T' ${message_date[$__uid]}
+	
+						if	[[ $__time 	== +any 				]]				||
+							[[ $__ctime == @($__stime|$__etime) ]] 				||
+							[[ $__ctime > $__stime  && $__ctime < $__etime ]]; then
+
+							for __dt in ${__date//,/ }; do
+							
+								IFS='-' read __sdate __edate <<< $__dt
+								printf -v __cdate '%(%d/%m/%Y)T' ${message_date[$__uid]}
+							
+								if	[[ $__date	== +any 							]] ||
+									[[ $__cdate == @($__sdate|$__edate) 			]] ||
+									[[ $__cdate > $__sdate && $__cdate < $__edate 	]]; then
+										$__action
+										__err=0
+								fi
+							done
+						fi
+					done
+				fi
+		done
+		
+		return ${__err:-1}
 	}
 
     ShellBot.getUpdates()
@@ -4198,6 +4451,8 @@ _EOF
 				ShellBot.sendMediaGroup \
 				ShellBot.inputMediaPhoto \
 				ShellBot.inputMediaVideo \
+				ShellBot.setMessageRules \
+				ShellBot.watchRules \
 				ShellBot.getUpdates
 
    	# Retorna objetos
@@ -4219,5 +4474,6 @@ readonly -f MessageError \
 			GetAllValues \
 			MethodReturn \
 			CheckArgType \
-			CreateLog
+			CreateLog \
+			SortList
 # /* SHELLBOT */
