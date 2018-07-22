@@ -104,7 +104,7 @@ readonly _ERR_SERVICE_USER_NOT_FOUND_='usuário não encontrado: a conta de usu�
 readonly _ERR_VAR_NAME_='o identificador da variável é inválido.'
 readonly _ERR_FLAG_TYPE_RETURN_='tipo inválido: somente "json", "map" ou "value".'
 readonly _ERR_FUNCTION_NOT_FOUND_='função não encontrada: o identificador especificado é inválido ou não existe.'
-readonly _ERR_CMD_INVALID_='comando inválido: o identificador do comando não pode conter espaços.'
+readonly _ERR_CMD_INVALID_='comando inválido: o comando deve iniciar com "/" e somente [a-zA-Z0-9_] são suportados.'
 readonly _ERR_CHAT_TYPE_='chat inválido: o tipo especificado para o chat não existe.'
 readonly _ERR_TIME_INVERVAL_='hora inválida: o formato para o intervalo de tempo não é suportado.'
 readonly _ERR_DATE_INVERVAL_='data inválida: o formato para o intervalo de datas não é suportado.'
@@ -115,8 +115,6 @@ readonly _ERR_ENTITIE_TYPE_='entidade inválida: a entidade especificada não é
 # hash
 declare -A _BOT_FUNCTION_LIST_
 declare -a _BOT_COMMAND_RULES_LIST_
-
-SortList(){ local list; printf -v list "%s|" $(printf '%s\n' ${1//|/ } | sort | uniq); echo ${list%|}; }
 
 Json() { local obj=$(jq "$1" <<< "${*:2}"); obj=${obj#\"}; echo "${obj%\"}"; }
 
@@ -252,7 +250,7 @@ CheckArgType(){
 	case $ctype in
 		user)		id "$value" &>/dev/null									|| MessageError API "$_ERR_SERVICE_USER_NOT_FOUND_" "$param" "$value";;
 		func)		[[ $(type -t "$value") == function ]]					|| MessageError API "$_ERR_FUNCTION_NOT_FOUND_" "$param" "$value";;
-		cmd)		[[ $value =~ ^[^\ ]+$ ]]								|| MessageError API "$_ERR_CMD_INVALID_" "$param" "$value";;
+		cmd)		[[ $value =~ ^/[a-zA-Z0-9_]+$ ]]						|| MessageError API "$_ERR_CMD_INVALID_" "$param" "$value";;
 		var)		[[ $value =~ ^[a-zA-Z_]+[a-zA-Z0-9_]*$ ]]				|| MessageError API "$_ERR_VAR_NAME_" "$param" "$value";;
 		int)		[[ $value =~ ^-?[0-9]+$ ]]								|| MessageError API "$_ERR_TYPE_INT_" "$param" "$value";;
 		float)		[[ $value =~ ^-?[0-9]+\.[0-9]+$ ]]						|| MessageError API "$_ERR_TYPE_FLOAT_" "$param" "$value";;
@@ -4043,10 +4041,11 @@ _EOF
 	{
 		local action command user_id username chat_id 
 		local chat_type time date language message_id 
-		local is_bot text entities_type file_name file_type
+		local is_bot text entities_type filename mime_type
+		local query_data new_member left_member
 
 		local param=$(getopt	--name "$FUNCNAME" \
-								--options 'a:c:i:u:h:w:l:m:b:t:n:f:p:e:d:' \
+								--options 'a:c:i:u:h:w:l:m:b:t:n:f:p:q:rge:d:' \
 								--longoptions	'action:,
 												command:,
 												user_id:,
@@ -4058,8 +4057,11 @@ _EOF
 												is_bot:,
 												text:,
 												entitie_type:,
-												file_name:,
-												file_type:,
+												filename:,
+												mime_type:,
+												query_data:,
+												new_member,
+												left_member,
 												time:,
 												date:' \
 								-- "$@")
@@ -4133,13 +4135,25 @@ _EOF
 					entities_type=${entities_type:+$entities_type,}${2}
 					shift 2
 					;;
-				-f|--file_name)
-					file_name=${file_name:+$file_name,}${2}
+				-f|--filename)
+					filename=${filename:+$filename,}${2}
 					shift 2
 					;;
-				-p|--file_type)
-					file_type=${file_type:+$file_type,}${2}
+				-p|--mime_type)
+					mime_type=${file_type:+$file_type,}${2}
 					shift 2
+					;;
+				-q|--query_data)
+					query_data=${query_data:+$query_data,}${2}
+					shift 2
+					;;
+				-r|--new_member)
+					new_member=true
+					shift
+					;;
+				-g|--left_member)
+					left_member=true
+					shift
 					;;
 				--)
 					shift
@@ -4150,20 +4164,19 @@ _EOF
 		
 		[[ $action ]]	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-a, --action]"
 		
-		_BOT_COMMAND_RULES_LIST_+=("$action|${message_id:-+any}|${is_bot:-+any}|${command:-+any}|${user_id:-+any}|${username:-+any}|${chat_id:-+any}|${chat_type:-+any}|${language:-+any}|${text:-+any}|${entities_type:-+any}|${file_name:-+any}|${file_type:-+any}|${time:-+any}|${date:-+any}")
+		_BOT_COMMAND_RULES_LIST_+=("$action|${message_id:-+any}|${is_bot:-+any}|${command:-+any}|${user_id:-+any}|${username:-+any}|${chat_id:-+any}|${chat_type:-+any}|${language:-+any}|${text:-+any}|${entities_type:-+any}|${filename:-+any}|${mime_type:-+any}|${query_data:-+any}|${new_member:-+any}|${left_member:-+any}|${time:-+any}|${date:-+any}")
 		
 		return $?
 	}
 
-	ShellBot.watchRules()
+	ShellBot.manageActionRules()
 	{
-		local __uid __rule __action __command 
-		local __user_id __username
-		local __message_id __is_bot __text 
-		local __entities_type __file_name __file_type
-		local __chat_id __chat_type __language __time __date
-		local __botcmd __err __tm __stime __etime __ctime 
-		local __dt __sdate __edate __cdate 
+		local __uid __rule __action __command __user_id __username
+		local __message_id __is_bot __text __entities_type __filename
+		local __chat_id __chat_type __language __time __date __botcmd 
+		local __err __tm __stime __etime __ctime __mime_type
+		local __dt __sdate __edate __cdate __query_data __msg_entities
+		local __new_member __left_member
 
 		local 	__param=$(getopt	--name "$FUNCNAME" \
 									--options 'u:' \
@@ -4203,43 +4216,36 @@ _EOF
 								__language \
 								__text \
 								__entities_type \
-								__file_name \
-								__file_type \
+								__filename \
+								__mime_type \
+								__query_data \
+								__new_member \
+								__left_member \
 								__time \
 								__date <<< $__rule
-		
-				# Obrigatórios
-				__message_id=${__message_id/+any/${message_message_id[$__uid]}}				# Mensagem (id)
-				__is_bot=${__is_bot/+any/${message_from_is_bot[$__uid]}}					# Usuário  (tipo)
-				__command=${__command/+any/${message_text[$__uid]%% *}}						# Mensagem (commando)
-				__user_id=${__user_id/+any/${message_from_id[$__uid]}}						# Usuário	(id)
-				__username=${__username/+any/${message_from_username[$__uid]}}				# Usuário	(nome)
-				__chat_id=${__chat_id/+any/${message_chat_id[$__uid]}}						# Bate-papo (id)
-				__chat_type=${__chat_type/+any/${message_chat_type[$__uid]}}				# Bate-papo (tipo)
-				__language=${__language/+any/${message_from_language_code[$__uid]}}			# Idioma
-				__text=${__text/+any/${message_text[$__uid]}}								# Mensagem (texto)
-
-				# Opcionais
-				__entities_type=${__entities_type/+any/${message_entities_type[$__uid]}} 	# Mensagem (entidade)
-				__file_name=${__file_name/+any/${message_document_file_name[$__uid]}}		# Arquivo (nome)
-				__file_type=${__file_type/+any/${message_document_mime_type[$__uid]:-${message_video_mime_type[$__uid]:-${message_audio_mime_type[$__uid]:-${message_voice_mime_type[$__uid]}}}}}	# Arquivo (tipo)
-
+	
+				__msg_entities=$(printf '%s\n' ${message_entities_type[$__uid]//$_BOT_DELM_/ } | sort | uniq)
+				__entities_type=$(printf '%s\n' ${__entities_type//,/ } | sort | uniq)
+				
 				# Valida regras.
-				if 	[[ ${message_message_id[$__uid]}			== @(${__message_id//,/|})										]] 	&&
-					[[ ${message_from_is_bot[$__uid]}			== @(${__is_bot//,/|})											]]	&&
-					[[ ${message_text[$__uid]%% *}				== @(${__command//,/|})?(@${_BOT_INFO_[3]}) 					]] 	&&
-					[[ ${message_from_id[$__uid]} 				== @(${__user_id//,/|}) 										]]	&&
-					[[ ${message_from_username[$__uid]} 		== @(${__username//,/|}) 										]]	&&
-					[[ ${message_from_language_code[$__uid]} 	== @(${__language//,/|}) 										]]	&&
-					[[ ${message_chat_id[$__uid]} 				== @(${__chat_id//,/|}) 										]] 	&&
-					[[ ${message_chat_type[$__uid]}				== @(${__chat_type//,/|}) 										]]	&&
-					[[ ${message_text[$__uid]}					=~ $__text														]]	&&
-					[[ $(SortList ${message_entities_type[$__uid]//$_BOT_DELM_/|})	== $(SortList ${__entities_type//,/|})		]]	&&
-					[[ ${message_document_file_name[$__uid]}	== @(${__file_name//,/|})										]]	&&
-					[[ 	${message_document_mime_type[$__uid]}	== @(${__file_type//,/|}) ||
-						${message_video_mime_type[$__uid]}		== @(${__file_type//,/|}) ||
-						${message_audio_mime_type[$__uid]}		== @(${__file_type//,/|}) ||
-						${message_voice_mime_type[$__uid]}		== @(${__file_type//,/|})										]]; then
+				if 	[[ $__message_id 	== +any	|| 	${message_message_id[$__uid]} 			== @(${__message_id//,/|})						]] 	&&
+					[[ $__is_bot 		== +any || 	${message_from_is_bot[$__uid]}			== @(${__is_bot//,/|})							]]	&&
+					[[ $__command		== +any	||	${message_text[$__uid]%% *}				== @(${__command//,/|})?(@${_BOT_INFO_[3]}) 	]] 	&&
+					[[ $__user_id		== +any ||	${message_from_id[$__uid]} 				== @(${__user_id//,/|}) 						]]	&&
+					[[ $__username		== +any ||	${message_from_username[$__uid]} 		== @(${__username//,/|}) 						]]	&&
+					[[ $__language		== +any	||	${message_from_language_code[$__uid]} 	== @(${__language//,/|}) 						]]	&&
+					[[ $__chat_id		== +any	||	${message_chat_id[$__uid]} 				== @(${__chat_id//,/|}) 						]] 	&&
+					[[ $__chat_type		== +any	||	${message_chat_type[$__uid]}			== @(${__chat_type//,/|}) 						]]	&&
+					[[ $__text			== +any	||	${message_text[$__uid]}					=~ $__text										]]	&&
+					[[ $__entities_type	== +any	||	$__msg_entities							== $__entities_type								]]	&&
+					[[ $__filename		== +any	||	${message_document_file_name[$__uid]}	== @(${__filename//,/|})						]]	&&
+					[[ $__mime_type		== +any	||	${message_document_mime_type[$__uid]}	== @(${__mime_type//,/|}) ||
+													${message_video_mime_type[$__uid]}		== @(${__mime_type//,/|}) ||
+													${message_audio_mime_type[$__uid]}		== @(${__mime_type//,/|}) ||
+													${message_voice_mime_type[$__uid]}		== @(${__mime_type//,/|})						]]	&&
+					[[ $__query_data	== +any	||	${callback_query_data[$__uid]}			== @(${__query_data//,|})						]]	&&
+					[[ $__new_member	== +any || 	$__new_member							&& ${message_new_chat_member_id[$__uid]}		]]	&&
+					[[ $__left_member	== +any ||	$__left_member 							&& ${message_left_chat_member_id[$__uid]}		]]; then
 
 					for __tm in ${__time//,/ }; do
 
@@ -4452,7 +4458,7 @@ _EOF
 				ShellBot.inputMediaPhoto \
 				ShellBot.inputMediaVideo \
 				ShellBot.setMessageRules \
-				ShellBot.watchRules \
+				ShellBot.manageActionRules \
 				ShellBot.getUpdates
 
    	# Retorna objetos
@@ -4474,6 +4480,5 @@ readonly -f MessageError \
 			GetAllValues \
 			MethodReturn \
 			CheckArgType \
-			CreateLog \
-			SortList
+			CreateLog
 # /* SHELLBOT */
