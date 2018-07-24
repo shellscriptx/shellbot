@@ -82,11 +82,8 @@ readonly _CURL_OPT_='--silent --request'	# CURL (opções)
 
 # Erros
 readonly _ERR_TYPE_BOOL_='tipo incompatível: suporta somente "true" ou "false".'
-readonly _ERR_TYPE_PARSE_MODE_='formatação inválida: suporta somente "markdown" ou "html".'
 readonly _ERR_TYPE_INT_='tipo incompatível: suporta somente inteiro.'
 readonly _ERR_TYPE_FLOAT_='tipo incompatível: suporta somente float.'
-readonly _ERR_TYPE_POINT_='máscara inválida: deve ser “forehead”, “eyes”, “mouth” ou “chin”.'
-readonly _ERR_ACTION_MODE_='ação inválida: a definição da ação não é suportada.'
 readonly _ERR_PARAM_REQUIRED_='opção requerida: verique se o(s) parâmetro(s) ou argumento(s) obrigatório(s) estão presente(s).'
 readonly _ERR_TOKEN_UNAUTHORIZED_='não autorizado: verifique se possui permissões para utilizar o token.'
 readonly _ERR_TOKEN_INVALID_='token inválido: verique o número do token e tente novamente.'
@@ -102,17 +99,9 @@ readonly _ERR_SERVICE_EXISTS_='erro ao criar o serviço: o nome do serviço já 
 readonly _ERR_SERVICE_SYSTEMD_NOT_FOUND_='erro ao ativar: o sistema não possui suporte ao gerenciamento de serviços "systemd".'
 readonly _ERR_SERVICE_USER_NOT_FOUND_='usuário não encontrado: a conta de usuário informada é inválida.'
 readonly _ERR_VAR_NAME_='o identificador da variável é inválido.'
-readonly _ERR_FLAG_TYPE_RETURN_='tipo inválido: somente "json", "map" ou "value".'
 readonly _ERR_FUNCTION_NOT_FOUND_='função não encontrada: o identificador especificado é inválido ou não existe.'
-readonly _ERR_CMD_INVALID_='comando inválido: o comando deve iniciar com "/" e somente [a-zA-Z0-9_] são suportados.'
-readonly _ERR_CHAT_TYPE_='chat inválido: o tipo especificado para o chat não existe.'
-readonly _ERR_TIME_INVERVAL_='hora inválida: o formato para o intervalo de tempo não é suportado.'
-readonly _ERR_DATE_INVERVAL_='data inválida: o formato para o intervalo de datas não é suportado.'
-readonly _ERR_USERNAME_='usuário inválido: somente caracteres [a-zA-Z0-9_] são suportados.'
-readonly _ERR_LANGUAGE_TAG='tag de idioma inválido: somente caracteres [a-z-] são suportados.'
-readonly _ERR_ENTITIE_TYPE_='entidade inválida: a entidade especificada não é suportada.'
+readonly _ERR_ARG_='argumento inválido: o argumento não é suportado pelo parâmetro especificado.'
 
-# hash
 declare -A _BOT_FUNCTION_LIST_
 declare -a _BOT_COMMAND_RULES_LIST_
 
@@ -248,33 +237,37 @@ CheckArgType(){
 	# É retornado '0' para sucesso, caso contrário uma mensagem
 	# de erro é retornada e o script/thread é finalizado com status '1'.
 	case $ctype in
-		user)		id "$value" &>/dev/null									|| MessageError API "$_ERR_SERVICE_USER_NOT_FOUND_" "$param" "$value";;
-		func)		[[ $(type -t "$value") == function ]]					|| MessageError API "$_ERR_FUNCTION_NOT_FOUND_" "$param" "$value";;
-		cmd)		[[ $value =~ ^/[a-zA-Z0-9_]+$ ]]						|| MessageError API "$_ERR_CMD_INVALID_" "$param" "$value";;
-		var)		[[ $value =~ ^[a-zA-Z_]+[a-zA-Z0-9_]*$ ]]				|| MessageError API "$_ERR_VAR_NAME_" "$param" "$value";;
-		int)		[[ $value =~ ^-?[0-9]+$ ]]								|| MessageError API "$_ERR_TYPE_INT_" "$param" "$value";;
-		float)		[[ $value =~ ^-?[0-9]+\.[0-9]+$ ]]						|| MessageError API "$_ERR_TYPE_FLOAT_" "$param" "$value";;
-		bool)		[[ $value =~ ^(true|false)$ ]]							|| MessageError API "$_ERR_TYPE_BOOL_" "$param" "$value";;
-		token)		[[ $value =~ ^[0-9]+:[a-zA-Z0-9_-]+$ ]]					|| MessageError API "$_ERR_TOKEN_INVALID_" "$param" "$value";;
-		file)		[[ $value =~ ^@ && ! -f ${value#@} ]]					&& MessageError API "$_ERR_FILE_NOT_FOUND_" "$param" "$value";;
-		chattype)	[[ $value == @(private|group|supergroup|channel) ]]		|| MessageError API "$_ERR_CHAT_TYPE_" "$param" "$value";;
-		return)		[[ $value == @(json|map|value) ]] 						|| MessageError API "$_ERR_FLAG_TYPE_RETURN_" "$param" "$value";;
-		parsemode)	[[ $value == @(markdown|html) ]]						|| MessageError API "$_ERR_TYPE_PARSE_MODE_" "$param" "$value";;
-		point)		[[ $value == @(forehead|eyes|mouth|chin) ]]				|| MessageError API "$_ERR_TYPE_POINT_" "$param" "$value";;
-		action)		[[ $value == @(typing|upload_photo) ]]					||
-					[[ $value == @(record_video|upload_video) ]]			||
-					[[ $value == @(record_audio|upload_audio) ]] 			||
-					[[ $value == @(upload_document|find_location) ]] 		||
-					[[ $value == @(record_video_note|upload_video_note) ]] 	|| MessageError API "$_ERR_ACTION_MODE_" "$param" "$value";;
-		username)	[[ $value =~ ^[a-zA-Z0-9_]+$ ]] 						|| MessageError API "$_ERR_USERNAME_" "$param" "$value";;
-		tagcode)	[[ $value =~ ^[a-z-]+$ ]] 								|| MessageError API "$_ERR_LANGUAGE_TAG_" "$param" "$value";;
-		entitie)	[[ $value == @(mention|hashtag|bot_command) ]]			||
-					[[ $value == @(url|email|bold|italic|code) ]]			||
-					[[ $value == @(pre|text_link|text_mention) ]]			|| MessageError API "$_ERR_ENTITIE_TYPE_" "$param" "$value";;
+		user)		id "$value" &>/dev/null										|| MessageError API "$_ERR_SERVICE_USER_NOT_FOUND_" "$param" "$value";;
+		func)		[[ $(type -t "$value") == function						]] 	|| MessageError API "$_ERR_FUNCTION_NOT_FOUND_" "$param" "$value";;
+		var)		[[ $value =~ ^[a-zA-Z_]+[a-zA-Z0-9_]*$ 					]] 	|| MessageError API "$_ERR_VAR_NAME_" "$param" "$value";;
+		int)		[[ $value =~ ^-?[0-9]+$ 								]] 	|| MessageError API "$_ERR_TYPE_INT_" "$param" "$value";;
+		float)		[[ $value =~ ^-?[0-9]+\.[0-9]+$ 						]] 	|| MessageError API "$_ERR_TYPE_FLOAT_" "$param" "$value";;
+		bool)		[[ $value =~ ^(true|false)$ 							]] 	|| MessageError API "$_ERR_TYPE_BOOL_" "$param" "$value";;
+		token)		[[ $value =~ ^[0-9]+:[a-zA-Z0-9_-]+$ 					]] 	|| MessageError API "$_ERR_TOKEN_INVALID_" "$param" "$value";;
+		file)		[[ $value =~ ^@ && ! -f ${value#@} 						]] 	&& MessageError API "$_ERR_FILE_NOT_FOUND_" "$param" "$value";;
+		chattype)	[[ $value == @(private|group|supergroup) 				]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
+		return)		[[ $value == @(json|map|value) 							]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
+		parsemode)	[[ $value == @(markdown|html) 							]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
+		point)		[[ $value == @(forehead|eyes|mouth|chin) 				]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
+		cmd)		[[ $value =~ ^/[a-zA-Z0-9_]+$ 							]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
+		action)		[[ $value == @(typing|upload_photo) 					]] 	||
+					[[ $value == @(record_video|upload_video) 				]] 	||
+					[[ $value == @(record_audio|upload_audio) 				]] 	||
+					[[ $value == @(upload_document|find_location) 			]] 	||
+					[[ $value == @(record_video_note|upload_video_note) 	]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
+		username)	[[ $value =~ ^[a-zA-Z0-9_]+$ 							]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
+		tagcode)	[[ $value =~ ^[a-zA-Z-]+$ 								]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
+		entitie)	[[ $value == @(mention|hashtag|bot_command) 			]] 	||
+					[[ $value == @(url|email|bold|italic|code) 				]] 	||
+					[[ $value == @(pre|text_link|text_mention) 				]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
+		chatmember)	[[ $value == @(new|left) 								]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
+		filetype)	[[ $value == @(photo|document|sticker|gif) 				]] 	||
+					[[ $value == @(video|audio|voice) 						]] 	||
+					[[ $value == @(contact|location)						]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		itime)		[[ $value =~ ^([01][0-9]|2[0-3]):[0-5][0-9]-([01][0-9]|2[0-3]):[0-5][0-9]$ ]] \
-																			|| MessageError API "$_ERR_TIME_INVERVAL_" "$param" "$value";;
+																				|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		idate)		[[ $value =~ ^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/([0-9]{4,})-(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/([0-9]{4,})$ ]] \
-																			|| MessageError API "$_ERR_DATE_INVERVAL_" "$param" "$value";;
+																				|| MessageError API "$_ERR_ARG_" "$param" "$value";;
     esac
 
 	return 0
@@ -525,7 +518,7 @@ ShellBot.init()
 
 		[[ $function ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-f, --function]"
    		[[ $callback_data ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-d, --callback_data]"
-    
+   
    		_BOT_FUNCTION_LIST_[$callback_data]+="$function $args|"
 
    		return 0
@@ -4041,12 +4034,15 @@ _EOF
 	{
 		local action command user_id username chat_id 
 		local chat_type time date language message_id 
-		local is_bot text entities_type filename mime_type
-		local query_data new_member left_member
+		local is_bot text entities_type file_type
+		local query_data query_id query_text
+		local chat_member mime_type num_args 
+		local action_args weekday
 
 		local param=$(getopt	--name "$FUNCNAME" \
-								--options 'a:c:i:u:h:w:l:m:b:t:n:f:p:q:rge:d:' \
+								--options 'a:z:c:i:u:h:y:l:m:b:t:n:f:p:q:r:x:g:o:e:d:w:' \
 								--longoptions	'action:,
+												action_args:,
 												command:,
 												user_id:,
 												username:,
@@ -4057,13 +4053,16 @@ _EOF
 												is_bot:,
 												text:,
 												entitie_type:,
-												filename:,
+												file_type:,
 												mime_type:,
 												query_data:,
-												new_member,
-												left_member,
+												query_id:,
+												query_text:,
+												chat_member:,
+												num_args:,
 												time:,
-												date:' \
+												date:,
+												weekday:' \
 								-- "$@")
 		
 		eval set -- "$param"
@@ -4074,6 +4073,10 @@ _EOF
 				-a|--action)
 					CheckArgType func "$1" "$2"
 					action=$2
+					shift 2
+					;;
+				-z|--action_args)
+					action_args=${2//|/\\|}
 					shift 2
 					;;
 				-c|--command)
@@ -4096,7 +4099,7 @@ _EOF
 					chat_id=${chat_id:+$chat_id,}${2}
 					shift 2
 					;;
-				-w|--chat_type)
+				-y|--chat_type)
 					CheckArgType chattype "$1" "$2"
 					chat_type=${chat_type:+$chat_type,}${2}
 					shift 2
@@ -4135,26 +4138,43 @@ _EOF
 					entities_type=${entities_type:+$entities_type,}${2}
 					shift 2
 					;;
-				-f|--filename)
-					filename=${filename:+$filename,}${2}
+				-f|--file_type)
+					CheckArgType filetype "$1" "$2"
+					file_type=${file_type:+$file_type,}${2}
 					shift 2
 					;;
 				-p|--mime_type)
-					mime_type=${file_type:+$file_type,}${2}
+					mime_type=${mime_type:+$mime_type,}${2}
 					shift 2
 					;;
 				-q|--query_data)
 					query_data=${query_data:+$query_data,}${2}
 					shift 2
 					;;
-				-r|--new_member)
-					new_member=true
-					shift
+				-r|--query_id)
+					CheckArgType int "$1" "$2"
+					query_id=${query_id:+$query_id,}${2}
+					shift 2
 					;;
-				-g|--left_member)
-					left_member=true
-					shift
+				-x|--query_text)
+					query_text=${2//|/\\|}
+					shift 2
 					;;
+				-g|--chat_member)
+					CheckArgType chatmember "$1" "$2"
+					chat_member=${chat_member:+$chat_member,}${2}
+					shift 2
+					;;
+				-o|--num_args)
+					CheckArgType int "$1" "$2"
+					num_args=${num_args:+$num_args,}${2}
+					shift 2
+					;;
+				-w|--weekday)
+					CheckArgType int "$1" "$2"
+					weekday=${weekday:+$weekday,}${2}
+					shift 2
+					;;	
 				--)
 					shift
 					break
@@ -4164,19 +4184,19 @@ _EOF
 		
 		[[ $action ]]	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-a, --action]"
 		
-		_BOT_COMMAND_RULES_LIST_+=("$action|${message_id:-+any}|${is_bot:-+any}|${command:-+any}|${user_id:-+any}|${username:-+any}|${chat_id:-+any}|${chat_type:-+any}|${language:-+any}|${text:-+any}|${entities_type:-+any}|${filename:-+any}|${mime_type:-+any}|${query_data:-+any}|${new_member:-+any}|${left_member:-+any}|${time:-+any}|${date:-+any}")
+		_BOT_COMMAND_RULES_LIST_+=("${action}|${action_args}|${message_id:-+any}|${is_bot:-+any}|${command:-+any}|${user_id:-+any}|${username:-+any}|${chat_id:-+any}|${chat_type:-+any}|${language:-+any}|${text:-+any}|${entities_type:-+any}|${file_type:-+any}|${mime_type:-+any}|${query_id:-+any}|${query_text:-+any}|${query_data:-+any}|${chat_member:-+any}|${num_args:-+any}|${time:-+any}|${date:-+any}|${weekday:-+any}")
 		
 		return $?
 	}
 
-	ShellBot.manageActionRules()
+	ShellBot.manageRules()
 	{
 		local __uid __rule __action __command __user_id __username
-		local __message_id __is_bot __text __entities_type __filename
+		local __message_id __is_bot __text __entities_type __file_type
 		local __chat_id __chat_type __language __time __date __botcmd 
-		local __err __tm __stime __etime __ctime __mime_type
-		local __dt __sdate __edate __cdate __query_data __msg_entities
-		local __new_member __left_member
+		local __err __tm __stime __etime __ctime __mime_type __weekday
+		local __dt __sdate __edate __cdate __query_data __query_id __query_text
+		local __chat_member __mem __ent __type __num_args __args __action_args
 
 		local 	__param=$(getopt	--name "$FUNCNAME" \
 									--options 'u:' \
@@ -4205,74 +4225,106 @@ _EOF
 		
 		for __rule in "${_BOT_COMMAND_RULES_LIST_[@]}"; do
 
-				IFS='|' read	__action \
-								__message_id \
-								__is_bot \
-								__command \
-								__user_id \
-								__username \
-								__chat_id \
-								__chat_type \
-								__language \
-								__text \
-								__entities_type \
-								__filename \
-								__mime_type \
-								__query_data \
-								__new_member \
-								__left_member \
-								__time \
-								__date <<< $__rule
-	
-				__msg_entities=$(printf '%s\n' ${message_entities_type[$__uid]//$_BOT_DELM_/ } | sort | uniq)
-				__entities_type=$(printf '%s\n' ${__entities_type//,/ } | sort | uniq)
+			IFS='|' read	__action 		\
+							__action_args 	\
+							__message_id 	\
+							__is_bot 		\
+							__command 		\
+							__user_id 		\
+							__username 		\
+							__chat_id 		\
+							__chat_type 	\
+							__language 		\
+							__text 			\
+							__entities_type \
+							__file_type 	\
+							__mime_type 	\
+							__query_id 		\
+							__query_text 	\
+							__query_data 	\
+							__chat_member 	\
+							__num_args 		\
+							__time 			\
+							__date 			\
+							__weekday <<< $__rule
+
+				IFS=' ' read -a __args <<< ${message_text[$__uid]}
 				
-				# Valida regras.
-				if 	[[ $__message_id 	== +any	|| 	${message_message_id[$__uid]} 			== @(${__message_id//,/|})						]] 	&&
-					[[ $__is_bot 		== +any || 	${message_from_is_bot[$__uid]}			== @(${__is_bot//,/|})							]]	&&
-					[[ $__command		== +any	||	${message_text[$__uid]%% *}				== @(${__command//,/|})?(@${_BOT_INFO_[3]}) 	]] 	&&
-					[[ $__user_id		== +any ||	${message_from_id[$__uid]} 				== @(${__user_id//,/|}) 						]]	&&
-					[[ $__username		== +any ||	${message_from_username[$__uid]} 		== @(${__username//,/|}) 						]]	&&
-					[[ $__language		== +any	||	${message_from_language_code[$__uid]} 	== @(${__language//,/|}) 						]]	&&
-					[[ $__chat_id		== +any	||	${message_chat_id[$__uid]} 				== @(${__chat_id//,/|}) 						]] 	&&
-					[[ $__chat_type		== +any	||	${message_chat_type[$__uid]}			== @(${__chat_type//,/|}) 						]]	&&
-					[[ $__text			== +any	||	${message_text[$__uid]}					=~ $__text										]]	&&
-					[[ $__entities_type	== +any	||	$__msg_entities							== $__entities_type								]]	&&
-					[[ $__filename		== +any	||	${message_document_file_name[$__uid]}	== @(${__filename//,/|})						]]	&&
-					[[ $__mime_type		== +any	||	${message_document_mime_type[$__uid]}	== @(${__mime_type//,/|}) ||
-													${message_video_mime_type[$__uid]}		== @(${__mime_type//,/|}) ||
-													${message_audio_mime_type[$__uid]}		== @(${__mime_type//,/|}) ||
-													${message_voice_mime_type[$__uid]}		== @(${__mime_type//,/|})						]]	&&
-					[[ $__query_data	== +any	||	${callback_query_data[$__uid]}			== @(${__query_data//,|})						]]	&&
-					[[ $__new_member	== +any || 	$__new_member							&& ${message_new_chat_member_id[$__uid]}		]]	&&
-					[[ $__left_member	== +any ||	$__left_member 							&& ${message_left_chat_member_id[$__uid]}		]]; then
+				[[ $__num_args		== +any 	||	${#__args[@]}								== @(${__num_args//,/|})					]]	&&
+				[[ $__command		== +any		||	${message_text[$__uid]%% *}					== @(${__command//,/|})?(@${_BOT_INFO_[3]}) ]]	&&
+				[[ $__message_id 	== +any		|| 	${message_message_id[$__uid]} 				== @(${__message_id//,/|})					]] 	&&
+				[[ $__is_bot 		== +any 	|| 	${message_from_is_bot[$__uid]}				== @(${__is_bot//,/|})						]]	&&
+				[[ $__user_id		== +any 	||	${message_from_id[$__uid]} 					== @(${__user_id//,/|}) 					]]	&&
+				[[ $__username		== +any 	||	${message_from_username[$__uid]} 			== @(${__username//,/|}) 					]]	&&
+				[[ $__language		== +any		||	${message_from_language_code[$__uid]} 		== @(${__language//,/|}) 					]]	&&
+				[[ $__chat_id		== +any		||	${message_chat_id[$__uid]} 					== @(${__chat_id//,/|}) 					]] 	&&
+				[[ $__chat_type		== +any		||	${message_chat_type[$__uid]}				== @(${__chat_type//,/|}) 					]]	&&
+				[[ $__text			== +any		||	${message_text[$__uid]}						=~ $__text									]]	&&
+				[[ $__mime_type		== +any		||	${message_document_mime_type[$__uid]}		== @(${__mime_type//,/|}) ||
+													${message_video_mime_type[$__uid]}			== @(${__mime_type//,/|}) ||
+													${message_audio_mime_type[$__uid]}			== @(${__mime_type//,/|}) ||
+													${message_voice_mime_type[$__uid]}			== @(${__mime_type//,/|})					]]	&&
+				[[ $__query_id		== +any		||	${callback_query_id[$__uid]}				== @(${__query_id//,/|})					]]	&&
+				[[ $__query_text	== +any		||	${callback_query_message_text[$__uid]}		=~ $__query_text							]]	&&
+				[[ $__query_data	== +any		||	${callback_query_data[$__uid]}				== @(${__query_data//,/|})					]]	&&
+				[[ $__weekday		== +any		||  $(printf '%(%u)T' ${message_date[$__uid]}) 	== @(${__weekday//,/|})						]] 	|| continue
+				
+				for __ent in ${__entities_type//,/ }; do
+					[[ $__ent == +any 												]]	||
+					[[ $__ent == @(${message_entities_type[$__uid]//$_BOT_DELM_/|}) ]] 	&& break
+				done
 
-					for __tm in ${__time//,/ }; do
+				[[ $? -eq 1 ]] && continue
+					
+				for __mem in ${__chat_member//,/ }; do
+					[[ $__mem == +any												]] ||
+					[[ $__mem == new 	&& ${message_new_chat_member_id[$__uid]} 	]] ||
+					[[ $__mem == left 	&& ${message_left_chat_member_id[$__uid]} 	]] && break
+				done
+			
+				[[ $? -eq 1 ]] && continue
 
-						IFS='-' read __stime __etime <<< $__tm
-						printf -v __ctime '%(%H:%M)T' ${message_date[$__uid]}
-	
-						if	[[ $__time 	== +any 				]]				||
-							[[ $__ctime == @($__stime|$__etime) ]] 				||
-							[[ $__ctime > $__stime  && $__ctime < $__etime ]]; then
+				for __type in ${__file_type//,/ }; do
+					[[ $__type == +any 																								]] 	||
+					[[ $__type == document 	&& ${message_document_file_id[$__uid]}	&& 	! ${message_document_thumb_file_id[$__uid]}	]] 	||
+					[[ $__type == gif 		&& ${message_document_file_id[$__uid]}  &&	${message_document_thumb_file_id[$__uid]}	]] 	||
+					[[ $__type == photo		&& ${message_photo_file_id[$__uid]} 													]] 	||
+					[[ $__type == sticker 	&& ${message_sticker_file_id[$__uid]} 													]]	||
+					[[ $__type == video		&& ${message_video_file_id[$__uid]} 													]]	||
+					[[ $__type == audio		&& ${message_audio_file_id[$__uid]} 													]]	||
+					[[ $__type == voice		&& ${message_voice_file_id[$__uid]} 													]]	||
+					[[ $__type == contact	&& ${message_contact_user_id[$__uid]} 													]]	||
+					[[ $__type == location	&& ${message_location_latitude[$__uid]}													]]	&& break
+				done
+					
+				[[ $? -eq 1 ]] && continue
 
-							for __dt in ${__date//,/ }; do
+				for __tm in ${__time//,/ }; do
+					IFS='-' read __stime __etime <<< $__tm
+					printf -v __ctime '%(%H:%M)T' ${message_date[$__uid]}
+
+					[[ $__time 	== +any 				]]				||
+					[[ $__ctime == @($__stime|$__etime) ]] 				||
+					[[ $__ctime > $__stime  && $__ctime < $__etime ]]	&& break
+				done
+					
+				[[ $? -eq 1 ]] && continue
+					
+				for __dt in ${__date//,/ }; do
+					IFS='-' read __sdate __edate <<< $__dt
+					printf -v __cdate '%(%d/%m/%Y)T' ${message_date[$__uid]}
 							
-								IFS='-' read __sdate __edate <<< $__dt
-								printf -v __cdate '%(%d/%m/%Y)T' ${message_date[$__uid]}
-							
-								if	[[ $__date	== +any 							]] ||
-									[[ $__cdate == @($__sdate|$__edate) 			]] ||
-									[[ $__cdate > $__sdate && $__cdate < $__edate 	]]; then
-										$__action
-										__err=0
-								fi
-							done
-						fi
-					done
-				fi
+					[[ $__date	== +any 							]] 	||
+					[[ $__cdate == @($__sdate|$__edate) 			]] 	||
+					[[ $__cdate > $__sdate && $__cdate < $__edate 	]]	&& break
+				done
+
+				[[ $? -eq 1 ]] && continue
+				
+				$__action ${__action_args:-${__args[@]}}
+				__err=0
 		done
-		
+
 		return ${__err:-1}
 	}
 
@@ -4458,7 +4510,7 @@ _EOF
 				ShellBot.inputMediaPhoto \
 				ShellBot.inputMediaVideo \
 				ShellBot.setMessageRules \
-				ShellBot.manageActionRules \
+				ShellBot.manageRules \
 				ShellBot.getUpdates
 
    	# Retorna objetos
