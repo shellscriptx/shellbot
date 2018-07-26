@@ -4303,7 +4303,7 @@ _EOF
 					IFS='-' read __stime __etime <<< $__tm
 					printf -v __ctime '%(%H:%M)T' ${message_date[$__uid]}
 
-					[[ $__time 	== +any 				]]				||
+					[[ $__time	== +any 				]]				||
 					[[ $__ctime == @($__stime|$__etime) ]] 				||
 					[[ $__ctime > $__stime  && $__ctime < $__etime ]]	&& break
 				done
@@ -4311,9 +4311,16 @@ _EOF
 				[[ $? -eq 1 ]] && continue
 					
 				for __dt in ${__date//,/ }; do
+
 					IFS='-' read __sdate __edate <<< $__dt
-					printf -v __cdate '%(%d/%m/%Y)T' ${message_date[$__uid]}
-							
+					IFS='/' read -a __sdate <<< $__sdate
+					IFS='/' read -a __edate <<< $__edate
+					
+					__sdate=${__sdate[2]}/${__sdate[1]}/${__sdate[0]}
+					__edate=${__edate[2]}/${__edate[1]}/${__edate[0]}
+
+					printf -v __cdate '%(%Y/%m/%d)T' ${message_date[$__uid]}
+					
 					[[ $__date	== +any 							]] 	||
 					[[ $__cdate == @($__sdate|$__edate) 			]] 	||
 					[[ $__cdate > $__sdate && $__cdate < $__edate 	]]	&& break
