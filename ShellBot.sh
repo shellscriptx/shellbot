@@ -47,18 +47,17 @@ readonly -A _SHELLBOT_=(
 [email]='shellscriptx@gmail.com'
 [wiki]='https://github.com/shellscriptx/shellbot/wiki'
 [github]='https://github.com/shellscriptx/shellbot'
-[packages]='bash >= 4.3, curl >= 7.0, getopt >= 2.0, jq >= 1.5'
+[packages]='bash 4.3, curl 7.0, getopt 2.0, jq 1.5'
 )
 
 # Verifica dependências.
-while read _pkg_ _op_ _ver_; do 
+while read _pkg_ _ver_; do
 	if command -v $_pkg_ &>/dev/null; then
 		if [[ $($_pkg_ --version 2>&1) =~ [0-9]+\.[0-9]+ ]]; then
-			if [[ $(bc <<< "$BASH_REMATCH $_op_ $_ver_") -eq 0 ]]; then
-				printf "%s: erro: '%s' a versão atual é incompatível. (versão requerida: %s %s)\n" \
+			if [[ $BASH_REMATCH < $_ver_ ]]; then
+				printf "%s: erro: requer o pacote '%s %s' ou superior\n" \
 							${_SHELLBOT_[name]} \
 							$_pkg_ 	\
-							$_op_ 	\
 							$_ver_ 1>&2
 				exit 1
 			fi
@@ -70,7 +69,7 @@ while read _pkg_ _op_ _ver_; do
 		printf "%s: erro: '%s' o pacote requerido está ausente.\n" ${_SHELLBOT_[name]} $_pkg_ 1>&2
 		exit 1
 	fi
-done < <(echo -e ${_SHELLBOT_[packages]//,/\\n})
+done <<< "${_SHELLBOT_[packages]//,/$'\n'}"
 
 # SHELL (opções).
 set -f
@@ -98,7 +97,7 @@ readonly _ERR_SERVICE_NOT_ROOT_='acesso negado: requer privilégios de root.'
 readonly _ERR_SERVICE_EXISTS_='erro ao criar o serviço: o nome do serviço já existe.'
 readonly _ERR_SERVICE_SYSTEMD_NOT_FOUND_='erro ao ativar: o sistema não possui suporte ao gerenciamento de serviços "systemd".'
 readonly _ERR_SERVICE_USER_NOT_FOUND_='usuário não encontrado: a conta de usuário informada é inválida.'
-readonly _ERR_VAR_NAME_='o identificador da variável é inválido.'
+readonly _ERR_VAR_NAME_='variável não encontrada: o identificador é inválido ou não existe.'
 readonly _ERR_FUNCTION_NOT_FOUND_='função não encontrada: o identificador especificado é inválido ou não existe.'
 readonly _ERR_ARG_='argumento inválido: o argumento não é suportado pelo parâmetro especificado.'
 
@@ -239,12 +238,15 @@ CheckArgType(){
 	case $ctype in
 		user)		id "$value" &>/dev/null										|| MessageError API "$_ERR_SERVICE_USER_NOT_FOUND_" "$param" "$value";;
 		func)		[[ $(type -t "$value") == function						]] 	|| MessageError API "$_ERR_FUNCTION_NOT_FOUND_" "$param" "$value";;
-		var)		[[ $value =~ ^[a-zA-Z_]+[a-zA-Z0-9_]*$ 					]] 	|| MessageError API "$_ERR_VAR_NAME_" "$param" "$value";;
+		var)		[[ -v $value 											]] 	|| MessageError API "$_ERR_VAR_NAME_" "$param" "$value";;
 		int)		[[ $value =~ ^-?[0-9]+$ 								]] 	|| MessageError API "$_ERR_TYPE_INT_" "$param" "$value";;
 		float)		[[ $value =~ ^-?[0-9]+\.[0-9]+$ 						]] 	|| MessageError API "$_ERR_TYPE_FLOAT_" "$param" "$value";;
 		bool)		[[ $value =~ ^(true|false)$ 							]] 	|| MessageError API "$_ERR_TYPE_BOOL_" "$param" "$value";;
 		token)		[[ $value =~ ^[0-9]+:[a-zA-Z0-9_-]+$ 					]] 	|| MessageError API "$_ERR_TOKEN_INVALID_" "$param" "$value";;
 		file)		[[ $value =~ ^@ && ! -f ${value#@} 						]] 	&& MessageError API "$_ERR_FILE_NOT_FOUND_" "$param" "$value";;
+		userstatus)	[[ $value == @(creator|administrator|member)			]]	||
+					[[ $value == @(restricted|left|kicked)					]]	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
+		mediatype)	[[ $value == @(animation|document|audio|photo|video)	]]	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		chattype)	[[ $value == @(private|group|supergroup) 				]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		return)		[[ $value == @(json|map|value) 							]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		parsemode)	[[ $value == @(markdown|html) 							]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
@@ -259,7 +261,8 @@ CheckArgType(){
 		tagcode)	[[ $value =~ ^[a-zA-Z-]+$ 								]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		entitie)	[[ $value == @(mention|hashtag|bot_command) 			]] 	||
 					[[ $value == @(url|email|bold|italic|code) 				]] 	||
-					[[ $value == @(pre|text_link|text_mention) 				]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
+					[[ $value == @(pre|text_link|text_mention) 				]] 	||
+					[[ $value == @(cashtag|phone_number)					]]	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		chatmember)	[[ $value == @(new|left) 								]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		filetype)	[[ $value == @(photo|document|sticker|gif) 				]] 	||
 					[[ $value == @(video|audio|voice) 						]] 	||
@@ -3826,79 +3829,26 @@ _EOF
     	
     	return $?
 	}
-
-	ShellBot.inputMediaPhoto()
+	
+	ShellBot.inputMedia()
 	{
-		local __media __caption __album __delm
-		
+		local __type __input __media __caption __parse_mode __thumb __width 
+		local __height __duration __supports_streaming __performer __title
+
 		local __param=$(getopt --name "$FUNCNAME" \
-								--options 'a:m:c:' \
-								--longoptions 'album:,
-												media:,
-												caption:' \
-								-- "$@")
-	
-	
-		eval set -- "$__param"
-		
-		while :
-		do
-			case $1 in
-				-a|--album)
-					CheckArgType var "$1" "$2"
-					__album="$2"
-					shift 2
-					;;
-				-m|--media)
-					CheckArgType file "$1" "$2"
-					__media="$2"
-					shift 2
-					;;
-				-c|--caption)
-					__caption="$2"
-					shift 2
-					;;
-				--)
-					shift
-					break
-					;;
-			esac
-		done
-
-		[[ $__album ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-a, --album]"
-		[[ $__media ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --media]"
-
-		declare -n __album
-
-    	__album=${__album#[}
-    	__album=${__album%]}
-    
-    	[[ $__album ]] && __delm=','
-    
-    	__album+="$__delm{\"type\":\"photo\","
-		__album+="\"media\":\"$__media\""
-		__album+="${__caption:+,\"caption\":\"$__caption\"}}"
-    	
-    	__album=${__album/#/[}
-		__album=${__album/%/]}
-
-		return 0
-	}
-	
-	ShellBot.inputMediaVideo()
-	{
-		local __media __album __delm
-		local __width __height __duration __caption __supports_streaming
-		
-		local __param=$(getopt --name "$FUNCNAME" \
-								--options 'a:m:c:w:h:d:s:' \
-								--longoptions 'album:,
+								--options 't:i:m:c:p:b:w:h:d:s:f:e:' \
+								--longoptions 'type:,
+												input:,
 												media:,
 												caption:,
-												width:,
+												parse_mode:,
+												thumb:,
+												witdh:,
 												height:,
 												duration:,
-												supports_streaming:' \
+												supports_streaming:,
+												performer:,
+												title:' \
 								-- "$@")
 	
 	
@@ -3907,9 +3857,14 @@ _EOF
 		while :
 		do
 			case $1 in
-				-a|--album)
+				-t|--type)
+					CheckArgType mediatype "$1" "$2"
+					__type="$2"
+					shift 2
+					;;
+				-i|--input)
 					CheckArgType var "$1" "$2"
-					__album="$2"
+					__input="$2"
 					shift 2
 					;;
 				-m|--media)
@@ -3919,6 +3874,16 @@ _EOF
 					;;
 				-c|--caption)
 					__caption="$2"
+					shift 2
+					;;
+				-p|--parse_mode)
+					CheckArgType parsemode "$1" "$2"
+					__parse_mode="$2"
+					shift 2
+					;;
+				-b|--thumb)
+					CheckArgType file "$1" "$2"
+					__thumb="$2"
 					shift 2
 					;;
 				-w|--width)
@@ -3941,6 +3906,14 @@ _EOF
 					__supports_streaming="$2"
 					shift 2
 					;;
+				-f|--performer)
+					__performer="$2"
+					shift 2
+					;;
+				-e|--title)
+					__title="$2"
+					shift 2
+					;;
 				--)
 					shift
 					break
@@ -3948,28 +3921,25 @@ _EOF
 			esac
 		done
 
-		[[ $__album ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-a, --album]"
+		[[ $__type ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-t, --type]"
+		[[ $__input ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-i, --input]"
 		[[ $__media ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --media]"
 
-		declare -n __album
+		local -n __input
+		
+    	__input="${__input:+$__input,}{\"type\":\"$__type\","
+		__input+="\"media\":\"$__media\""
+		__input+="${__caption:+,\"caption\":\"$__caption\"}"
+		__input+="${__parse_mode:+,\"parse_mode\":\"$__parse_mode\"}"
+		__input+="${__thumb:+,\"thumb\":\"$__thumb\"}"
+		__input+="${__width:+,\"width\":\"$__width\"}"
+		__input+="${__height:+,\"height\":\"$__height\"}"
+		__input+="${__duration:+,\"duration\":\"$__duration\"}"
+		__input+="${__supports_streaming:+,\"supports_streaming\":$__supports_streaming}"
+		__input+="${__performer:+,\"performer\":\"$__performer\"}"
+		__input+="${__title:+,\"title\":\"$__title\"}}"
 
-    	__album=${__album#[}
-    	__album=${__album%]}
-    
-    	[[ $__album ]] && __delm=','
-    
-		__album+="$__delm{\"type\":\"video\","
-		__album+="\"media\":\"$__media\""
-		__album+="${__caption:+,\"caption\":\"$__caption\"}"
-		__album+="${__width:+,\"width\":$__width}"
-		__album+="${__height:+,\"height\":$__height}"
-		__album+="${__duration:+,\"duration\":$__duration}"
-    	__album+="${__supports_streaming:+,\"supports_streaming\":$__supports_streaming}}"
-
-    	__album=${__album/#/[}
-		__album=${__album/%/]}
-
-		return 0
+		return $?
 	}
 
 	ShellBot.sendMediaGroup()
@@ -3994,7 +3964,7 @@ _EOF
 					shift 2
 					;;
 				-m|--media)
-					media="$2"
+					media="[$2]"
 					shift 2
 					;;
 				-n|--disable_notification)
@@ -4029,7 +3999,183 @@ _EOF
     	# Status
     	return $?
 	}
-	
+
+	ShellBot.editMessageMedia()
+	{
+		local chat_id message_id inline_message_id media reply_markup jq_obj
+
+		local param=$(getopt	--name "$FUNCNAME" \
+								--options 'c:i:n:m:k:' \
+								--longoptions	'chat_id:,
+												message_id:,
+												inline_message_id:,
+												media:,
+												reply_markup:'	\
+								-- "$@")
+
+		eval set -- "$param"
+		
+		while :
+		do
+			case $1 in
+				-c|--chat_id)
+					chat_id="$2"
+					shift 2
+					;;
+				-i|--message_id)
+					CheckArgType int "$1" "$2"
+					message_id="$2"
+					shift 2
+					;;
+				-n|--inline_message_id)
+					CheckArgType int "$1" "$2"
+					inline_message_id="$2"
+					shift 2
+					;;
+				-m|--media)
+					media="$2"
+					shift 2
+					;;
+				-k|--reply_markup)
+					reply_markup="$2"
+					shift 2
+					;;
+				--)
+					shift
+					break
+					;;
+			esac
+		done
+
+		[[ $inline_message_id ]] || {
+			[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+			[[ $message_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-i, --message_id]"
+		}
+		
+		[[ $media ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --media]"
+		
+		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-F chat_id="$chat_id"} \
+									${message_id:+-F message_id="$message_id"} \
+									${inline_message_id:+-F inline_message_id="$inline_message_id"} \
+    								${media:+-F media="$media"} \
+    								${reply_markup:+-F reply_markup="$reply_markup"})   
+		 
+		# Retorno do método
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
+    
+    	# Status
+    	return $?
+	}
+
+	ShellBot.sendAnimation()
+	{
+		local chat_id animation duration width height 
+		local thumb caption parse_mode disable_notification 
+		local reply_to_message_id reply_markup jq_obj
+		
+		local param=$(getopt	--name "$FUNCNAME" \
+								--options 'c:a:d:w:h:b:o:p:n:r:k:' \
+								--longoptions 'chat_id:,
+												animation:,
+												duration:,
+												width:,
+												height:,
+												thumb:,
+												caption:,
+												parse_mode:,
+												disable_notification:,
+												reply_to_message_id:,
+												reply_markup:' \
+								-- "$@")
+		
+		eval set -- "$param"
+		
+		while :
+		do
+			case $1 in
+				-c|--chat_id)
+					chat_id="$2"
+					shift 2
+					;;
+				-a|--animation)
+					CheckArgType file "$1" "$2"
+					animation="$2"
+					shift 2
+					;;
+				-d|--duration)
+					CheckArgType int "$1" "$2"
+					duartion="$2"
+					shift 2
+					;;
+				-w|--width)
+					CheckArgType int "$1" "$2"
+					width="$2"
+					shift 2
+					;;
+				-h|--height)
+					CheckArgType int "$1" "$2"
+					height="$2"
+					shift 2
+					;;
+				-b|--thumb)
+					CheckArgType file "$1" "$2"
+					thumb="$2"
+					shift 2
+					;;
+				-o|--caption)
+					caption="$2"
+					shift 2
+					;;
+				-p|--parse_mode)
+					CheckArgType parsemode "$1" "$2"
+					parse_mode="$2"
+					shift 2
+					;;
+				-n|--disable_notification)
+					CheckArgType bool "$1" "$2"
+					disable_notification="$2"
+					shift 2
+					;;
+				-r|--reply_to_message_id)
+					CheckArgType int "$1" "$2"
+					reply_to_message_id="$2"
+					shift 2
+					;;
+				-k|--reply_markup)
+					reply_markup="$2"
+					shift 2
+					;;
+				--)
+					shift
+					break
+					;;
+			esac
+		done
+
+		[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+		[[ $animation ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-a, --animation]"
+		
+		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-F chat_id="$chat_id"} \
+									${animation:+-F animation="$animation"} \
+									${duration:+-F duration="$duration"} \
+									${width:+-F width="$width"} \
+									${height:+-F height="$height"} \
+									${thumb:+-F thumb="$thumb"} \
+									${caption:+-F caption="$caption"} \
+									${parse_mode:+-F parse_mode="$parse_mode"} \
+									${disable_notification:+-F disable_notification="$disable_notification"} \
+									${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
+    								${reply_markup:+-F reply_markup="$reply_markup"})   
+		 
+		# Retorno do método
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
+    
+    	# Status
+    	return $?
+	}
+
 	ShellBot.setMessageRules()
 	{
 		local action command user_id username chat_id 
@@ -4037,10 +4183,10 @@ _EOF
 		local is_bot text entities_type file_type
 		local query_data query_id query_text
 		local chat_member mime_type num_args 
-		local action_args weekday
+		local action_args weekday user_status
 
 		local param=$(getopt	--name "$FUNCNAME" \
-								--options 'a:z:c:i:u:h:y:l:m:b:t:n:f:p:q:r:x:g:o:e:d:w:' \
+								--options 'a:z:c:i:u:h:y:l:m:b:t:n:f:p:q:r:g:o:e:d:w:j:' \
 								--longoptions	'action:,
 												action_args:,
 												command:,
@@ -4057,12 +4203,12 @@ _EOF
 												mime_type:,
 												query_data:,
 												query_id:,
-												query_text:,
 												chat_member:,
 												num_args:,
 												time:,
 												date:,
-												weekday:' \
+												weekday:,
+												user_status:' \
 								-- "$@")
 		
 		eval set -- "$param"
@@ -4156,10 +4302,6 @@ _EOF
 					query_id=${query_id:+$query_id,}${2}
 					shift 2
 					;;
-				-x|--query_text)
-					query_text=${2//|/\\|}
-					shift 2
-					;;
 				-g|--chat_member)
 					CheckArgType chatmember "$1" "$2"
 					chat_member=${chat_member:+$chat_member,}${2}
@@ -4174,7 +4316,12 @@ _EOF
 					CheckArgType int "$1" "$2"
 					weekday=${weekday:+$weekday,}${2}
 					shift 2
-					;;	
+					;;
+				-j|--user_status)
+					CheckArgType userstatus "$1" "$2"
+					user_status=${user_status:+$user_status,}${2}
+					shift 2
+					;;
 				--)
 					shift
 					break
@@ -4184,7 +4331,7 @@ _EOF
 		
 		[[ $action ]]	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-a, --action]"
 		
-		_BOT_COMMAND_RULES_LIST_+=("${action}|${action_args}|${message_id:-+any}|${is_bot:-+any}|${command:-+any}|${user_id:-+any}|${username:-+any}|${chat_id:-+any}|${chat_type:-+any}|${language:-+any}|${text:-+any}|${entities_type:-+any}|${file_type:-+any}|${mime_type:-+any}|${query_id:-+any}|${query_text:-+any}|${query_data:-+any}|${chat_member:-+any}|${num_args:-+any}|${time:-+any}|${date:-+any}|${weekday:-+any}")
+		_BOT_COMMAND_RULES_LIST_+=("${action}|${action_args}|${message_id:-+any}|${is_bot:-+any}|${command:-+any}|${user_id:-+any}|${username:-+any}|${chat_id:-+any}|${chat_type:-+any}|${language:-+any}|${text:-+any}|${entities_type:-+any}|${file_type:-+any}|${mime_type:-+any}|${query_id:-+any}|${query_data:-+any}|${chat_member:-+any}|${num_args:-+any}|${time:-+any}|${date:-+any}|${weekday:-+any}|${user_status:-+any}")
 		
 		return $?
 	}
@@ -4195,8 +4342,9 @@ _EOF
 		local __message_id __is_bot __text __entities_type __file_type
 		local __chat_id __chat_type __language __time __date __botcmd 
 		local __err __tm __stime __etime __ctime __mime_type __weekday
-		local __dt __sdate __edate __cdate __query_data __query_id __query_text
-		local __chat_member __mem __ent __type __num_args __args __action_args
+		local __dt __sdate __edate __cdate __query_data __query_id
+		local __chat_member __mem __ent __type __num_args __args
+		local __action_args __user_status __status __out
 
 		local 	__param=$(getopt	--name "$FUNCNAME" \
 									--options 'u:' \
@@ -4240,34 +4388,33 @@ _EOF
 							__file_type 	\
 							__mime_type 	\
 							__query_id 		\
-							__query_text 	\
 							__query_data 	\
 							__chat_member 	\
 							__num_args 		\
 							__time 			\
 							__date 			\
-							__weekday <<< $__rule
+							__weekday		\
+							__user_status <<< $__rule
 
 				IFS=' ' read -a __args <<< ${message_text[$__uid]}
 				
-				[[ $__num_args		== +any 	||	${#__args[@]}								== @(${__num_args//,/|})					]]	&&
-				[[ $__command		== +any		||	${message_text[$__uid]%% *}					== @(${__command//,/|})?(@${_BOT_INFO_[3]}) ]]	&&
-				[[ $__message_id 	== +any		|| 	${message_message_id[$__uid]} 				== @(${__message_id//,/|})					]] 	&&
-				[[ $__is_bot 		== +any 	|| 	${message_from_is_bot[$__uid]}				== @(${__is_bot//,/|})						]]	&&
-				[[ $__user_id		== +any 	||	${message_from_id[$__uid]} 					== @(${__user_id//,/|}) 					]]	&&
-				[[ $__username		== +any 	||	${message_from_username[$__uid]} 			== @(${__username//,/|}) 					]]	&&
-				[[ $__language		== +any		||	${message_from_language_code[$__uid]} 		== @(${__language//,/|}) 					]]	&&
-				[[ $__chat_id		== +any		||	${message_chat_id[$__uid]} 					== @(${__chat_id//,/|}) 					]] 	&&
-				[[ $__chat_type		== +any		||	${message_chat_type[$__uid]}				== @(${__chat_type//,/|}) 					]]	&&
-				[[ $__text			== +any		||	${message_text[$__uid]}						=~ $__text									]]	&&
-				[[ $__mime_type		== +any		||	${message_document_mime_type[$__uid]}		== @(${__mime_type//,/|}) ||
-													${message_video_mime_type[$__uid]}			== @(${__mime_type//,/|}) ||
-													${message_audio_mime_type[$__uid]}			== @(${__mime_type//,/|}) ||
-													${message_voice_mime_type[$__uid]}			== @(${__mime_type//,/|})					]]	&&
-				[[ $__query_id		== +any		||	${callback_query_id[$__uid]}				== @(${__query_id//,/|})					]]	&&
-				[[ $__query_text	== +any		||	${callback_query_message_text[$__uid]}		=~ $__query_text							]]	&&
-				[[ $__query_data	== +any		||	${callback_query_data[$__uid]}				== @(${__query_data//,/|})					]]	&&
-				[[ $__weekday		== +any		||  $(printf '%(%u)T' ${message_date[$__uid]}) 	== @(${__weekday//,/|})						]] 	|| continue
+				[[ $__num_args		== +any || ${#__args[@]}								== @(${__num_args//,/|})											]]	&&
+				[[ $__command		== +any	|| ${message_text[$__uid]%% *}					== @(${__command//,/|})?(@${_BOT_INFO_[3]}) 						]]	&&
+				[[ $__message_id 	== +any	|| ${message_message_id[$__uid]:-${callback_query_message_message_id[$__uid]}} 			== @(${__message_id//,/|})	]] 	&&
+				[[ $__is_bot 		== +any || ${message_from_is_bot[$__uid]:-${callback_query_from_is_bot[$__uid]}}				== @(${__is_bot//,/|})		]]	&&
+				[[ $__user_id		== +any || ${message_from_id[$__uid]:-${callback_query_from_id[$__uid]}}						== @(${__user_id//,/|})		]]	&&
+				[[ $__username		== +any || ${message_from_username[$__uid]:-${callback_query_from_username[$__uid]}}			== @(${__username//,/|}) 	]]	&&
+				[[ $__language		== +any	|| ${message_from_language_code[$__uid]:-${callback_query_from_language_code[$__uid]}}	== @(${__language//,/|}) 	]]	&&
+				[[ $__chat_id		== +any	|| ${message_chat_id[$__uid]:-${callback_query_message_chat_id[$__uid]}}				== @(${__chat_id//,/|})		]] 	&&
+				[[ $__chat_type		== +any	|| ${message_chat_type[$__uid]:-${callback_query_message_chat_type[$__uid]}}			== @(${__chat_type//,/|})	]]	&&
+				[[ $__text			== +any	|| ${message_text[$__uid]:-${callback_query_message_text[$__uid]}}						=~ $__text					]]	&&
+				[[ $__mime_type		== +any	|| ${message_document_mime_type[$__uid]}		== @(${__mime_type//,/|}) ||
+											   ${message_video_mime_type[$__uid]}			== @(${__mime_type//,/|}) ||
+											   ${message_audio_mime_type[$__uid]}			== @(${__mime_type//,/|}) ||
+											   ${message_voice_mime_type[$__uid]}			== @(${__mime_type//,/|})											]]	&&
+				[[ $__query_id		== +any	|| ${callback_query_id[$__uid]}					== @(${__query_id//,/|})											]]	&&
+				[[ $__query_data	== +any	|| ${callback_query_data[$__uid]}				== @(${__query_data//,/|})											]]	&&
+				[[ $__weekday		== +any	|| $(printf '%(%u)T' ${message_date[$__uid]:-${callback_query_message_date[$__uid]}}) 	== @(${__weekday//,/|})		]] 	|| continue
 				
 				for __ent in ${__entities_type//,/ }; do
 					[[ $__ent == +any 												]]	||
@@ -4301,11 +4448,11 @@ _EOF
 
 				for __tm in ${__time//,/ }; do
 					IFS='-' read __stime __etime <<< $__tm
-					printf -v __ctime '%(%H:%M)T' ${message_date[$__uid]}
+					printf -v __ctime '%(%H:%M)T' ${message_date[$__uid]:-${callback_query_message_date[$__uid]}}
 
 					[[ $__time	== +any 				]]				||
 					[[ $__ctime == @($__stime|$__etime) ]] 				||
-					[[ $__ctime > $__stime  && $__ctime < $__etime ]]	&& break
+					[[ $__ctime > $__stime && $__ctime < $__etime ]]	&& break
 				done
 					
 				[[ $? -eq 1 ]] && continue
@@ -4319,7 +4466,7 @@ _EOF
 					__sdate=${__sdate[2]}/${__sdate[1]}/${__sdate[0]}
 					__edate=${__edate[2]}/${__edate[1]}/${__edate[0]}
 
-					printf -v __cdate '%(%Y/%m/%d)T' ${message_date[$__uid]}
+					printf -v __cdate '%(%Y/%m/%d)T' ${message_date[$__uid]:-${callback_query_message_date[$__uid]}}
 					
 					[[ $__date	== +any 							]] 	||
 					[[ $__cdate == @($__sdate|$__edate) 			]] 	||
@@ -4327,6 +4474,28 @@ _EOF
 				done
 
 				[[ $? -eq 1 ]] && continue
+			
+				if [[ $__user_status != +any && ${message_chat_type[$__uid]:-${callback_query_message_chat_type[$__uid]}} == @(group|supergroup) ]]; then
+					case $_BOT_TYPE_RETURN_ in
+						value)
+							__out=$(ShellBot.getChatMember 	--chat_id ${message_chat_id[$__uid]:-${callback_query_message_chat_id[$__uid]}} \
+															--user_id ${message_from_id[$__uid]:-${callback_query_from_id[$__uid]}} 2>&1)
+							__status=${__out##*$_BOT_DELM_}
+							;;
+						json)
+							__out=$(ShellBot.getChatMember 	--chat_id ${message_chat_id[$__uid]:-${callback_query_message_chat_id[$__uid]}} \
+															--user_id ${message_from_id[$__uid]:-${callback_query_from_id[$__uid]}} 2>&1)
+							__status=$(Json '.result.status' $__out)
+							;;
+						map)	
+       						ShellBot.getChatMember 	--chat_id ${message_chat_id[$__uid]:-${callback_query_message_chat_id[$__uid]}} \
+													--user_id ${message_from_id[$__uid]:-${callback_query_from_id[$__uid]}} &>/dev/null
+							__status=${return[status]}
+							;;
+					esac
+			
+					[[ $__status == @(${__user_status//,/|}) ]]	|| continue
+				fi	
 				
 				$__action ${__action_args:-${__args[@]}}
 				__err=0
@@ -4381,70 +4550,69 @@ _EOF
     		esac
     	done
     	
-	# Seta os parâmetros
-	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+		# Seta os parâmetros
+		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
 								${offset:+-d offset="$offset"} \
 								${limit:+-d limit="$limit"} \
 								${timeout:+-d timeout="$timeout"} \
 								${allowed_updates:+-d allowed_updates="$allowed_updates"})
 
 
-	# Limpa as variáveis inicializadas.
-	unset ${_var_init_list_//|/ }
-	_var_init_list_=''
+		# Limpa as variáveis inicializadas.
+		unset ${_var_init_list_//|/ }
+		_var_init_list_=''
 	
-    [[ $(jq -r '.result|length' <<< $jq_obj) -eq 0 ]] && return 0
-	[[ $_FLUSH_OFFSET_ ]] && { echo "$jq_obj"; return 0; } # flush
-
-	if [[ $_BOT_MONITOR_ ]]; then
-		printf -v bar '=%.s' {1..50}
-		printf "$bar\nData: %(%d/%m/%Y %T)T\n"
-		printf 'Script: %s\nBot (nome): %s\nBot (usuario): %s\nBot (id): %s\n' \
-				"${_BOT_SCRIPT_}" 	\
-				"${_BOT_INFO_[2]}" 	\
-				"${_BOT_INFO_[3]}" 	\
-				"${_BOT_INFO_[1]}"
-	fi
-
-	# Salva e fecha o descritor de erro
-	exec 5<&2
-	exec 2<&-
-
-	for obj in $(GetAllKeys $jq_obj); do
-	
-		[[ $obj =~ [0-9]+ ]]
-		vet=${BASH_REMATCH:-0}
-		
-		var=${obj//[0-9\[\]]/}
-		var=${var#result.}
-		var=${var//./_}
-			
-		declare -g $var
-		local -n byref=$var # ponteiro
-					
-		val=$(Json ".$obj" $jq_obj)
-		[[ ${byref[$vet]} ]] && byref[$vet]+=${_BOT_DELM_}${val} || byref[$vet]=$val
+    	[[ $(jq -r '.result|length' <<< $jq_obj) -eq 0 ]] && return 0
+		[[ $_FLUSH_OFFSET_ ]] && { echo "$jq_obj"; return 0; } # flush
 
 		if [[ $_BOT_MONITOR_ ]]; then
-			[[ $vet -ne ${oldv:--1} ]] && printf "$bar\nMensagem: %d\n$bar\n" $((vet+1))
-			printf "[ShellBot.getUpdates]: %s = '%s'\n" "$var" "$val"
-			oldv=$vet
+			printf -v bar '=%.s' {1..50}
+			printf "$bar\nData: %(%d/%m/%Y %T)T\n"
+			printf 'Script: %s\nBot (nome): %s\nBot (usuario): %s\nBot (id): %s\n' \
+					"${_BOT_SCRIPT_}" 	\
+					"${_BOT_INFO_[2]}" 	\
+					"${_BOT_INFO_[3]}" 	\
+					"${_BOT_INFO_[1]}"
 		fi
 
-		unset -n byref
-		[[ $var != @(${_var_init_list_%|}) ]] && _var_init_list_+="$var|"
-	done
+		# Salva e fecha o descritor de erro
+		exec 5<&2
+		exec 2<&-
 
-	# Restaura o descritor de erro.
-	exec 2<&5
+		for obj in $(GetAllKeys $jq_obj); do
 	
-	# Log (thread)	
-	[[ $_BOT_LOG_FILE_ ]] && CreateLog ${#update_id[@]} $jq_obj &
-
-    # Status
-    return $?
+			[[ $obj =~ [0-9]+ ]]
+			vet=${BASH_REMATCH:-0}
+			
+			var=${obj//[0-9\[\]]/}
+			var=${var#result.}
+			var=${var//./_}
+	
+			declare -g $var
+			local -n byref=$var # ponteiro
+						
+			val=$(Json ".$obj" $jq_obj)
+			[[ ${byref[$vet]} ]] && byref[$vet]+=${_BOT_DELM_}${val} || byref[$vet]=$val
+	
+			if [[ $_BOT_MONITOR_ ]]; then
+				[[ $vet -ne ${oldv:--1} ]] && printf "$bar\nMensagem: %d\n$bar\n" $((vet+1))
+				printf "[ShellBot.getUpdates]: %s = '%s'\n" "$var" "$val"
+				oldv=$vet
+			fi
+	
+			unset -n byref
+			[[ $var != @(${_var_init_list_%|}) ]] && _var_init_list_+="$var|"
+		done
+	
+		# Restaura o descritor de erro.
+		exec 2<&5
 		
-    }
+		# Log (thread)	
+		[[ $_BOT_LOG_FILE_ ]] && CreateLog ${#update_id[@]} $jq_obj &
+	
+   		 # Status
+   	 	return $?
+	}
    
 	# Bot métodos (somente leitura)
 	readonly -f ShellBot.token \
@@ -4514,8 +4682,9 @@ _EOF
 				ShellBot.setChatStickerSet \
 				ShellBot.deleteChatStickerSet \
 				ShellBot.sendMediaGroup \
-				ShellBot.inputMediaPhoto \
-				ShellBot.inputMediaVideo \
+				ShellBot.editMessageMedia \
+				ShellBot.inputMedia \
+				ShellBot.sendAnimation \
 				ShellBot.setMessageRules \
 				ShellBot.manageRules \
 				ShellBot.getUpdates
