@@ -3,7 +3,7 @@
 #-----------------------------------------------------------------------------------------------------------
 #	DATA:				07 de Março de 2017
 #	SCRIPT:				ShellBot.sh
-#	VERSÃO:				5.6
+#	VERSÃO:				5.7
 #	DESENVOLVIDO POR:	Juliano Santos [SHAMAN]
 #	PÁGINA:				http://www.shellscriptx.blogspot.com.br
 #	FANPAGE:			https://www.facebook.com/shellscriptx
@@ -39,7 +39,7 @@ readonly -A _SHELLBOT_=(
 [name]='ShellBot'
 [keywords]='Shell Script Telegram API'
 [description]='API não-oficial para criação de bots na plataforma Telegram.'
-[version]='5.6'
+[version]='5.7'
 [language]='shellscript'
 [shell]=${SHELL}
 [shell_version]=${BASH_VERSION}
@@ -246,12 +246,14 @@ CheckArgType(){
 		file)		[[ $value =~ ^@ && ! -f ${value#@} 						]] 	&& MessageError API "$_ERR_FILE_NOT_FOUND_" "$param" "$value";;
 		userstatus)	[[ $value == @(creator|administrator|member)			]]	||
 					[[ $value == @(restricted|left|kicked)					]]	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
+		msgstatus)	[[ $value == @(pinned|edited|forwarded)					]]	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		mediatype)	[[ $value == @(animation|document|audio|photo|video)	]]	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		chattype)	[[ $value == @(private|group|supergroup) 				]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		return)		[[ $value == @(json|map|value) 							]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		parsemode)	[[ $value == @(markdown|html) 							]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		point)		[[ $value == @(forehead|eyes|mouth|chin) 				]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		cmd)		[[ $value =~ ^/[a-zA-Z0-9_]+$ 							]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
+		flag)		[[ $value =~ ^[a-zA-Z0-9_]+$ 							]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		action)		[[ $value == @(typing|upload_photo) 					]] 	||
 					[[ $value == @(record_video|upload_video) 				]] 	||
 					[[ $value == @(record_audio|upload_audio) 				]] 	||
@@ -4182,17 +4184,20 @@ _EOF
 		local chat_type time date language message_id 
 		local is_bot text entities_type file_type
 		local query_data query_id query_text
-		local chat_member mime_type num_args 
-		local action_args weekday user_status
+		local chat_member mime_type num_args
+		local action_args weekday user_status chat_name 
+		local message_status reply_message rule_name
 
 		local param=$(getopt	--name "$FUNCNAME" \
-								--options 'a:z:c:i:u:h:y:l:m:b:t:n:f:p:q:r:g:o:e:d:w:j:' \
-								--longoptions	'action:,
+								--options 's:a:z:c:i:u:h:v:y:l:m:b:t:n:f:p:q:r:g:o:e:d:w:j:x:k:' \
+								--longoptions	'name:,
+												action:,
 												action_args:,
 												command:,
 												user_id:,
 												username:,
 												chat_id:,
+												chat_name:,
 												chat_type:,
 												language_code:,
 												message_id:,
@@ -4208,7 +4213,9 @@ _EOF
 												time:,
 												date:,
 												weekday:,
-												user_status:' \
+												user_status:,
+												message_status:,
+												reply_message:' \
 								-- "$@")
 		
 		eval set -- "$param"
@@ -4216,6 +4223,11 @@ _EOF
 		while :
 		do
 			case $1 in
+				-s|--name)
+					CheckArgType flag "$1" "$2"
+					rule_name=$2
+					shift 2
+					;;
 				-a|--action)
 					CheckArgType func "$1" "$2"
 					action=$2
@@ -4243,6 +4255,11 @@ _EOF
 				-h|--chat_id)
 					CheckArgType int "$1" "$2"
 					chat_id=${chat_id:+$chat_id,}${2}
+					shift 2
+					;;
+				-v|--chat_name)
+					CheckArgType username "$1" "$2"
+					chat_name=${chat_name:+$chat_name,}${2}
 					shift 2
 					;;
 				-y|--chat_type)
@@ -4322,6 +4339,15 @@ _EOF
 					user_status=${user_status:+$user_status,}${2}
 					shift 2
 					;;
+				-x|--message_status)
+					CheckArgType msgstatus "$1" "$2"
+					message_status=${message_status:+$message_status,}${2}
+					shift 2
+					;;
+				-k|--reply_message)
+					reply_message=$2
+					shift 2
+					;;
 				--)
 					shift
 					break
@@ -4329,9 +4355,9 @@ _EOF
 			esac
 		done
 		
-		[[ $action ]]	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-a, --action]"
-		
-		_BOT_COMMAND_RULES_LIST_+=("${action}|${action_args}|${message_id:-+any}|${is_bot:-+any}|${command:-+any}|${user_id:-+any}|${username:-+any}|${chat_id:-+any}|${chat_type:-+any}|${language:-+any}|${text:-+any}|${entities_type:-+any}|${file_type:-+any}|${mime_type:-+any}|${query_id:-+any}|${query_data:-+any}|${chat_member:-+any}|${num_args:-+any}|${time:-+any}|${date:-+any}|${weekday:-+any}|${user_status:-+any}")
+		[[ $rule_name ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --name]"
+
+		_BOT_COMMAND_RULES_LIST_+=("${BASH_SOURCE[1]##*/}|${BASH_LINENO}|${rule_name}|${action}|${action_args}|${message_id:-+any}|${is_bot:-+any}|${command:-+any}|${user_id:-+any}|${username:-+any}|${chat_id:-+any}|${chat_name:-+any}|${chat_type:-+any}|${language:-+any}|${text}|${entities_type:-+any}|${file_type:-+any}|${mime_type:-+any}|${query_id:-+any}|${query_data:-+any}|${chat_member:-+any}|${num_args:-+any}|${time:-+any}|${date:-+any}|${weekday:-+any}|${user_status:-+any}|${message_status:-+any}|${reply_message}")
 		
 		return $?
 	}
@@ -4344,7 +4370,13 @@ _EOF
 		local __err __tm __stime __etime __ctime __mime_type __weekday
 		local __dt __sdate __edate __cdate __query_data __query_id
 		local __chat_member __mem __ent __type __num_args __args
-		local __action_args __user_status __status __out
+		local __action_args __user_status __status __out __reply_message
+		local __rule_name __rule_line __rule_source __chat_name 
+		local __u_message_text __u_message_id __u_message_from_is_bot 
+		local __u_message_from_id __u_message_from_username __msgstatus 
+		local __u_message_from_language_code __u_message_chat_id __message_status
+		local __u_message_chat_type __u_message_date __u_message_entities_type
+		local __u_message_mime_type __u_message_chat_title
 
 		local 	__param=$(getopt	--name "$FUNCNAME" \
 									--options 'u:' \
@@ -4373,63 +4405,90 @@ _EOF
 		
 		for __rule in "${_BOT_COMMAND_RULES_LIST_[@]}"; do
 
-			IFS='|' read	__action 		\
-							__action_args 	\
-							__message_id 	\
-							__is_bot 		\
-							__command 		\
-							__user_id 		\
-							__username 		\
-							__chat_id 		\
-							__chat_type 	\
-							__language 		\
-							__text 			\
-							__entities_type \
-							__file_type 	\
-							__mime_type 	\
-							__query_id 		\
-							__query_data 	\
-							__chat_member 	\
-							__num_args 		\
-							__time 			\
-							__date 			\
-							__weekday		\
-							__user_status <<< $__rule
+			IFS='|' read	__rule_source		\
+							__rule_line			\
+							__rule_name			\
+							__action 			\
+							__action_args 		\
+							__message_id 		\
+							__is_bot 			\
+							__command 			\
+							__user_id 			\
+							__username 			\
+							__chat_id 			\
+							__chat_name			\
+							__chat_type 		\
+							__language 			\
+							__text 				\
+							__entities_type 	\
+							__file_type 		\
+							__mime_type 		\
+							__query_id 			\
+							__query_data 		\
+							__chat_member 		\
+							__num_args 			\
+							__time 				\
+							__date 				\
+							__weekday			\
+							__user_status		\
+							__message_status	\
+							__reply_message	<<< $__rule
+				
+				__u_message_text=${message_text[$__uid]:-${edited_message_text[$__uid]:-${callback_query_message_text[$__uid]}}}
+				__u_message_id=${message_message_id[$__uid]:-${edited_message_message_id[$__uid]:-${callback_query_message_message_id[$__uid]}}}
+				__u_message_from_is_bot=${message_from_is_bot[$__uid]:-${edited_message_from_is_bot[$__uid]:-${callback_query_from_is_bot[$__uid]}}}
+				__u_message_from_id=${message_from_id[$__uid]:-${edited_message_from_id[$__uid]:-${callback_query_from_id[$__uid]}}}
+				__u_message_from_username=${message_from_username[$__uid]:-${edited_message_from_username[$__uid]:-${callback_query_from_username[$__uid]}}}
+				__u_message_from_language_code=${message_from_language_code[$__uid]:-${edited_message_from_language_code[$__uid]:-${callback_query_from_language_code[$__uid]}}}
+				__u_message_chat_id=${message_chat_id[$__uid]:-${edited_message_chat_id[$__uid]:-${callback_query_message_chat_id[$__uid]}}}
+				__u_message_chat_username=${message_chat_username[$__uid]:-${edited_message_chat_username[$__uid]:-${callback_query_message_chat_username[$__uid]}}}
+				__u_message_chat_type=${message_chat_type[$__uid]:-${edited_message_chat_type[$__uid]:-${callback_query_message_chat_type[$__uid]}}}
+				__u_message_chat_title=${message_chat_title[$__uid]:-${edited_message_chat_title[$__uid]:-${callback_query_message_chat_title[$__uid]}}}
+				__u_message_date=${message_date[$__uid]:-${edited_message_edit_date[$__uid]:-${callback_query_message_date[$__uid]}}}
+				__u_message_entities_type=${message_entities_type[$__uid]:-${edited_message_entities_type[$__uid]:-${callback_query_message_entities_type[$__uid]}}}
+				__u_message_mime_type=${message_document_mime_type[$__uid]:-${message_video_mime_type[$__uid]:-${message_audio_mime_type[$__uid]:-${message_voice_mime_type[$__uid]}}}}
+				
+				IFS=' ' read -a __args <<< $__u_message_text
+			
+				[[ $__num_args			== +any ||	${#__args[@]}							== @(${__num_args//,/|})					]]	&&
+				[[ $__command			== +any	||	${__u_message_text%% *}					== @(${__command//,/|})?(@${_BOT_INFO_[3]}) ]]	&&
+				[[ $__message_id 		== +any	||	$__u_message_id 						== @(${__message_id//,/|})					]] 	&&
+				[[ $__is_bot 			== +any ||	$__u_message_from_is_bot				== @(${__is_bot//,/|})						]]	&&
+				[[ $__user_id			== +any ||	$__u_message_from_id					== @(${__user_id//,/|})						]]	&&
+				[[ $__username			== +any ||	$__u_message_from_username				== @(${__username//,/|}) 					]]	&&
+				[[ $__language			== +any	||	$__u_message_from_language_code			== @(${__language//,/|}) 					]]	&&
+				[[ $__chat_id			== +any	||	$__u_message_chat_id					== @(${__chat_id//,/|})						]] 	&&
+				[[ $__chat_name			== +any	||	$__u_message_chat_username				== @(${__chat_name//,/|})					]] 	&&
+				[[ $__chat_type			== +any	||	$__u_message_chat_type					== @(${__chat_type//,/|})					]]	&&
+				[[ ! $__text					||	$__u_message_text						=~ $__text									]]	&&
+				[[ $__mime_type			== +any	||	$__u_message_mime_type					== @(${__mime_type//,/|})					]]	&&
+				[[ $__query_id			== +any	||	${callback_query_id[$__uid]}			== @(${__query_id//,/|})					]]	&&
+				[[ $__query_data		== +any	||	${callback_query_data[$__uid]}			== @(${__query_data//,/|})					]]	&&
+				[[ $__weekday			== +any	|| 	$(printf '%(%u)T' $__u_message_date) 	== @(${__weekday//,/|})						]]	|| continue
+			
+				for __msgstatus in ${__message_status//,/ }; do
+					[[ $__msgstatus == +any 														]]	||
+					[[ $__msgstatus == pinned		&& ${message_pinned_message_message_id[$__uid]} ]] 	||
+					[[ $__msgstatus == edited 		&& ${edited_message_message_id[$__uid]}			]] 	||
+					[[ $__msgstatus == forwarded	&& ${message_forward_from_id[$__uid]}			]]	&& break
+				done
+				
+				(($?)) && continue
 
-				IFS=' ' read -a __args <<< ${message_text[$__uid]}
-				
-				[[ $__num_args		== +any || ${#__args[@]}								== @(${__num_args//,/|})											]]	&&
-				[[ $__command		== +any	|| ${message_text[$__uid]%% *}					== @(${__command//,/|})?(@${_BOT_INFO_[3]}) 						]]	&&
-				[[ $__message_id 	== +any	|| ${message_message_id[$__uid]:-${callback_query_message_message_id[$__uid]}} 			== @(${__message_id//,/|})	]] 	&&
-				[[ $__is_bot 		== +any || ${message_from_is_bot[$__uid]:-${callback_query_from_is_bot[$__uid]}}				== @(${__is_bot//,/|})		]]	&&
-				[[ $__user_id		== +any || ${message_from_id[$__uid]:-${callback_query_from_id[$__uid]}}						== @(${__user_id//,/|})		]]	&&
-				[[ $__username		== +any || ${message_from_username[$__uid]:-${callback_query_from_username[$__uid]}}			== @(${__username//,/|}) 	]]	&&
-				[[ $__language		== +any	|| ${message_from_language_code[$__uid]:-${callback_query_from_language_code[$__uid]}}	== @(${__language//,/|}) 	]]	&&
-				[[ $__chat_id		== +any	|| ${message_chat_id[$__uid]:-${callback_query_message_chat_id[$__uid]}}				== @(${__chat_id//,/|})		]] 	&&
-				[[ $__chat_type		== +any	|| ${message_chat_type[$__uid]:-${callback_query_message_chat_type[$__uid]}}			== @(${__chat_type//,/|})	]]	&&
-				[[ $__text			== +any	|| ${message_text[$__uid]:-${callback_query_message_text[$__uid]}}						=~ $__text					]]	&&
-				[[ $__mime_type		== +any	|| ${message_document_mime_type[$__uid]}		== @(${__mime_type//,/|}) ||
-											   ${message_video_mime_type[$__uid]}			== @(${__mime_type//,/|}) ||
-											   ${message_audio_mime_type[$__uid]}			== @(${__mime_type//,/|}) ||
-											   ${message_voice_mime_type[$__uid]}			== @(${__mime_type//,/|})											]]	&&
-				[[ $__query_id		== +any	|| ${callback_query_id[$__uid]}					== @(${__query_id//,/|})											]]	&&
-				[[ $__query_data	== +any	|| ${callback_query_data[$__uid]}				== @(${__query_data//,/|})											]]	&&
-				[[ $__weekday		== +any	|| $(printf '%(%u)T' ${message_date[$__uid]:-${callback_query_message_date[$__uid]}}) 	== @(${__weekday//,/|})		]] 	|| continue
-				
 				for __ent in ${__entities_type//,/ }; do
 					[[ $__ent == +any 												]]	||
-					[[ $__ent == @(${message_entities_type[$__uid]//$_BOT_DELM_/|}) ]] 	&& break
+					[[ $__ent == @(${__u_message_entities_type//$_BOT_DELM_/|}) ]] 	&& break
 				done
 
-				[[ $? -eq 1 ]] && continue
-					
+				(($?)) && continue
+	
 				for __mem in ${__chat_member//,/ }; do
 					[[ $__mem == +any												]] ||
 					[[ $__mem == new 	&& ${message_new_chat_member_id[$__uid]} 	]] ||
 					[[ $__mem == left 	&& ${message_left_chat_member_id[$__uid]} 	]] && break
 				done
 			
-				[[ $? -eq 1 ]] && continue
+				(($?)) && continue
 
 				for __type in ${__file_type//,/ }; do
 					[[ $__type == +any 																								]] 	||
@@ -4444,19 +4503,19 @@ _EOF
 					[[ $__type == location	&& ${message_location_latitude[$__uid]}													]]	&& break
 				done
 					
-				[[ $? -eq 1 ]] && continue
+				(($?)) && continue
 
 				for __tm in ${__time//,/ }; do
 					IFS='-' read __stime __etime <<< $__tm
-					printf -v __ctime '%(%H:%M)T' ${message_date[$__uid]:-${callback_query_message_date[$__uid]}}
+					printf -v __ctime '%(%H:%M)T' $__u_message_date
 
 					[[ $__time	== +any 				]]				||
 					[[ $__ctime == @($__stime|$__etime) ]] 				||
 					[[ $__ctime > $__stime && $__ctime < $__etime ]]	&& break
 				done
 					
-				[[ $? -eq 1 ]] && continue
-					
+				(($?)) && continue
+	
 				for __dt in ${__date//,/ }; do
 
 					IFS='-' read __sdate __edate <<< $__dt
@@ -4466,42 +4525,64 @@ _EOF
 					__sdate=${__sdate[2]}/${__sdate[1]}/${__sdate[0]}
 					__edate=${__edate[2]}/${__edate[1]}/${__edate[0]}
 
-					printf -v __cdate '%(%Y/%m/%d)T' ${message_date[$__uid]:-${callback_query_message_date[$__uid]}}
+					printf -v __cdate '%(%Y/%m/%d)T' $__u_message_date
 					
 					[[ $__date	== +any 							]] 	||
 					[[ $__cdate == @($__sdate|$__edate) 			]] 	||
 					[[ $__cdate > $__sdate && $__cdate < $__edate 	]]	&& break
 				done
 
-				[[ $? -eq 1 ]] && continue
-			
-				if [[ $__user_status != +any && ${message_chat_type[$__uid]:-${callback_query_message_chat_type[$__uid]}} == @(group|supergroup) ]]; then
+				(($?)) && continue
+	
+				if [[ $__user_status != +any ]]; then
 					case $_BOT_TYPE_RETURN_ in
 						value)
-							__out=$(ShellBot.getChatMember 	--chat_id ${message_chat_id[$__uid]:-${callback_query_message_chat_id[$__uid]}} \
-															--user_id ${message_from_id[$__uid]:-${callback_query_from_id[$__uid]}} 2>&1)
-							__status=${__out##*$_BOT_DELM_}
+							__out=$(ShellBot.getChatMember 	--chat_id $__u_message_chat_id \
+															--user_id $__u_message_from_id 2>/dev/null)
+							
+							IFS=$_BOT_DELM_ read -a __out <<< $__out
+							[[ ${__out[2]} == true ]]
+							__status=${__out[$(($? ? 6 : 5))]}
 							;;
 						json)
-							__out=$(ShellBot.getChatMember 	--chat_id ${message_chat_id[$__uid]:-${callback_query_message_chat_id[$__uid]}} \
-															--user_id ${message_from_id[$__uid]:-${callback_query_from_id[$__uid]}} 2>&1)
+							__out=$(ShellBot.getChatMember 	--chat_id $__u_message_chat_id \
+															--user_id $__u_message_from_id 2>/dev/null)
+							
 							__status=$(Json '.result.status' $__out)
 							;;
 						map)	
-       						ShellBot.getChatMember 	--chat_id ${message_chat_id[$__uid]:-${callback_query_message_chat_id[$__uid]}} \
-													--user_id ${message_from_id[$__uid]:-${callback_query_from_id[$__uid]}} &>/dev/null
+							ShellBot.getChatMember 	--chat_id $__u_message_chat_id \
+													--user_id $__u_message_from_id &>/dev/null
+
 							__status=${return[status]}
 							;;
 					esac
-			
 					[[ $__status == @(${__user_status//,/|}) ]]	|| continue
-				fi	
+				fi
 				
-				$__action ${__action_args:-${__args[@]}}
-				__err=0
+				[[ $_BOT_MONITOR_ ]] && printf '[%s]: %s: %s: %s: %s: %s: %s: %s: %s: %s: %s\n'	\
+											${FUNCNAME}											\
+											$((__uid+1))										\
+											$(printf '%(%d/%m/%Y %H:%M)T' ${__u_message_date}) 	\
+											${__u_message_chat_type:--}							\
+											${__u_message_chat_title:--}						\
+											${__u_message_from_username:--} 					\
+											${__rule_source}									\
+											${__rule_line}										\
+											${__rule_name} 										\
+											${__action:--}
+
+				[[ $__reply_message ]] && ShellBot.sendMessage 	--chat_id $__u_message_chat_id \
+																--reply_to_message_id $__u_message_id \
+																--text "$__reply_message" \
+																--parse_mode markdown 2>/dev/null
+
+				${__action:+$__action ${__action_args:-${__args[@]}}}
+
+				return 0
 		done
 
-		return ${__err:-1}
+		return 1
 	}
 
     ShellBot.getUpdates()
