@@ -21,7 +21,7 @@ album=""
 # Anexando as mídias.
 # Fotos (url)
 ShellBot.inputMedia --input album --type photo --media 'http://2.bp.blogspot.com/-M53JjEuGjvE/WXM2uL0QpxI/AAAAAAAAI2k/HDEa368-yecsQG7_dgCevxYoIonS4MnmgCK4BGAYYCw/w800/14650669_269510070111655_4132757982135640193_n.png' --caption "SHELL x SCRIPT (blog wallpaper)"
-ShellBot.inputMedia --input album --media 'https://www.ibm.com/developerworks/mydeveloperworks/blogs/752a690f-8e93-4948-b7a3-c060117e8665/resource/BLOGS_UPLOADED_IMAGES/post-50_applinux.jpg' --caption "Família Linux (IBM)"
+ShellBot.inputMedia --input album --type photo --media 'https://www.ibm.com/developerworks/mydeveloperworks/blogs/752a690f-8e93-4948-b7a3-c060117e8665/resource/BLOGS_UPLOADED_IMAGES/post-50_applinux.jpg' --caption "Família Linux (IBM)"
 
 # Fotos (ID)
 ShellBot.inputMedia --input album --type photo --media 'AgADAQADyqcxGx10kUbF0VrzCBAH-d4n9y8ABAMBhyFEYQ0EO00BAAEC' --caption "ShellBot e os Pinguins de Madagascar."
