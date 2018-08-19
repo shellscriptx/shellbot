@@ -4376,7 +4376,7 @@ _EOF
 		local __u_message_from_id __u_message_from_username __msgstatus 
 		local __u_message_from_language_code __u_message_chat_id __message_status
 		local __u_message_chat_type __u_message_date __u_message_entities_type
-		local __u_message_mime_type __u_message_chat_title
+		local __u_message_mime_type
 
 		local 	__param=$(getopt	--name "$FUNCNAME" \
 									--options 'u:' \
@@ -4443,7 +4443,6 @@ _EOF
 				__u_message_chat_id=${message_chat_id[$__uid]:-${edited_message_chat_id[$__uid]:-${callback_query_message_chat_id[$__uid]}}}
 				__u_message_chat_username=${message_chat_username[$__uid]:-${edited_message_chat_username[$__uid]:-${callback_query_message_chat_username[$__uid]}}}
 				__u_message_chat_type=${message_chat_type[$__uid]:-${edited_message_chat_type[$__uid]:-${callback_query_message_chat_type[$__uid]}}}
-				__u_message_chat_title=${message_chat_title[$__uid]:-${edited_message_chat_title[$__uid]:-${callback_query_message_chat_title[$__uid]}}}
 				__u_message_date=${message_date[$__uid]:-${edited_message_edit_date[$__uid]:-${callback_query_message_date[$__uid]}}}
 				__u_message_entities_type=${message_entities_type[$__uid]:-${edited_message_entities_type[$__uid]:-${callback_query_message_entities_type[$__uid]}}}
 				__u_message_mime_type=${message_document_mime_type[$__uid]:-${message_video_mime_type[$__uid]:-${message_audio_mime_type[$__uid]:-${message_voice_mime_type[$__uid]}}}}
@@ -4565,7 +4564,7 @@ _EOF
 											$((__uid+1))										\
 											$(printf '%(%d/%m/%Y %H:%M)T' ${__u_message_date}) 	\
 											${__u_message_chat_type:--}							\
-											${__u_message_chat_title:--}						\
+											${__u_message_chat_username:--}						\
 											${__u_message_from_username:--} 					\
 											${__rule_source}									\
 											${__rule_line}										\
