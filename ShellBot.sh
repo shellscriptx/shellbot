@@ -3,7 +3,7 @@
 #-----------------------------------------------------------------------------------------------------------
 #	DATA:				07 de Março de 2017
 #	SCRIPT:				ShellBot.sh
-#	VERSÃO:				5.7
+#	VERSÃO:				5.8
 #	DESENVOLVIDO POR:	Juliano Santos [SHAMAN]
 #	PÁGINA:				http://www.shellscriptx.blogspot.com.br
 #	FANPAGE:			https://www.facebook.com/shellscriptx
@@ -34,12 +34,17 @@
 
 [[ $_SHELLBOT_SH_ ]] && return 1
 
+if ! awk 'BEGIN { exit ARGV[1] < 4.3 }' ${BASH_VERSINFO[0]}.${BASH_VERSINFO[1]}; then
+	echo "${BASH_SOURCE:-${0##*/}}: erro: requer o interpretador de comandos 'bash 4.3' ou superior." 1>&2
+	exit 1
+fi
+
 # Informações
 readonly -A _SHELLBOT_=(
 [name]='ShellBot'
 [keywords]='Shell Script Telegram API'
 [description]='API não-oficial para criação de bots na plataforma Telegram.'
-[version]='5.7'
+[version]='5.8'
 [language]='shellscript'
 [shell]=${SHELL}
 [shell_version]=${BASH_VERSION}
@@ -47,18 +52,15 @@ readonly -A _SHELLBOT_=(
 [email]='shellscriptx@gmail.com'
 [wiki]='https://github.com/shellscriptx/shellbot/wiki'
 [github]='https://github.com/shellscriptx/shellbot'
-[packages]='bash 4.3, curl 7.0, getopt 2.0, jq 1.5'
+[packages]='curl 7.0, getopt 2.0, jq 1.5'
 )
 
 # Verifica dependências.
 while read _pkg_ _ver_; do
 	if command -v $_pkg_ &>/dev/null; then
 		if [[ $($_pkg_ --version 2>&1) =~ [0-9]+\.[0-9]+ ]]; then
-			if [[ $BASH_REMATCH < $_ver_ ]]; then
-				printf "%s: erro: requer o pacote '%s %s' ou superior\n" \
-							${_SHELLBOT_[name]} \
-							$_pkg_ 	\
-							$_ver_ 1>&2
+			if ! awk 'BEGIN { exit ARGV[1] < ARGV[2] }' $BASH_REMATCH $_ver_; then
+				printf "%s: erro: requer o pacote '%s %s' ou superior.\n" ${_SHELLBOT_[name]} $_pkg_ $_ver_ 1>&2
 				exit 1
 			fi
 		else
@@ -71,12 +73,25 @@ while read _pkg_ _ver_; do
 	fi
 done <<< "${_SHELLBOT_[packages]//,/$'\n'}"
 
-# SHELL (opções).
+# bash (opções).
+shopt -s	checkwinsize			\
+			cmdhist					\
+			complete_fullquote		\
+			expand_aliases			\
+			extglob					\
+			extquote				\
+			force_fignore			\
+			histappend				\
+			interactive_comments	\
+			progcomp				\
+			promptvars				\
+			sourcepath
+
+# Desabilita a expansão de nomes de arquivos (globbing).
 set -f
-shopt -s extglob
 
 readonly _SHELLBOT_SH_=1					# Inicialização
-readonly _BOT_SCRIPT_=$(basename "$0")		# Script
+readonly _BOT_SCRIPT_=${0##*/}				# Script
 readonly _CURL_OPT_='--silent --request'	# CURL (opções)
 
 # Erros
@@ -122,22 +137,26 @@ CreateLog()
 
 	for ((i=0; i < $1; i++)); do
 		printf -v fmt "$_BOT_LOG_FORMAT_" || MessageError API
-	
-		# FLAGS
+
+		# Suprimir erros.
+		exec 5<&2
+		exec 2<&-
+
+		# Flags
 		fmt=${fmt//\{OK\}/${return[ok]:-$ok}}
 		fmt=${fmt//\{UPDATE_ID\}/${update_id[$i]}}
-		fmt=${fmt//\{MESSAGE_ID\}/${return[message_id]:-${message_message_id[$i]:-${callback_query_id[$i]}}}}
-		fmt=${fmt//\{FROM_ID\}/${return[from_id]:-${message_from_id[$i]:-${callback_query_from_id[$i]}}}}
-		fmt=${fmt//\{FROM_IS_BOT\}/${return[from_is_bot]:-${message_from_is_bot[$i]:-${callback_query_from_is_bot[$i]}}}}
-		fmt=${fmt//\{FROM_FIRST_NAME\}/${return[from_first_name]:-${message_from_firstname[$i]:-${callback_query_from_first_name[$i]}}}}
-		fmt=${fmt//\{FROM_USERNAME\}/${return[from_username]:-${message_from_username[$i]:-${callback_query_from_username[$i]}}}}
-		fmt=${fmt//\{FROM_LANGUAGE_CODE\}/${message_from_language_code[$i]:-${callback_query_from_language_code[$i]}}}
-		fmt=${fmt//\{CHAT_ID\}/${return[chat_id]:-${message_chat_id[$i]:-${callback_query_message_chat_id[$i]}}}}
-		fmt=${fmt//\{CHAT_TITLE\}/${return[chat_title]:-${message_chat_title[$i]:-${callback_query_message_chat_title[$i]}}}}
-		fmt=${fmt//\{CHAT_TYPE\}/${return[chat_type]:-${message_chat_type[$i]:-${callback_query_message_chat_type[$i]}}}}
-		fmt=${fmt//\{MESSAGE_DATE\}/${return[date]:-${message_date[$i]:-${callback_query_message_date[$i]}}}}
-		fmt=${fmt//\{MESSAGE_TEXT\}/${return[text]:-${message_text[$i]:-${callback_query_message_text[$i]}}}}
-		fmt=${fmt//\{ENTITIES_TYPE\}/${return[entities_type]:-${message_entities_type[$i]:-${callback_query_data[$i]}}}}
+		fmt=${fmt//\{MESSAGE_ID\}/${return[message_id]:-${message_message_id[$i]:-${edited_message_message_id[$id]:-${callback_query_id[$i]}}}}}
+		fmt=${fmt//\{FROM_ID\}/${return[from_id]:-${message_from_id[$i]:-${edited_message_from_id[$id]:-${callback_query_from_id[$i]}}}}}
+		fmt=${fmt//\{FROM_IS_BOT\}/${return[from_is_bot]:-${message_from_is_bot[$i]:-${edited_message_from_is_bot[$id]:-${callback_query_from_is_bot[$i]}}}}}
+		fmt=${fmt//\{FROM_FIRST_NAME\}/${return[from_first_name]:-${message_from_first_name[$i]:-${edited_message_from_first_name[$id]:-${callback_query_from_first_name[$i]}}}}}
+		fmt=${fmt//\{FROM_USERNAME\}/${return[from_username]:-${message_from_username[$i]:-${edited_message_from_username[$id]:-${callback_query_from_username[$i]}}}}}
+		fmt=${fmt//\{FROM_LANGUAGE_CODE\}/${message_from_language_code[$i]:-${edited_message_from_language_code[$id]:-${callback_query_from_language_code[$i]}}}}
+		fmt=${fmt//\{CHAT_ID\}/${return[chat_id]:-${message_chat_id[$i]:-${edited_message_chat_id[$id]:-${callback_query_message_chat_id[$i]}}}}}
+		fmt=${fmt//\{CHAT_TITLE\}/${return[chat_title]:-${message_chat_title[$i]:-${edited_message_chat_title[$id]:-${callback_query_message_chat_title[$i]}}}}}
+		fmt=${fmt//\{CHAT_TYPE\}/${return[chat_type]:-${message_chat_type[$i]:-${edited_message_chat_type[$id]:-${callback_query_message_chat_type[$i]}}}}}
+		fmt=${fmt//\{MESSAGE_DATE\}/${return[date]:-${message_date[$i]:-${edited_message_date[$id]:-${callback_query_message_date[$i]}}}}}
+		fmt=${fmt//\{MESSAGE_TEXT\}/${return[text]:-${message_text[$i]:-${edited_message_text[$id]:-${callback_query_message_text[$i]}}}}}
+		fmt=${fmt//\{ENTITIES_TYPE\}/${return[entities_type]:-${message_entities_type[$i]:-${edited_message_entities_type[$id]:-${callback_query_data[$i]}}}}}
 		fmt=${fmt//\{BOT_TOKEN\}/${_BOT_INFO_[0]}}
 		fmt=${fmt//\{BOT_ID\}/${_BOT_INFO_[1]}}
 		fmt=${fmt//\{BOT_FIRST_NAME\}/${_BOT_INFO_[2]}}
@@ -146,8 +165,10 @@ CreateLog()
 		fmt=${fmt//\{METHOD\}/${FUNCNAME[2]/main/ShellBot.getUpdates}}
 		fmt=${fmt//\{RETURN\}/$(GetAllValues ${*:2})}
 
+		exec 2<&5
+
 		# log
-		echo "$fmt" >> $_BOT_LOG_FILE_ || MessageError API
+		[[ $fmt ]] && { echo "$fmt" >> "$_BOT_LOG_FILE_" || MessageError API; }
 	done
 
 	return $?
@@ -388,8 +409,8 @@ ShellBot.init()
 			case $1 in
 				-t|--token)
 	    			CheckArgType token "$1" "$2"
-	    			declare -gr _TOKEN_="$2"												# TOKEN
-	    			declare -gr _API_TELEGRAM_="https://api.telegram.org/bot$_TOKEN_"		# API
+	    			declare -gr _TOKEN_=$2												# TOKEN
+	    			declare -gr _API_TELEGRAM_="https://api.telegram.org/bot$_TOKEN_"	# API
 	    			shift 2
 	   				;;
 	   			-m|--monitor)
@@ -410,7 +431,7 @@ ShellBot.init()
 					;;
 				-u|--user)
 					CheckArgType user "$1" "$2"
-					user_unit="$2"
+					user_unit=$2
 					shift 2
 					;;
 				-l|--log_file)
@@ -468,7 +489,7 @@ ShellBot.init()
 	)
 
 	# Configuração. (padrão)
-	declare -gr _BOT_LOG_FORMAT_=${logfmt:-"%(%d/%m/%Y %H:%M:%S)T: {BASENAME}: {BOT_USERNAME}: {UPDATE_ID}: {METHOD}: {FROM_USERNAME}: {MESSAGE_TEXT}"}
+	declare -gr _BOT_LOG_FORMAT_=${logfmt:-%(%d/%m/%Y %H:%M:%S)T: \{BASENAME\}: \{BOT_USERNAME\}: \{UPDATE_ID\}: \{METHOD\}: \{FROM_USERNAME\}: \{MESSAGE_TEXT\}}
 	declare -gr _BOT_TYPE_RETURN_=${ret:-value}
 	declare -gr _BOT_DELM_=${delm:-|}
 	declare -gr _SHELLBOT_INIT_=1 
@@ -503,15 +524,15 @@ ShellBot.init()
    			case $1 in
    				-f|--function)
 					CheckArgType func "$1" "$2"
-   					function="$2"
+   					function=$2
    					shift 2
    					;;
     			-a|--args)
-   					args="$2"
+   					args=$2
    					shift 2
    					;;
    				-d|--callback_data)
-   					callback_data="$2"
+   					callback_data=$2
    					shift 2
    					;;
    				--)
@@ -544,7 +565,7 @@ ShellBot.init()
     		case $1 in
     			-d|--callback_data)
     				shift 2
-    				callback_data="$1"
+    				callback_data=$1
     				;;
     			*)
     				shift
@@ -610,21 +631,21 @@ ShellBot.init()
     	do
     		case $1 in
     			-u|--url)
-    				url="$2"
+    				url=$2
     				shift 2
     				;;
     			-c|--certificate)
 					CheckArgType file "$1" "$2"
-    				certificate="$2"
+    				certificate=$2
     				shift 2
     				;;
     			-m|--max_connections)
     				CheckArgType int "$1" "$2"
-    				max_connections="$2"
+    				max_connections=$2
     				shift 2
     				;;
     			-a|--allowed_updates)
-    				allowed_updates="$2"
+    				allowed_updates=$2
     				shift 2
     				;;
     			--)
@@ -664,12 +685,12 @@ ShellBot.init()
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			-p|--photo)
 					CheckArgType file "$1" "$2"
-    				photo="$2"
+    				photo=$2
     				shift 2
     				;;
     			--)
@@ -707,7 +728,7 @@ ShellBot.init()
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			--)
@@ -744,11 +765,11 @@ ShellBot.init()
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			-t|--title)
-    				title="$2"
+    				title=$2
     				shift 2
     				;;
     			--)
@@ -788,11 +809,11 @@ ShellBot.init()
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			-d|--description)
-    				description="$2"
+    				description=$2
     				shift 2
     				;;
     			--)
@@ -833,17 +854,17 @@ ShellBot.init()
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			-m|--message_id)
     				CheckArgType int "$1" "$2"
-    				message_id="$2"
+    				message_id=$2
     				shift 2
     				;;
     			-n|--disable_notification)
     				CheckArgType bool "$1" "$2"
-    				disable_notification="$2"
+    				disable_notification=$2
     				shift 2
     				;;	
     			--)
@@ -882,7 +903,7 @@ ShellBot.init()
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			--)
@@ -925,37 +946,37 @@ ShellBot.init()
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			-u|--user_id)
     				CheckArgType int "$1" "$2"
-    				user_id="$2"
+    				user_id=$2
     				shift 2
     				;;
     			-d|--until_date)
     				CheckArgType int "$1" "$2"
-    				until_date="$2"
+    				until_date=$2
     				shift 2
     				;;
     			-s|--can_send_messages)
     				CheckArgType bool "$1" "$2"
-    				can_send_messages="$2"
+    				can_send_messages=$2
     				shift 2
     				;;
     			-m|--can_send_media_messages)
     				CheckArgType bool "$1" "$2"
-    				can_send_media_messages="$2"
+    				can_send_media_messages=$2
     				shift 2
     				;;
     			-o|--can_send_other_messages)
     				CheckArgType bool "$1" "$2"
-    				can_send_other_messages="$2"
+    				can_send_other_messages=$2
     				shift 2
     				;;
     			-w|--can_add_web_page_previews)
     				CheckArgType bool "$1" "$2"
-    				can_add_web_page_previews="$2"
+    				can_add_web_page_previews=$2
     				shift 2
     				;;				
     			--)
@@ -1012,52 +1033,52 @@ ShellBot.init()
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			-u|--user_id)
     				CheckArgType int "$1" "$2"
-    				user_id="$2"
+    				user_id=$2
     				shift 2
     				;;
     			-i|--can_change_info)
     				CheckArgType bool "$1" "$2"
-    				can_change_info="$2"
+    				can_change_info=$2
     				shift 2
     				;;
     			-p|--can_post_messages)
     				CheckArgType bool "$1" "$2"
-    				can_post_messages="$2"
+    				can_post_messages=$2
     				shift 2
     				;;
     			-e|--can_edit_messages)
     				CheckArgType bool "$1" "$2"
-    				can_edit_messages="$2"
+    				can_edit_messages=$2
     				shift 2
     				;;
     			-d|--can_delete_messages)
     				CheckArgType bool "$1" "$2"
-    				can_delete_messages="$2"
+    				can_delete_messages=$2
     				shift 2
     				;;
     			-v|--can_invite_users)
     				CheckArgType bool "$1" "$2"
-    				can_invite_users="$2"
+    				can_invite_users=$2
     				shift 2
     				;;
     			-r|--can_restrict_members)
     				CheckArgType bool "$1" "$2"
-    				can_restrict_members="$2"
+    				can_restrict_members=$2
     				shift 2
     				;;
     			-f|--can_pin_messages)
     				CheckArgType bool "$1" "$2"
-    				can_pin_messages="$2"
+    				can_pin_messages=$2
     				shift 2
     				;;	
     			-m|--can_promote_members)
     				CheckArgType bool "$1" "$2"
-    				can_promote_members="$2"
+    				can_promote_members=$2
     				shift 2
     				;;
     			--)
@@ -1103,7 +1124,7 @@ ShellBot.init()
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			--)
@@ -1147,36 +1168,36 @@ ShellBot.init()
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			-v|--video_note)
 					CheckArgType file "$1" "$2"
-    				video_note="$2"
+    				video_note=$2
     				shift 2
     				;;
     			-t|--duration)
     				CheckArgType int "$1" "$2"
-    				duration="$2"
+    				duration=$2
     				shift 2
     				;;
     			-l|--length)
     				CheckArgType int "$1" "$2"
-    				length="$2"
+    				length=$2
     				shift 2
     				;;
     			-n|--disable_notification)
     				CheckArgType bool "$1" "$2"
-    				disable_notification="$2"
+    				disable_notification=$2
     				shift 2
     				;;
     			-r|--reply_to_message_id)
     				CheckArgType int "$1" "$2"
-    				reply_to_message_id="$2"
+    				reply_to_message_id=$2
     				shift 2
     				;;
     			-m|--reply_markup)
-    				reply_markup="$2"
+    				reply_markup=$2
     				shift 2
     				;;
     			--)
@@ -1232,32 +1253,32 @@ ShellBot.init()
     				# Ponteiro que recebe o endereço de "button" com as definições
     				# da configuração do botão inserido.
 					CheckArgType var "$1" "$2"
-    				__button="$2"
+    				__button=$2
     				shift 2
     				;;
     			-l|--line)
     				CheckArgType int "$1" "$2"
-    				__line="$2"
+    				__line=$2
     				shift 2
     				;;
     			-t|--text)
-    				__text="$2"
+					__text=$2
     				shift 2
     				;;
     			-u|--url)
-    				__url="$2"
+    				__url=$2
     				shift 2
     				;;
     			-c|--callback_data)
-    				__callback_data="$2"
+    				__callback_data=$2
     				shift 2
     				;;
     			-q|--switch_inline_query)
-    				__switch_inline_query="$2"
+    				__switch_inline_query=$2
     				shift 2
     				;;
     			-s|--switch_inline_query_current_chat)
-    				__switch_inline_query_current_chat="$2"
+    				__switch_inline_query_current_chat=$2
     				shift 2
     				;;
     			--)
@@ -1386,27 +1407,27 @@ ShellBot.init()
     	do
     		case $1 in
     			-c|--callback_query_id)
-    				callback_query_id="$2"
+    				callback_query_id=$2
     				shift 2
     				;;
     			-t|--text)
-    				text="$2"
+					text=$2
     				shift 2
     				;;
     			-s|--show_alert)
     				# boolean
     				CheckArgType bool "$1" "$2"
-    				show_alert="$2"
+    				show_alert=$2
     				shift 2
     				;;
     			-u|--url)
-    				url="$2"
+    				url=$2
     				shift 2
     				;;
     			-e|--cache_time)
     				# inteiro
     				CheckArgType int "$1" "$2"
-    				cache_time="$2"
+    				cache_time=$2
     				shift 2
     				;;
     			--)
@@ -1534,39 +1555,39 @@ _EOF
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			-t|--text)
-    				text="$2"
+					text=$2
     				shift 2
     				;;
     			-p|--parse_mode)
     				# Tipo: "markdown" ou "html"
     				CheckArgType parsemode "$1" "$2"
-    				parse_mode="$2"
+    				parse_mode=$2
     				shift 2
     				;;
     			-w|--disable_web_page_preview)
     				# Tipo: boolean
     				CheckArgType bool "$1" "$2"
-    				disable_web_page_preview="$2"
+    				disable_web_page_preview=$2
     				shift 2
     				;;
     			-n|--disable_notification)
     				# Tipo: boolean
     				CheckArgType bool "$1" "$2"
-    				disable_notification="$2"
+    				disable_notification=$2
     				shift 2
     				;;
     			-r|--reply_to_message_id)
     				# Tipo: inteiro
     				CheckArgType int "$1" "$2"
-    				reply_to_message_id="$2"
+    				reply_to_message_id=$2
     				shift 2
     				;;
     			-k|--reply_markup)
-    				reply_markup="$2"
+    				reply_markup=$2
     				shift 2
     				;;
     			--)
@@ -1692,33 +1713,33 @@ _EOF
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			-p|--photo)
 					CheckArgType file "$1" "$2"
-    				photo="$2"
+    				photo=$2
     				shift 2
     				;;
     			-t|--caption)
     				# Limite máximo de caracteres: 200
-    				caption="$2"
+					caption=$2
     				shift 2
     				;;
     			-n|--disable_notification)
     				# Tipo: boolean
     				CheckArgType bool "$1" "$2"
-    				disable_notification="$2"
+    				disable_notification=$2
     				shift 2
     				;;
     			-r|--reply_to_message_id)
     				# Tipo: inteiro
     				CheckArgType int "$1" "$2"
-    				reply_to_message_id="$2"
+    				reply_to_message_id=$2
     				shift 2
     				;;
     			-k|--reply_markup)
-    				reply_markup="$2"
+    				reply_markup=$2
     				shift 2
     				;;
     			--)
@@ -1775,46 +1796,46 @@ _EOF
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			-a|--audio)
 					CheckArgType file "$1" "$2"
-    				audio="$2"
+    				audio=$2
     				shift 2
     				;;
     			-t|--caption)
-    				caption="$2"
+					caption=$2
     				shift 2
     				;;
     			-d|--duration)
     				# Tipo: inteiro
     				CheckArgType int "$1" "$2"
-    				duration="$2"
+    				duration=$2
     				shift 2
     				;;
     			-e|--performer)
-    				performer="$2"
+    				performer=$2
     				shift 2
     				;;
     			-i|--title)
-    				title="$2"
+    				title=$2
     				shift 2
     				;;
     			-n|--disable_notification)
     				# Tipo: boolean
     				CheckArgType bool "$1" "$2"
-    				disable_notification="$2"
+    				disable_notification=$2
     				shift 2
     				;;
     			-r|--reply_to_message_id)
     				# Tipo: inteiro
     				CheckArgType int "$1" "$2"
-    				reply_to_message_id="$2"
+    				reply_to_message_id=$2
     				shift 2
     				;;
     			-k|--reply_markup)
-    				reply_markup="$2"
+    				reply_markup=$2
     				shift 2
     				;;
     			--)
@@ -1873,30 +1894,30 @@ _EOF
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			-d|--document)
 					CheckArgType file "$1" "$2"
-    				document="$2"
+    				document=$2
     				shift 2
     				;;
     			-t|--caption)
-    				caption="$2"
+					caption=$2
     				shift 2
     				;;
     			-n|--disable_notification)
     				CheckArgType bool "$1" "$2"
-    				disable_notification="$2"
+    				disable_notification=$2
     				shift 2
     				;;
     			-r|--reply_to_message_id)
     				CheckArgType int "$1" "$2"
-    				reply_to_message_id="$2"
+    				reply_to_message_id=$2
     				shift 2
     				;;
     			-k|--reply_markup)
-    				reply_MARKUP="$2"
+    				reply_markup=$2
     				shift 2
     				;;
     			--)
@@ -1950,28 +1971,28 @@ _EOF
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			-s|--sticker)
 					CheckArgType file "$1" "$2"
-    				sticker="$2"
+    				sticker=$2
     				shift 2
     				;;
     			-n|--disable_notification)
     				# Tipo: boolean
     				CheckArgType bool "$1" "$2"
-    				disable_notification="$2"
+    				disable_notification=$2
     				shift 2
     				;;
     			-r|--reply_to_message_id)
     				# Tipo: inteiro
     				CheckArgType int "$1" "$2"
-    				reply_to_message_id="$2"
+    				reply_to_message_id=$2
     				shift 2
     				;;
     			-k|--reply_markup)
-    				reply_markup="$2"
+    				reply_markup=$2
     				shift 2
     				;;
     			--)
@@ -2016,7 +2037,7 @@ _EOF
 		do
 			case $1 in
 				-n|--name)
-					name="$2"
+					name=$2
 					shift 2
 					;;
 				--)
@@ -2054,12 +2075,12 @@ _EOF
 			case $1 in
 				-u|--user_id)
     				CheckArgType int "$1" "$2"
-					user_id="$2"
+					user_id=$2
 					shift 2
 					;;
 				-s|--png_sticker)
 					CheckArgType file "$1" "$2"
-					png_sticker="$2"
+					png_sticker=$2
 					shift 2
 					;;
 				--)
@@ -2100,12 +2121,12 @@ _EOF
 		do
 			case $1 in
 				-s|--sticker)
-					sticker="$2"
+					sticker=$2
 					shift 2
 					;;
 				-p|--position)
 					CheckArgType int "$1" "$2"
-					position="$2"
+					position=$2
 					shift 2
 					;;
 				--)
@@ -2145,7 +2166,7 @@ _EOF
 		do
 			case $1 in
 				-s|--sticker)
-					sticker="$2"
+					sticker=$2
 					shift 2
 					;;
 				--)
@@ -2188,27 +2209,27 @@ _EOF
 			case $1 in
 				-p|--point)
 					CheckArgType point "$1" "$2"
-					point="$2"
+					point=$2
 					shift 2
 					;;
 				-x|--x_shift)
 					CheckArgType float "$1" "$2"
-					x_shift="$2"
+					x_shift=$2
 					shift 2
 					;;
 				-y|--y_shift)
 					CheckArgType float "$1" "$2"
-					y_shift="$2"
+					y_shift=$2
 					shift 2
 					;;
 				-s|--scale)
 					CheckArgType float "$1" "$2"
-					scale="$2"
+					scale=$2
 					shift 2
 					;;
 				-z|--zoom)
 					CheckArgType float "$1" "$2"
-					zoom="$2"
+					zoom=$2
 					shift 2
 					;;
 				--)
@@ -2254,33 +2275,33 @@ _EOF
 			case $1 in
 				-u|--user_id)
 					CheckArgType int "$1" "$2"
-					user_id="$2"
+					user_id=$2
 					shift 2
 					;;
 				-n|--name)
-					name="$2"
+					name=$2
 					shift 2
 					;;
 				-t|--title)
-					title="$2"
+					title=$2
 					shift 2
 					;;
 				-s|--png_sticker)
 					CheckArgType file "$1" "$2"
-					png_sticker="$2"
+					png_sticker=$2
 					shift 2
 					;;
 				-e|--emojis)
-					emojis="$2"
+					emojis=$2
 					shift 2
 					;;
 				-c|--contains_masks)
     				CheckArgType bool "$1" "$2"
-					contains_masks="$2"
+					contains_masks=$2
 					shift 2
 					;;
 				-m|--mask_position)
-					mask_position="$2"
+					mask_position=$2
 					shift 2
 					;;
 				--)
@@ -2333,24 +2354,24 @@ _EOF
 			case $1 in
 				-u|--user_id)
 					CheckArgType int "$1" "$2"
-					user_id="$2"
+					user_id=$2
 					shift 2
 					;;
 				-n|--name)
-					name="$2"
+					name=$2
 					shift 2
 					;;
 				-s|--png_sticker)
 					CheckArgType file "$1" "$2"
-					png_sticker="$2"
+					png_sticker=$2
 					shift 2
 					;;
 				-e|--emojis)
-					emojis="$2"
+					emojis=$2
 					shift 2
 					;;
 				-m|--mask_position)
-					mask_position="$2"
+					mask_position=$2
 					shift 2
 					;;
 				--)
@@ -2410,49 +2431,49 @@ _EOF
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			-v|--video)
 					CheckArgType file "$1" "$2"
-    				video="$2"
+    				video=$2
     				shift 2
     				;;
     			-d|--duration)
     				# Tipo: inteiro
     				CheckArgType int "$1" "$2"
-    				duration="$2"
+    				duration=$2
     				shift 2
     				;;
     			-w|--width)
     				# Tipo: inteiro
     				CheckArgType int "$1" "$2"
-    				width="$2"
+    				width=$2
     				shift 2
     				;;
     			-h|--height)
     				# Tipo: inteiro
     				CheckArgType int "$1" "$2"
-    				height="$2"
+    				height=$2
     				shift 2
     				;;
     			-t|--caption)
-    				caption="$2"
+					caption=$2
     				shift 2
     				;;
     			-n|--disable_notification)
     				# Tipo: boolean
     				CheckArgType bool "$1" "$2"
-    				disable_notification="$2"
+    				disable_notification=$2
     				shift 2
     				;;
     			-r|--reply_to_message_id)
     				CheckArgType int "$1" "$2"
-    				reply_to_message_id="$2"
+    				reply_to_message_id=$2
     				shift 2
     				;;
     			-k|--reply_markup)
-    				reply_markup="$2"
+    				reply_markup=$2
     				shift 2
     				;;
 				-s|--supports_streaming)
@@ -2518,38 +2539,38 @@ _EOF
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			-v|--voice)
 					CheckArgType file "$1" "$2"
-    				voice="$2"
+    				voice=$2
     				shift 2
     				;;
     			-t|--caption)
-    				caption="$2"
+					caption=$2
     				shift 2
     				;;
     			-d|--duration)
     				# Tipo: inteiro
     				CheckArgType int "$1" "$2"
-    				duration="$2"
+    				duration=$2
     				shift 2
     				;;
     			-n|--disable_notification)
     				# Tipo: boolean
     				CheckArgType bool "$1" "$2"
-    				disable_notification="$2"
+    				disable_notification=$2
     				shift 2
     				;;
     			-r|--reply_to_message_id)
     				# Tipo: inteiro
     				CheckArgType int "$1" "$2"
-    				reply_to_message_id="$2"
+    				reply_to_message_id=$2
     				shift 2
     				;;
     			-k|--reply_markup)
-    				reply_markup="$2"
+    				reply_markup=$2
     				shift 2
     				;;
     			--)
@@ -2608,40 +2629,40 @@ _EOF
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			-l|--latitude)
     				# Tipo: float
     				CheckArgType float "$1" "$2"
-    				latitude="$2"
+    				latitude=$2
     				shift 2
     				;;
     			-g|--longitude)
     				# Tipo: float
     				CheckArgType float "$1" "$2"
-    				longitude="$2"
+    				longitude=$2
     				shift 2
     				;;
 				-p|--live_period)
     				CheckArgType int "$1" "$2"
-					live_period="$2"
+					live_period=$2
 					shift 2
 					;;
     			-n|--disable_notification)
     				# Tipo: boolean
     				CheckArgType bool "$1" "$2"
-    				disable_notification="$2"
+    				disable_notification=$2
     				shift 2
     				;;
     			-r|--reply_to_message_id)
     				# Tipo: inteiro
     				CheckArgType int "$1" "$2"
-    				reply_to_message_id="$2"
+    				reply_to_message_id=$2
     				shift 2
     				;;
     			-k|--reply_markup)
-    				reply_markup="$2"
+    				reply_markup=$2
     				shift 2
     				;;
     			--)
@@ -2700,47 +2721,47 @@ _EOF
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			-l|--latitude)
     				# Tipo: float
     				CheckArgType float "$1" "$2"
-    				latitude="$2"
+    				latitude=$2
     				shift 2
     				;;
     			-g|--longitude)
     				# Tipo: float
     				CheckArgType float "$1" "$2"
-    				longitude="$2"
+    				longitude=$2
     				shift 2
     				;;
     			-i|--title)
-    				title="$2"
+    				title=$2
     				shift 2
     				;;
     			-a|--address)
-    				address="$2"
+    				address=$2
     				shift 2
     				;;
     			-f|--foursquare_id)
-    				foursquare_id="$2"
+    				foursquare_id=$2
     				shift 2
     				;;
     			-n|--disable_notification)
     				# Tipo: boolean
     				CheckArgType bool "$1" "$2"
-    				disable_notification="$2"
+    				disable_notification=$2
     				shift 2
     				;;
     			-r|--reply_to_message_id)
     				# Tipo: inteiro
     				CheckArgType int "$1" "$2"
-    				reply_to_message_id="$2"
+    				reply_to_message_id=$2
     				shift 2
     				;;
     			-k|--reply_markup)
-    				reply_markup="$2"
+    				reply_markup=$2
     				shift 2
     				;;
     			--)
@@ -2802,35 +2823,35 @@ _EOF
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			-p|--phone_number)
-    				phone_number="$2"
+    				phone_number=$2
     				shift 2
     				;;
     			-f|--first_name)
-    				first_name="$2"
+    				first_name=$2
     				shift 2
     				;;
     			-l|--last_name)
-    				last_name="$2"
+    				last_name=$2
     				shift 2
     				;;
     			-n|--disable_notification)
     				# Tipo: boolean
     				CheckArgType bool "$1" "$2"
-    				disable_notification="$2"
+    				disable_notification=$2
     				shift 2
     				;;
     			-r|--reply_to_message_id)
     				# Tipo: inteiro
     				CheckArgType int "$1" "$2"
-    				reply_to_message_id="$2"
+    				reply_to_message_id=$2
     				shift 2
     				;;
     			-k|--reply_markup)
-    				reply_markup="$2"
+    				reply_markup=$2
     				shift 2
     				;;
     			--)
@@ -2882,12 +2903,12 @@ _EOF
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			-a|--action)
     				CheckArgType action "$1" "$2"
-    				action="$2"
+    				action=$2
     				shift 2
     				;;
     			--)
@@ -2936,17 +2957,17 @@ _EOF
     		case $1 in
     			-u|--user_id)
     				CheckArgType int "$1" "$2"
-    				user_id="$2"
+    				user_id=$2
     				shift 2
     				;;
     			-o|--offset)
     				CheckArgType int "$1" "$2"
-    				offset="$2"
+    				offset=$2
     				shift 2
     				;;
     			-l|--limit)
     				CheckArgType int "$1" "$2"
-    				limit="$2"
+    				limit=$2
     				shift 2
     				;;
     			--)
@@ -2992,7 +3013,7 @@ _EOF
     	do
     		case $1 in
     			-f|--file_id)
-    				file_id="$2"
+    				file_id=$2
     				shift 2
     				;;
     			--)
@@ -3037,17 +3058,17 @@ _EOF
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			-u|--user_id)
     				CheckArgType int "$1" "$2"
-    				user_id="$2"
+    				user_id=$2
     				shift 2
     				;;
     			-d|--until_date)
     				CheckArgType int "$1" "$2"
-    				until_date="$2"
+    				until_date=$2
     				shift 2
     				;;
     			--)
@@ -3094,7 +3115,7 @@ _EOF
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			--)
@@ -3134,12 +3155,12 @@ _EOF
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			-u|--user_id)
     				CheckArgType int "$1" "$2"
-    				user_id="$2"
+    				user_id=$2
     				shift 2
     				;;
     			--)
@@ -3181,7 +3202,7 @@ _EOF
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			--)
@@ -3220,7 +3241,7 @@ _EOF
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			--)
@@ -3259,7 +3280,7 @@ _EOF
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			--)
@@ -3299,12 +3320,12 @@ _EOF
     	do
     		case $1 in
     			-c|--chat_id)
-    				chat_id="$2"
+    				chat_id=$2
     				shift 2
     				;;
     			-u|--user_id)
     				CheckArgType int "$1" "$2"
-    				user_id="$2"
+    				user_id=$2
     				shift 2
     				;;
     			--)
@@ -3348,35 +3369,35 @@ _EOF
     	do
     			case $1 in
     				-c|--chat_id)
-    					chat_id="$2"
+    					chat_id=$2
     					shift 2
     					;;
     				-m|--message_id)
     					CheckArgType int "$1" "$2"
-    					message_id="$2"
+    					message_id=$2
     					shift 2
     					;;
     				-i|--inline_message_id)
     					CheckArgType int "$1" "$2"
-    					inline_message_id="$2"
+    					inline_message_id=$2
     					shift 2
     					;;
     				-t|--text)
-    					text="$2"
+						text=$2
     					shift 2
     					;;
     				-p|--parse_mode)
     					CheckArgType parsemode "$1" "$2"
-    					parse_mode="$2"
+    					parse_mode=$2
     					shift 2
     					;;
     				-w|--disable_web_page_preview)
     					CheckArgType bool "$1" "$2"
-    					disable_web_page_preview="$2"
+    					disable_web_page_preview=$2
     					shift 2
     					;;
     				-r|--reply_markup)
-    					reply_markup="$2"
+    					reply_markup=$2
     					shift 2
     					;;
     				--)
@@ -3428,25 +3449,25 @@ _EOF
     	do
     			case $1 in
     				-c|--chat_id)
-    					chat_id="$2"
+    					chat_id=$2
     					shift 2
     					;;
     				-m|--message_id)
     					CheckArgType int "$1" "$2"
-    					message_id="$2"
+    					message_id=$2
     					shift 2
     					;;
     				-i|--inline_message_id)
     					CheckArgType int "$1" "$2"
-    					inline_message_id="$2"
+    					inline_message_id=$2
     					shift 2
     					;;
     				-t|--caption)
-    					caption="$2"
+						caption=$2
     					shift 2
     					;;
     				-r|--reply_markup)
-    					reply_markup="$2"
+    					reply_markup=$2
     					shift 2
     					;;
     				--)
@@ -3491,21 +3512,21 @@ _EOF
     	do
     			case $1 in
     				-c|--chat_id)
-    					chat_id="$2"
+    					chat_id=$2
     					shift 2
     					;;
     				-m|--message_id)
     					CheckArgType int "$1" "$2"
-    					message_id="$2"
+    					message_id=$2
     					shift 2
     					;;
     				-i|--inline_message_id)
     					CheckArgType int "$1" "$2"
-    					inline_message_id="$2"
+    					inline_message_id=$2
     					shift 2
     					;;
     				-r|--reply_markup)
-    					reply_markup="$2"
+    					reply_markup=$2
     					shift 2
     					;;
     				--)
@@ -3549,12 +3570,12 @@ _EOF
     	do
     			case $1 in
     				-c|--chat_id)
-    					chat_id="$2"
+    					chat_id=$2
     					shift 2
     					;;
     				-m|--message_id)
     					CheckArgType int "$1" "$2"
-    					message_id="$2"
+    					message_id=$2
     					shift 2
     					;;
     				--)
@@ -3595,14 +3616,14 @@ _EOF
 		do
 			case $1 in
 				-f|--file_path)
-					file_path="$2"
+					file_path=$2
 					shift 2
 					;;
 				-d|--dir)
 					[[ -d $2 ]] && {
 						[[ -w $2 ]] || MessageError API "$_ERR_DIR_WRITE_DENIED_" "$1" "$2"
 					} || MessageError API "$_ERR_DIR_NOT_FOUND_" "$1" "$2"
-					dir="${2%/}"
+					dir=${2%/}
 					shift 2
 					;;
 				--)
@@ -3642,33 +3663,33 @@ _EOF
 		do
 			case $1 in
 				-c|--chat_id)
-					chat_id="$2"
+					chat_id=$2
 					shift 2
 					;;
 				-m|--message_id)
     				CheckArgType int "$1" "$2"
-					message_id="$2"
+					message_id=$2
 					shift 2
 					;;
     			-i|--inline_message_id)
 					CheckArgType int "$1" "$2"
-					inline_message_id="$2"
+					inline_message_id=$2
 					shift 2
 					;;
     			-l|--latitude)
     				# Tipo: float
     				CheckArgType float "$1" "$2"
-    				latitude="$2"
+    				latitude=$2
     				shift 2
     				;;
     			-g|--longitude)
     				# Tipo: float
     				CheckArgType float "$1" "$2"
-    				longitude="$2"
+    				longitude=$2
     				shift 2
     				;;
     			-r|--reply_markup)
-    				reply_markup="$2"
+    				reply_markup=$2
     				shift 2
     				;;
     			--)
@@ -3715,21 +3736,21 @@ _EOF
 		do
 			case $1 in
 				-c|--chat_id)
-					chat_id="$2"
+					chat_id=$2
 					shift 2
 					;;
 				-m|--message_id)
     				CheckArgType int "$1" "$2"
-					message_id="$2"
+					message_id=$2
 					shift 2
 					;;
     			-i|--inline_message_id)
 					CheckArgType int "$1" "$2"
-					inline_message_id="$2"
+					inline_message_id=$2
 					shift 2
 					;;
     			-r|--reply_markup)
-    				reply_markup="$2"
+    				reply_markup=$2
     				shift 2
     				;;
     			--)
@@ -3772,11 +3793,11 @@ _EOF
 		do
 			case $1 in
 				-c|--chat_id)
-					chat_id="$2"
+					chat_id=$2
 					shift 2
 					;;
 				-s|--sticker_set_name)
-					sticker_set_name="$2"
+					sticker_set_name=$2
 					shift 2
 					;;
 				--)
@@ -3813,7 +3834,7 @@ _EOF
 		do
 			case $1 in
 				-c|--chat_id)
-					chat_id="$2"
+					chat_id=$2
 					shift 2
 					;;
 				--)
@@ -3861,59 +3882,59 @@ _EOF
 			case $1 in
 				-t|--type)
 					CheckArgType mediatype "$1" "$2"
-					__type="$2"
+					__type=$2
 					shift 2
 					;;
 				-i|--input)
 					CheckArgType var "$1" "$2"
-					__input="$2"
+					__input=$2
 					shift 2
 					;;
 				-m|--media)
 					CheckArgType file "$1" "$2"
-					__media="$2"
+					__media=$2
 					shift 2
 					;;
 				-c|--caption)
-					__caption="$2"
+					__caption=$2
 					shift 2
 					;;
 				-p|--parse_mode)
 					CheckArgType parsemode "$1" "$2"
-					__parse_mode="$2"
+					__parse_mode=$2
 					shift 2
 					;;
 				-b|--thumb)
 					CheckArgType file "$1" "$2"
-					__thumb="$2"
+					__thumb=$2
 					shift 2
 					;;
 				-w|--width)
 					CheckArgType int "$1" "$2"
-					__width="$2"
+					__width=$2
 					shift 2
 					;;
 				-h|--height)
 					CheckArgType int "$1" "$2"
-					__height="$2"
+					__height=$2
 					shift 2
 					;;
 				-d|--duration)
 					CheckArgType int "$1" "$2"
-					__duration="$2"
+					__duration=$2
 					shift 2
 					;;
 				-s|--supports_streaming)
 					CheckArgType bool "$1" "$2"
-					__supports_streaming="$2"
+					__supports_streaming=$2
 					shift 2
 					;;
 				-f|--performer)
-					__performer="$2"
+					__performer=$2
 					shift 2
 					;;
 				-e|--title)
-					__title="$2"
+					__title=$2
 					shift 2
 					;;
 				--)
@@ -3962,21 +3983,21 @@ _EOF
 		do
 			case $1 in
 				-c|--chat_id)
-					chat_id="$2"
+					chat_id=$2
 					shift 2
 					;;
 				-m|--media)
-					media="[$2]"
+					media=[$2]
 					shift 2
 					;;
 				-n|--disable_notification)
     				CheckArgType bool "$1" "$2"
-					disable_notification="$2"
+					disable_notification=$2
 					shift 2
 					;;
 				-r|--reply_to_message_id)
     				CheckArgType int "$1" "$2"
-    				reply_to_message_id="$2"
+    				reply_to_message_id=$2
     				shift 2
 					;;
 				--)
@@ -4021,25 +4042,25 @@ _EOF
 		do
 			case $1 in
 				-c|--chat_id)
-					chat_id="$2"
+					chat_id=$2
 					shift 2
 					;;
 				-i|--message_id)
 					CheckArgType int "$1" "$2"
-					message_id="$2"
+					message_id=$2
 					shift 2
 					;;
 				-n|--inline_message_id)
 					CheckArgType int "$1" "$2"
-					inline_message_id="$2"
+					inline_message_id=$2
 					shift 2
 					;;
 				-m|--media)
-					media="$2"
+					media=$2
 					shift 2
 					;;
 				-k|--reply_markup)
-					reply_markup="$2"
+					reply_markup=$2
 					shift 2
 					;;
 				--)
@@ -4097,55 +4118,55 @@ _EOF
 		do
 			case $1 in
 				-c|--chat_id)
-					chat_id="$2"
+					chat_id=$2
 					shift 2
 					;;
 				-a|--animation)
 					CheckArgType file "$1" "$2"
-					animation="$2"
+					animation=$2
 					shift 2
 					;;
 				-d|--duration)
 					CheckArgType int "$1" "$2"
-					duartion="$2"
+					duartion=$2
 					shift 2
 					;;
 				-w|--width)
 					CheckArgType int "$1" "$2"
-					width="$2"
+					width=$2
 					shift 2
 					;;
 				-h|--height)
 					CheckArgType int "$1" "$2"
-					height="$2"
+					height=$2
 					shift 2
 					;;
 				-b|--thumb)
 					CheckArgType file "$1" "$2"
-					thumb="$2"
+					thumb=$2
 					shift 2
 					;;
 				-o|--caption)
-					caption="$2"
+					caption=$2
 					shift 2
 					;;
 				-p|--parse_mode)
 					CheckArgType parsemode "$1" "$2"
-					parse_mode="$2"
+					parse_mode=$2
 					shift 2
 					;;
 				-n|--disable_notification)
 					CheckArgType bool "$1" "$2"
-					disable_notification="$2"
+					disable_notification=$2
 					shift 2
 					;;
 				-r|--reply_to_message_id)
 					CheckArgType int "$1" "$2"
-					reply_to_message_id="$2"
+					reply_to_message_id=$2
 					shift 2
 					;;
 				-k|--reply_markup)
-					reply_markup="$2"
+					reply_markup=$2
 					shift 2
 					;;
 				--)
@@ -4184,7 +4205,7 @@ _EOF
 		local chat_type time date language message_id 
 		local is_bot text entities_type file_type
 		local query_data query_id query_text
-		local chat_member mime_type num_args
+		local chat_member mime_type num_args exec
 		local action_args weekday user_status chat_name 
 		local message_status reply_message rule_name
 
@@ -4215,7 +4236,8 @@ _EOF
 												weekday:,
 												user_status:,
 												message_status:,
-												reply_message:' \
+												reply_message:,
+												exec:' \
 								-- "$@")
 		
 		eval set -- "$param"
@@ -4348,6 +4370,10 @@ _EOF
 					reply_message=$2
 					shift 2
 					;;
+				--exec)
+					exec=${2//|/\\|}
+					shift 2
+					;;
 				--)
 					shift
 					break
@@ -4357,7 +4383,7 @@ _EOF
 		
 		[[ $rule_name ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --name]"
 
-		_BOT_COMMAND_RULES_LIST_+=("${BASH_SOURCE[1]##*/}|${BASH_LINENO}|${rule_name}|${action}|${action_args}|${message_id:-+any}|${is_bot:-+any}|${command:-+any}|${user_id:-+any}|${username:-+any}|${chat_id:-+any}|${chat_name:-+any}|${chat_type:-+any}|${language:-+any}|${text}|${entities_type:-+any}|${file_type:-+any}|${mime_type:-+any}|${query_id:-+any}|${query_data:-+any}|${chat_member:-+any}|${num_args:-+any}|${time:-+any}|${date:-+any}|${weekday:-+any}|${user_status:-+any}|${message_status:-+any}|${reply_message}")
+		_BOT_COMMAND_RULES_LIST_+=("${BASH_SOURCE[1]##*/}|${BASH_LINENO}|${rule_name}|${action}|${action_args}|${exec}|${message_id:-+any}|${is_bot:-+any}|${command:-+any}|${user_id:-+any}|${username:-+any}|${chat_id:-+any}|${chat_name:-+any}|${chat_type:-+any}|${language:-+any}|${text}|${entities_type:-+any}|${file_type:-+any}|${mime_type:-+any}|${query_id:-+any}|${query_data:-+any}|${chat_member:-+any}|${num_args:-+any}|${time:-+any}|${date:-+any}|${weekday:-+any}|${user_status:-+any}|${message_status:-+any}|${reply_message}")
 		
 		return $?
 	}
@@ -4371,12 +4397,12 @@ _EOF
 		local __dt __sdate __edate __cdate __query_data __query_id
 		local __chat_member __mem __ent __type __num_args __args
 		local __action_args __user_status __status __out __reply_message
-		local __rule_name __rule_line __rule_source __chat_name 
+		local __rule_name __rule_line __rule_source __chat_name
 		local __u_message_text __u_message_id __u_message_from_is_bot 
 		local __u_message_from_id __u_message_from_username __msgstatus 
 		local __u_message_from_language_code __u_message_chat_id __message_status
 		local __u_message_chat_type __u_message_date __u_message_entities_type
-		local __u_message_mime_type
+		local __u_message_mime_type __stdout __buffer __exec
 
 		local 	__param=$(getopt	--name "$FUNCNAME" \
 									--options 'u:' \
@@ -4402,7 +4428,8 @@ _EOF
 		done
 		
 		[[ $__uid ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-u, --update_id]"
-		
+
+		# Regras
 		for __rule in "${_BOT_COMMAND_RULES_LIST_[@]}"; do
 
 			IFS='|' read	__rule_source		\
@@ -4410,6 +4437,7 @@ _EOF
 							__rule_name			\
 							__action 			\
 							__action_args 		\
+							__exec				\
 							__message_id 		\
 							__is_bot 			\
 							__command 			\
@@ -4432,8 +4460,8 @@ _EOF
 							__weekday			\
 							__user_status		\
 							__message_status	\
-							__reply_message	<<< $__rule
-				
+							__reply_message		<<< $__rule
+			
 				__u_message_text=${message_text[$__uid]:-${edited_message_text[$__uid]:-${callback_query_message_text[$__uid]}}}
 				__u_message_id=${message_message_id[$__uid]:-${edited_message_message_id[$__uid]:-${callback_query_message_message_id[$__uid]}}}
 				__u_message_from_is_bot=${message_from_is_bot[$__uid]:-${edited_message_from_is_bot[$__uid]:-${callback_query_from_is_bot[$__uid]}}}
@@ -4559,24 +4587,52 @@ _EOF
 					[[ $__status == @(${__user_status//,/|}) ]]	|| continue
 				fi
 				
-				[[ $_BOT_MONITOR_ ]] && printf '[%s]: %s: %s: %s: %s: %s: %s: %s: %s: %s: %s\n'	\
-											${FUNCNAME}											\
-											$((__uid+1))										\
-											$(printf '%(%d/%m/%Y %H:%M)T' ${__u_message_date}) 	\
-											${__u_message_chat_type:--}							\
-											${__u_message_chat_username:--}						\
-											${__u_message_from_username:--} 					\
-											${__rule_source}									\
-											${__rule_line}										\
-											${__rule_name} 										\
-											${__action:--}
+				# Monitor
+				[[ $_BOT_MONITOR_ ]] && 	printf '[%s]: %s: %s: %s: %s: %s: %s: %s: %s: %s: %s\n'		\
+											"${FUNCNAME}"												\
+											"$((__uid+1))"												\
+											"$(printf '%(%d/%m/%Y %H:%M)T' ${__u_message_date})"		\
+											"${__u_message_chat_type}"									\
+											"${__u_message_chat_username}"								\
+											"${__u_message_from_username}" 								\
+											"${__rule_source}"											\
+											"${__rule_line}"											\
+											"${__rule_name}" 											\
+											"${__action:--}"											\
+											"${__exec:--}"
+			
+				# Log	
+				[[ $_BOT_LOG_FILE_ ]] &&	printf '%s: %s: %s: %s: %s: %s: %s\n'						\
+										 	"$(printf '%(%d/%m/%Y %H:%M:%S)T')"							\
+									 	 	"${FUNCNAME}"												\
+										 	"${__rule_source}"											\
+										 	"${__rule_line}"											\
+										 	"${__rule_name}"											\
+											"${__action:--}"											\
+											"${__exec:--}"												>> "$_BOT_LOG_FILE_"
 
-				[[ $__reply_message ]] && ShellBot.sendMessage 	--chat_id $__u_message_chat_id \
-																--reply_to_message_id $__u_message_id \
-																--text "$__reply_message" \
-																--parse_mode markdown 2>/dev/null
+				# Mensagem de resposta.
+				[[ $__reply_message ]] && ShellBot.sendMessage 	--chat_id $__u_message_chat_id 			\
+																--reply_to_message_id $__u_message_id 	\
+																--text "$__reply_message" 				\
+																--parse_mode markdown 					2>/dev/null
 
+				# Executa a função passando os argumentos posicionais. (se existir)
 				${__action:+$__action ${__action_args:-${__args[@]}}}
+
+				# Executa o bloco de comandos com os argumentos posicionais e salva o retorno.
+				__stdout=${__exec:+$(set -- ${__args[@]}; eval ${__exec} 2>&1)}
+
+				while [[ $__stdout ]]; do
+					# Salva em buffer os primeiros 4096 caracteres.
+					read -N 4096 __buffer <<< $__stdout
+					
+					# Envia o buffer.
+					ShellBot.sendMessage --chat_id $__u_message_chat_id --text "$__buffer"
+
+					# Descarta os caracteres lidos.
+					__stdout=${__stdout:4096}
+				done 
 
 				return 0
 		done
@@ -4605,21 +4661,21 @@ _EOF
     		case $1 in
     			-o|--offset)
     				CheckArgType int "$1" "$2"
-    				offset="$2"
+    				offset=$2
     				shift 2
     				;;
     			-l|--limit)
     				CheckArgType int "$1" "$2"
-    				limit="$2"
+    				limit=$2
     				shift 2
     				;;
     			-t|--timeout)
     				CheckArgType int "$1" "$2"
-    				timeout="$2"
+    				timeout=$2
     				shift 2
     				;;
     			-a|--allowed_updates)
-    				allowed_updates="$2"
+    				allowed_updates=$2
     				shift 2
     				;;
     			--)
@@ -4639,7 +4695,7 @@ _EOF
 
 
 		# Limpa as variáveis inicializadas.
-		unset ${_var_init_list_//|/ }
+		unset $_var_init_list_
 		_var_init_list_=''
 	
     	[[ $(jq -r '.result|length' <<< $jq_obj) -eq 0 ]] && return 0
@@ -4648,10 +4704,10 @@ _EOF
 		if [[ $_BOT_MONITOR_ ]]; then
 			printf -v bar '=%.s' {1..50}
 			printf "$bar\nData: %(%d/%m/%Y %T)T\n"
-			printf 'Script: %s\nBot (nome): %s\nBot (usuario): %s\nBot (id): %s\n' \
-					"${_BOT_SCRIPT_}" 	\
-					"${_BOT_INFO_[2]}" 	\
-					"${_BOT_INFO_[3]}" 	\
+			printf 'Script: %s\nBot (nome): %s\nBot (usuario): %s\nBot (id): %s\n' 	\
+					"${_BOT_SCRIPT_}" 												\
+					"${_BOT_INFO_[2]}" 												\
+					"${_BOT_INFO_[3]}" 												\
 					"${_BOT_INFO_[1]}"
 		fi
 
@@ -4676,12 +4732,12 @@ _EOF
 	
 			if [[ $_BOT_MONITOR_ ]]; then
 				[[ $vet -ne ${oldv:--1} ]] && printf "$bar\nMensagem: %d\n$bar\n" $((vet+1))
-				printf "[ShellBot.getUpdates]: %s = '%s'\n" "$var" "$val"
+				printf "[%s]: %s = '%s'\n" "$FUNCNAME" "$var" "$val"
 				oldv=$vet
 			fi
 	
 			unset -n byref
-			[[ $var != @(${_var_init_list_%|}) ]] && _var_init_list_+="$var|"
+			[[ $var != @(${_var_init_list_// /|}) ]] && _var_init_list_=${_var_init_list_:+$_var_init_list_ }${var}
 		done
 	
 		# Restaura o descritor de erro.
@@ -4695,78 +4751,78 @@ _EOF
 	}
    
 	# Bot métodos (somente leitura)
-	readonly -f ShellBot.token \
-				ShellBot.id \
-				ShellBot.username \
-				ShellBot.first_name \
-				ShellBot.regHandleFunction \
-				ShellBot.watchHandle \
-				ShellBot.ListUpdates \
-				ShellBot.TotalUpdates \
-				ShellBot.OffsetEnd \
-				ShellBot.OffsetNext \
-				ShellBot.getMe \
-				ShellBot.getWebhookInfo \
-				ShellBot.deleteWebhook \
-				ShellBot.setWebhook \
-				ShellBot.init \
-				ShellBot.ReplyKeyboardMarkup \
-				ShellBot.sendMessage \
-				ShellBot.forwardMessage \
-				ShellBot.sendPhoto \
-				ShellBot.sendAudio \
-				ShellBot.sendDocument \
-				ShellBot.sendSticker \
-				ShellBot.sendVideo \
-				ShellBot.sendVideoNote \
-				ShellBot.sendVoice \
-				ShellBot.sendLocation \
-				ShellBot.sendVenue \
-				ShellBot.sendContact \
-				ShellBot.sendChatAction \
-				ShellBot.getUserProfilePhotos \
-				ShellBot.getFile \
-				ShellBot.kickChatMember \
-				ShellBot.leaveChat \
-				ShellBot.unbanChatMember \
-				ShellBot.getChat \
-				ShellBot.getChatAdministrators \
-				ShellBot.getChatMembersCount \
-				ShellBot.getChatMember \
-				ShellBot.editMessageText \
-				ShellBot.editMessageCaption \
-				ShellBot.editMessageReplyMarkup \
-				ShellBot.InlineKeyboardMarkup \
-				ShellBot.InlineKeyboardButton \
-				ShellBot.answerCallbackQuery \
-				ShellBot.deleteMessage \
-				ShellBot.exportChatInviteLink \
-				ShellBot.setChatPhoto \
-				ShellBot.deleteChatPhoto \
-				ShellBot.setChatTitle \
-				ShellBot.setChatDescription \
-				ShellBot.pinChatMessage \
-				ShellBot.unpinChatMessage \
-				ShellBot.promoteChatMember \
-				ShellBot.restrictChatMember \
-				ShellBot.getStickerSet \
-				ShellBot.uploadStickerFile \
-				ShellBot.createNewStickerSet \
-				ShellBot.addStickerToSet \
-				ShellBot.setStickerPositionInSet \
-				ShellBot.deleteStickerFromSet \
-				ShellBot.stickerMaskPosition \
-				ShellBot.downloadFile \
-				ShellBot.editMessageLiveLocation \
-				ShellBot.stopMessageLiveLocation \
-				ShellBot.setChatStickerSet \
-				ShellBot.deleteChatStickerSet \
-				ShellBot.sendMediaGroup \
-				ShellBot.editMessageMedia \
-				ShellBot.inputMedia \
-				ShellBot.sendAnimation \
-				ShellBot.setMessageRules \
-				ShellBot.manageRules \
+	readonly -f ShellBot.token 						\
+				ShellBot.id 						\
+				ShellBot.username 					\
+				ShellBot.first_name 				\
+				ShellBot.regHandleFunction 			\
+				ShellBot.watchHandle 				\
+				ShellBot.ListUpdates 				\
+				ShellBot.TotalUpdates 				\
+				ShellBot.OffsetEnd 					\
+				ShellBot.OffsetNext 				\
+				ShellBot.getMe 						\
+				ShellBot.getWebhookInfo 			\
+				ShellBot.deleteWebhook 				\
+				ShellBot.setWebhook 				\
+				ShellBot.init 						\
+				ShellBot.ReplyKeyboardMarkup 		\
+				ShellBot.sendMessage 				\
+				ShellBot.forwardMessage 			\
+				ShellBot.sendPhoto 					\
+				ShellBot.sendAudio 					\
+				ShellBot.sendDocument 				\
+				ShellBot.sendSticker 				\
+				ShellBot.sendVideo 					\
+				ShellBot.sendVideoNote 				\
+				ShellBot.sendVoice 					\
+				ShellBot.sendLocation 				\
+				ShellBot.sendVenue 					\
+				ShellBot.sendContact 				\
+				ShellBot.sendChatAction 			\
+				ShellBot.getUserProfilePhotos 		\
+				ShellBot.getFile 					\
+				ShellBot.kickChatMember 			\
+				ShellBot.leaveChat 					\
+				ShellBot.unbanChatMember 			\
+				ShellBot.getChat 					\
+				ShellBot.getChatAdministrators 		\
+				ShellBot.getChatMembersCount 		\
+				ShellBot.getChatMember 				\
+				ShellBot.editMessageText 			\
+				ShellBot.editMessageCaption 		\
+				ShellBot.editMessageReplyMarkup 	\
+				ShellBot.InlineKeyboardMarkup 		\
+				ShellBot.InlineKeyboardButton 		\
+				ShellBot.answerCallbackQuery 		\
+				ShellBot.deleteMessage 				\
+				ShellBot.exportChatInviteLink 		\
+				ShellBot.setChatPhoto 				\
+				ShellBot.deleteChatPhoto 			\
+				ShellBot.setChatTitle 				\
+				ShellBot.setChatDescription 		\
+				ShellBot.pinChatMessage 			\
+				ShellBot.unpinChatMessage 			\
+				ShellBot.promoteChatMember 			\
+				ShellBot.restrictChatMember 		\
+				ShellBot.getStickerSet 				\
+				ShellBot.uploadStickerFile 			\
+				ShellBot.createNewStickerSet 		\
+				ShellBot.addStickerToSet 			\
+				ShellBot.setStickerPositionInSet 	\
+				ShellBot.deleteStickerFromSet 		\
+				ShellBot.stickerMaskPosition 		\
+				ShellBot.downloadFile 				\
+				ShellBot.editMessageLiveLocation 	\
+				ShellBot.stopMessageLiveLocation 	\
+				ShellBot.setChatStickerSet 			\
+				ShellBot.deleteChatStickerSet 		\
+				ShellBot.sendMediaGroup 			\
+				ShellBot.editMessageMedia 			\
+				ShellBot.inputMedia 				\
+				ShellBot.sendAnimation 				\
+				ShellBot.setMessageRules 			\
+				ShellBot.manageRules 				\
 				ShellBot.getUpdates
 
    	# Retorna objetos
@@ -4780,13 +4836,14 @@ _EOF
 }
 
 # Funções (somente leitura)
-readonly -f MessageError \
-			Json \
-			FlushOffset \
-			CreateUnitService \
-			GetAllKeys \
-			GetAllValues \
-			MethodReturn \
-			CheckArgType \
+readonly -f MessageError 		\
+			Json 				\
+			FlushOffset 		\
+			CreateUnitService 	\
+			GetAllKeys 			\
+			GetAllValues 		\
+			MethodReturn 		\
+			CheckArgType 		\
 			CreateLog
+
 # /* SHELLBOT */
