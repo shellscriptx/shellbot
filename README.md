@@ -1,4 +1,4 @@
-# ShellBot API v5.7
+# ShellBot API v5.8
 ![ShellBot](https://github.com/shellscriptx/ShellBot/blob/master/ShellBot.png)
 
 ## Sobre
