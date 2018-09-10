@@ -4593,8 +4593,8 @@ _EOF
 											"$((__uid+1))"												\
 											"$(printf '%(%d/%m/%Y %H:%M)T' ${__u_message_date})"		\
 											"${__u_message_chat_type}"									\
-											"${__u_message_chat_username}"								\
-											"${__u_message_from_username}" 								\
+											"${__u_message_chat_username:--}"							\
+											"${__u_message_from_username:--}"							\
 											"${__rule_source}"											\
 											"${__rule_line}"											\
 											"${__rule_name}" 											\
