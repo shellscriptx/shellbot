@@ -3,7 +3,7 @@
 #-----------------------------------------------------------------------------------------------------------
 #	DATA:				07 de Março de 2017
 #	SCRIPT:				ShellBot.sh
-#	VERSÃO:				5.8
+#	VERSÃO:				5.9
 #	DESENVOLVIDO POR:	Juliano Santos [SHAMAN]
 #	PÁGINA:				http://www.shellscriptx.blogspot.com.br
 #	FANPAGE:			https://www.facebook.com/shellscriptx
@@ -44,7 +44,7 @@ readonly -A _SHELLBOT_=(
 [name]='ShellBot'
 [keywords]='Shell Script Telegram API'
 [description]='API não-oficial para criação de bots na plataforma Telegram.'
-[version]='5.8'
+[version]='5.9'
 [language]='shellscript'
 [shell]=${SHELL}
 [shell_version]=${BASH_VERSION}
@@ -115,6 +115,7 @@ readonly _ERR_SERVICE_USER_NOT_FOUND_='usuário não encontrado: a conta de usu�
 readonly _ERR_VAR_NAME_='variável não encontrada: o identificador é inválido ou não existe.'
 readonly _ERR_FUNCTION_NOT_FOUND_='função não encontrada: o identificador especificado é inválido ou não existe.'
 readonly _ERR_ARG_='argumento inválido: o argumento não é suportado pelo parâmetro especificado.'
+readonly _ERR_RULE_ALREADY_EXISTS_='falha ao definir: o nome da regra já existe.'
 
 declare -A _BOT_FUNCTION_LIST_
 declare -a _BOT_COMMAND_RULES_LIST_
@@ -129,6 +130,18 @@ GetAllValues(){
 GetAllKeys(){
 	local key; jq -r 'path(..)|map(if type == "number" then .|tostring|"["+.+"]" else . end)|join(".")' <<< $* | \
 	while read key; do [[ $(jq -r ".${key//.\[/\[}|type" <<< $*) == @(string|number|boolean) ]] && echo ${key//.\[/\[}; done
+}
+
+FlagConv()
+{
+	local var str=$2
+
+	while [[ $str =~ \$\{([a-z_]+)\} ]]; do
+		var=${BASH_REMATCH[1]}[$1]
+		str=${str//${BASH_REMATCH[0]}/${!var}}
+	done
+
+	echo "$str"
 }
 
 CreateLog()
@@ -1262,7 +1275,7 @@ ShellBot.init()
     				shift 2
     				;;
     			-t|--text)
-					__text=$2
+					__text=$(echo -e "$2")
     				shift 2
     				;;
     			-u|--url)
@@ -1411,7 +1424,7 @@ ShellBot.init()
     				shift 2
     				;;
     			-t|--text)
-					text=$2
+					text=$(echo -e "$2")
     				shift 2
     				;;
     			-s|--show_alert)
@@ -1559,7 +1572,7 @@ _EOF
     				shift 2
     				;;
     			-t|--text)
-					text=$2
+					text=$(echo -e "$2")
     				shift 2
     				;;
     			-p|--parse_mode)
@@ -1723,7 +1736,7 @@ _EOF
     				;;
     			-t|--caption)
     				# Limite máximo de caracteres: 200
-					caption=$2
+					caption=$(echo -e "$2")
     				shift 2
     				;;
     			-n|--disable_notification)
@@ -1805,7 +1818,7 @@ _EOF
     				shift 2
     				;;
     			-t|--caption)
-					caption=$2
+					caption=$(echo -e "$2")
     				shift 2
     				;;
     			-d|--duration)
@@ -1903,7 +1916,7 @@ _EOF
     				shift 2
     				;;
     			-t|--caption)
-					caption=$2
+					caption=$(echo -e "$2")
     				shift 2
     				;;
     			-n|--disable_notification)
@@ -2458,7 +2471,7 @@ _EOF
     				shift 2
     				;;
     			-t|--caption)
-					caption=$2
+					caption=$(echo -e "$2")
     				shift 2
     				;;
     			-n|--disable_notification)
@@ -2548,7 +2561,7 @@ _EOF
     				shift 2
     				;;
     			-t|--caption)
-					caption=$2
+					caption=$(echo -e "$2")
     				shift 2
     				;;
     			-d|--duration)
@@ -3383,7 +3396,7 @@ _EOF
     					shift 2
     					;;
     				-t|--text)
-						text=$2
+						text=$(echo -e "$2")
     					shift 2
     					;;
     				-p|--parse_mode)
@@ -3463,7 +3476,7 @@ _EOF
     					shift 2
     					;;
     				-t|--caption)
-						caption=$2
+						caption=$(echo -e "$2")
     					shift 2
     					;;
     				-r|--reply_markup)
@@ -3896,7 +3909,7 @@ _EOF
 					shift 2
 					;;
 				-c|--caption)
-					__caption=$2
+					__caption=$(echo -e "$2")
 					shift 2
 					;;
 				-p|--parse_mode)
@@ -4147,7 +4160,7 @@ _EOF
 					shift 2
 					;;
 				-o|--caption)
-					caption=$2
+					caption=$(echo -e "$2")
 					shift 2
 					;;
 				-p|--parse_mode)
@@ -4204,13 +4217,14 @@ _EOF
 		local action command user_id username chat_id 
 		local chat_type time date language message_id 
 		local is_bot text entities_type file_type
-		local query_data query_id query_text
-		local chat_member mime_type num_args exec
+		local query_data query_id query_text send_message
+		local chat_member mime_type num_args exec rule
 		local action_args weekday user_status chat_name 
-		local message_status reply_message rule_name
+		local message_status reply_message rule_name parse_mode
+		local forward_message reply_markup continue
 
 		local param=$(getopt	--name "$FUNCNAME" \
-								--options 's:a:z:c:i:u:h:v:y:l:m:b:t:n:f:p:q:r:g:o:e:d:w:j:x:k:' \
+								--options 's:a:z:c:i:u:h:v:y:l:m:b:t:n:f:p:q:r:g:o:e:d:w:j:x:' \
 								--longoptions	'name:,
 												action:,
 												action_args:,
@@ -4236,8 +4250,13 @@ _EOF
 												weekday:,
 												user_status:,
 												message_status:,
-												reply_message:,
-												exec:' \
+												exec:,
+												bot_reply_message:,
+												bot_send_message:,
+												bot_forward_message:,
+												bot_reply_markup:,
+												bot_parse_mode:,
+												continue' \
 								-- "$@")
 		
 		eval set -- "$param"
@@ -4256,7 +4275,8 @@ _EOF
 					shift 2
 					;;
 				-z|--action_args)
-					action_args=${2//|/\\|}
+					action_args=${2//\\/\\\\}
+					action_args=${action_args//|/\\|}
 					shift 2
 					;;
 				-c|--command)
@@ -4366,13 +4386,39 @@ _EOF
 					message_status=${message_status:+$message_status,}${2}
 					shift 2
 					;;
-				-k|--reply_message)
-					reply_message=$2
+				--bot_reply_message)
+					reply_message=${2//\\/\\\\}
+					reply_message=${reply_message//|/\\|}
+					shift 2
+					;;
+				--bot_send_message)
+					send_message=${2//\\/\\\\}
+					send_message=${send_message//|/\\|}
+					shift 2
+					;;
+				--bot_forward_message)
+					CheckArgType int "$1" "$2"
+					forward_message=${forward_message:+$forward_message,}${2}
+					shift 2
+					;;
+				--bot_reply_markup)
+					reply_markup=${2//\\/\\\\}
+					reply_markup=${reply_markup//|/\\|}
+					shift 2
+					;;
+				--bot_parse_mode)
+					CheckArgType parsemode "$1" "$2"
+					parse_mode=$2
 					shift 2
 					;;
 				--exec)
-					exec=${2//|/\\|}
+					exec=${2//\\/\\\\}
+					exec=${exec//|/\\|}
 					shift 2
+					;;
+				--continue)
+					continue=true
+					shift
 					;;
 				--)
 					shift
@@ -4383,8 +4429,13 @@ _EOF
 		
 		[[ $rule_name ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --name]"
 
-		_BOT_COMMAND_RULES_LIST_+=("${BASH_SOURCE[1]##*/}|${BASH_LINENO}|${rule_name}|${action}|${action_args}|${exec}|${message_id:-+any}|${is_bot:-+any}|${command:-+any}|${user_id:-+any}|${username:-+any}|${chat_id:-+any}|${chat_name:-+any}|${chat_type:-+any}|${language:-+any}|${text}|${entities_type:-+any}|${file_type:-+any}|${mime_type:-+any}|${query_id:-+any}|${query_data:-+any}|${chat_member:-+any}|${num_args:-+any}|${time:-+any}|${date:-+any}|${weekday:-+any}|${user_status:-+any}|${message_status:-+any}|${reply_message}")
-		
+		for rule in "${_BOT_COMMAND_RULES_LIST_[@]}"; do
+			IFS='|' read _ _ rule _ <<< $rule
+			[[ $rule == $rule_name ]] && MessageError API "$_ERR_RULE_ALREADY_EXISTS_" "[-s, --name]" "$rule_name"
+		done
+
+		_BOT_COMMAND_RULES_LIST_+=("${BASH_SOURCE[1]##*/}|${BASH_LINENO}|${rule_name}|${action}|${action_args}|${exec}|${message_id:-+any}|${is_bot:-+any}|${command:-+any}|${user_id:-+any}|${username:-+any}|${chat_id:-+any}|${chat_name:-+any}|${chat_type:-+any}|${language:-+any}|${text}|${entities_type:-+any}|${file_type:-+any}|${mime_type:-+any}|${query_id:-+any}|${query_data:-+any}|${chat_member:-+any}|${num_args:-+any}|${time:-+any}|${date:-+any}|${weekday:-+any}|${user_status:-+any}|${message_status:-+any}|${reply_message}|${send_message}|${forward_message}|${reply_markup}|${parse_mode}|${continue}")
+	
 		return $?
 	}
 
@@ -4397,12 +4448,15 @@ _EOF
 		local __dt __sdate __edate __cdate __query_data __query_id
 		local __chat_member __mem __ent __type __num_args __args
 		local __action_args __user_status __status __out __reply_message
-		local __rule_name __rule_line __rule_source __chat_name
+		local __rule_name __rule_line __rule_source __chat_name __fwid
+		local __reply_markup __send_message __forward_message __parse_mode
+		local __stdout __buffer __exec __continue
+
 		local __u_message_text __u_message_id __u_message_from_is_bot 
-		local __u_message_from_id __u_message_from_username __msgstatus 
+		local __u_message_from_id __u_message_from_username __msgstatus __argpos
 		local __u_message_from_language_code __u_message_chat_id __message_status
 		local __u_message_chat_type __u_message_date __u_message_entities_type
-		local __u_message_mime_type __stdout __buffer __exec
+		local __u_message_mime_type
 
 		local 	__param=$(getopt	--name "$FUNCNAME" \
 									--options 'u:' \
@@ -4428,6 +4482,9 @@ _EOF
 		done
 		
 		[[ $__uid ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-u, --update_id]"
+
+		# Define a lista de regras (somente-leitura)
+		readonly _BOT_COMMAND_RULES_LIST_
 
 		# Regras
 		for __rule in "${_BOT_COMMAND_RULES_LIST_[@]}"; do
@@ -4460,8 +4517,13 @@ _EOF
 							__weekday			\
 							__user_status		\
 							__message_status	\
-							__reply_message		<<< $__rule
-			
+							__reply_message		\
+							__send_message		\
+							__forward_message	\
+							__reply_markup		\
+							__parse_mode		\
+							__continue			<<< $__rule
+		
 				__u_message_text=${message_text[$__uid]:-${edited_message_text[$__uid]:-${callback_query_message_text[$__uid]}}}
 				__u_message_id=${message_message_id[$__uid]:-${edited_message_message_id[$__uid]:-${callback_query_message_message_id[$__uid]}}}
 				__u_message_from_is_bot=${message_from_is_bot[$__uid]:-${edited_message_from_is_bot[$__uid]:-${callback_query_from_is_bot[$__uid]}}}
@@ -4474,8 +4536,8 @@ _EOF
 				__u_message_date=${message_date[$__uid]:-${edited_message_edit_date[$__uid]:-${callback_query_message_date[$__uid]}}}
 				__u_message_entities_type=${message_entities_type[$__uid]:-${edited_message_entities_type[$__uid]:-${callback_query_message_entities_type[$__uid]}}}
 				__u_message_mime_type=${message_document_mime_type[$__uid]:-${message_video_mime_type[$__uid]:-${message_audio_mime_type[$__uid]:-${message_voice_mime_type[$__uid]}}}}
-				
-				IFS=' ' read -a __args <<< $__u_message_text
+	
+				IFS=' ' read -ra __args <<< $__u_message_text
 			
 				[[ $__num_args			== +any ||	${#__args[@]}							== @(${__num_args//,/|})					]]	&&
 				[[ $__command			== +any	||	${__u_message_text%% *}					== @(${__command//,/|})?(@${_BOT_INFO_[3]}) ]]	&&
@@ -4588,10 +4650,10 @@ _EOF
 				fi
 				
 				# Monitor
-				[[ $_BOT_MONITOR_ ]] && 	printf '[%s]: %s: %s: %s: %s: %s: %s: %s: %s: %s: %s\n'		\
+				[[ $_BOT_MONITOR_ ]]	&& 	printf '[%s]: %s: %s: %s: %s: %s: %s: %s: %s: %s: %s\n'		\
 											"${FUNCNAME}"												\
 											"$((__uid+1))"												\
-											"$(printf '%(%d/%m/%Y %H:%M)T' ${__u_message_date})"		\
+											"$(printf '%(%d/%m/%Y %H:%M:%S)T' ${__u_message_date})"		\
 											"${__u_message_chat_type}"									\
 											"${__u_message_chat_username:--}"							\
 											"${__u_message_from_username:--}"							\
@@ -4602,7 +4664,7 @@ _EOF
 											"${__exec:--}"
 			
 				# Log	
-				[[ $_BOT_LOG_FILE_ ]] &&	printf '%s: %s: %s: %s: %s: %s: %s\n'						\
+				[[ $_BOT_LOG_FILE_ ]] 	&&	printf '%s: %s: %s: %s: %s: %s: %s\n'						\
 										 	"$(printf '%(%d/%m/%Y %H:%M:%S)T')"							\
 									 	 	"${FUNCNAME}"												\
 										 	"${__rule_source}"											\
@@ -4611,30 +4673,42 @@ _EOF
 											"${__action:--}"											\
 											"${__exec:--}"												>> "$_BOT_LOG_FILE_"
 
-				# Mensagem de resposta.
-				[[ $__reply_message ]] && ShellBot.sendMessage 	--chat_id $__u_message_chat_id 			\
-																--reply_to_message_id $__u_message_id 	\
-																--text "$__reply_message" 				\
-																--parse_mode markdown 					2>/dev/null
+				[[ $__reply_message ]] && ShellBot.sendMessage	--chat_id $__u_message_chat_id							\
+																--reply_to_message_id $__u_message_id 					\
+																--text "$(FlagConv $__uid "$__reply_message")"			\
+																${__reply_markup:+--reply_markup "$__reply_markup"}		\
+																${__parse_mode:+--parse_mode $__parse_mode}				&>/dev/null
+				
+				[[ $__send_message ]] && ShellBot.sendMessage	--chat_id $__u_message_chat_id							\
+																--text "$(FlagConv $__uid "$__send_message")" 			\
+																${__reply_markup:+--reply_markup "$__reply_markup"}		\
+																${__parse_mode:+--parse_mode $__parse_mode}				&>/dev/null
+				
+				for __fwid in ${__forward_message//,/ }; do
+					ShellBot.forwardMessage		--chat_id $__fwid					\
+												--from_chat_id $__u_message_chat_id \
+												--message_id $__u_message_id		&>/dev/null
+				done
 
-				# Executa a função passando os argumentos posicionais. (se existir)
-				${__action:+$__action ${__action_args:-${__args[@]}}}
-
-				# Executa o bloco de comandos com os argumentos posicionais e salva o retorno.
-				__stdout=${__exec:+$(set -- ${__args[@]}; eval ${__exec} 2>&1)}
+				# Chama a função passando os argumentos posicionais. (se existir)
+				${__action:+$__action ${__action_args:-${__args[*]}}}
+		
+				# Executa a linha de comando e salva o retorno.
+				__stdout=${__exec:+$(set -- ${__args[*]}; eval $(FlagConv $__uid "$__exec") 2>&1)}
 
 				while [[ $__stdout ]]; do
 					# Salva em buffer os primeiros 4096 caracteres.
-					read -N 4096 __buffer <<< $__stdout
+					read -rN 4096 __buffer <<< $__stdout
 					
 					# Envia o buffer.
-					ShellBot.sendMessage --chat_id $__u_message_chat_id --text "$__buffer"
+					ShellBot.sendMessage	--chat_id $__u_message_chat_id 	\
+											--text "$__buffer"				&>/dev/null
 
 					# Descarta os caracteres lidos.
 					__stdout=${__stdout:4096}
 				done 
 
-				return 0
+				${__continue:-return 0}
 		done
 
 		return 1
@@ -4695,8 +4769,7 @@ _EOF
 
 
 		# Limpa as variáveis inicializadas.
-		unset $_var_init_list_
-		_var_init_list_=''
+		unset ${_var_init_list_[*]} _var_init_list_
 	
     	[[ $(jq -r '.result|length' <<< $jq_obj) -eq 0 ]] && return 0
 		[[ $_FLUSH_OFFSET_ ]] && { echo "$jq_obj"; return 0; } # flush
@@ -4728,8 +4801,8 @@ _EOF
 			local -n byref=$var # ponteiro
 						
 			val=$(Json ".$obj" $jq_obj)
-			[[ ${byref[$vet]} ]] && byref[$vet]+=${_BOT_DELM_}${val} || byref[$vet]=$val
-	
+			byref[$vet]+=${byref[$vet]:+$_BOT_DELM_}${val}
+
 			if [[ $_BOT_MONITOR_ ]]; then
 				[[ $vet -ne ${oldv:--1} ]] && printf "$bar\nMensagem: %d\n$bar\n" $((vet+1))
 				printf "[%s]: %s = '%s'\n" "$FUNCNAME" "$var" "$val"
@@ -4737,7 +4810,7 @@ _EOF
 			fi
 	
 			unset -n byref
-			[[ $var != @(${_var_init_list_// /|}) ]] && _var_init_list_=${_var_init_list_:+$_var_init_list_ }${var}
+			_var_init_list_+=($var)
 		done
 	
 		# Restaura o descritor de erro.
@@ -4844,6 +4917,7 @@ readonly -f MessageError 		\
 			GetAllValues 		\
 			MethodReturn 		\
 			CheckArgType 		\
-			CreateLog
+			CreateLog			\
+			FlagConv
 
 # /* SHELLBOT */
