@@ -118,7 +118,7 @@ readonly _ERR_ARG_='argumento inválido: o argumento não é suportado pelo par�
 readonly _ERR_RULE_ALREADY_EXISTS_='falha ao definir: o nome da regra já existe.'
 
 declare -A _BOT_FUNCTION_LIST_
-declare -a _BOT_COMMAND_RULES_LIST_
+declare -a _BOT_RULES_LIST_
 
 Json() { local obj=$(jq "$1" <<< "${*:2}"); obj=${obj#\"}; echo "${obj%\"}"; }
 
@@ -137,7 +137,7 @@ FlagConv()
 	local var str=$2
 
 	while [[ $str =~ \$\{([a-z_]+)\} ]]; do
-		var=${BASH_REMATCH[1]}[$1]
+		[[ ${BASH_REMATCH[1]} == @(${_var_init_list_// /|}) ]] && var=${BASH_REMATCH[1]}[$1] || var=_
 		str=${str//${BASH_REMATCH[0]}/${!var}}
 	done
 
@@ -4285,28 +4285,23 @@ _EOF
 					shift 2
 					;;
 				-i|--user_id)
-					CheckArgType int "$1" "$2"
-					user_id=${user_id:+$user_id,}${2}
+					user_id=${user_id:+$user_id,}${2//|/\\|}
 					shift 2
 					;;
 				-u|--username)
-					CheckArgType username "$1" "$2"
-					username=${username:+$username,}${2}
+					username=${username:+$username,}${2//|/\\|}
 					shift 2
 					;;
 				-h|--chat_id)
-					CheckArgType int "$1" "$2"
-					chat_id=${chat_id:+$chat_id,}${2}
+					chat_id=${chat_id:+$chat_id,}${2//|/\\|}
 					shift 2
 					;;
 				-v|--chat_name)
-					CheckArgType username "$1" "$2"
-					chat_name=${chat_name:+$chat_name,}${2}
+					chat_name=${chat_name:+$chat_name,}${2//|/\\|}
 					shift 2
 					;;
 				-y|--chat_type)
-					CheckArgType chattype "$1" "$2"
-					chat_type=${chat_type:+$chat_type,}${2}
+					chat_type=${chat_type:+$chat_type,}${2//|/\\|}
 					shift 2
 					;;
 				-e|--time)
@@ -4320,18 +4315,15 @@ _EOF
 					shift 2
 					;;
 				-l|--laguage_code)
-					CheckArgType tagcode "$1" "$2"
-					language=${language:+$language,}${2}
+					language=${language:+$language,}${2//|/\\|}
 					shift 2
 					;;
 				-m|--message_id)
-					CheckArgType int "$1" "$2"
-					message_id=${message_id:+$message_id,}${2}
+					message_id=${message_id:+$message_id,}${2//|/\\|}
 					shift 2
 					;;
 				-b|--is_bot)
-					CheckArgType bool "$1" "$2"
-					is_bot=${is_bot:+$is_bot,}${2}
+					is_bot=${is_bot:+$is_bot,}${2//|/\\|}
 					shift 2
 					;;
 				-t|--text)
@@ -4339,51 +4331,43 @@ _EOF
 					shift 2
 					;;
 				-n|--entitie_type)
-					CheckArgType entitie "$1" "$2"
-					entities_type=${entities_type:+$entities_type,}${2}
+					entities_type=${entities_type:+$entities_type,}${2//|/\\|}
 					shift 2
 					;;
 				-f|--file_type)
-					CheckArgType filetype "$1" "$2"
-					file_type=${file_type:+$file_type,}${2}
+					file_type=${file_type:+$file_type,}${2//|/\\|}
 					shift 2
 					;;
 				-p|--mime_type)
-					mime_type=${mime_type:+$mime_type,}${2}
+					mime_type=${mime_type:+$mime_type,}${2//|/\\|}
 					shift 2
 					;;
 				-q|--query_data)
-					query_data=${query_data:+$query_data,}${2}
+					query_data=${query_data:+$query_data,}${2//|/\\|}
 					shift 2
 					;;
 				-r|--query_id)
-					CheckArgType int "$1" "$2"
-					query_id=${query_id:+$query_id,}${2}
+					query_id=${query_id:+$query_id,}${2//|/\\|}
 					shift 2
 					;;
 				-g|--chat_member)
-					CheckArgType chatmember "$1" "$2"
-					chat_member=${chat_member:+$chat_member,}${2}
+					chat_member=${chat_member:+$chat_member,}${2//|/\\|}
 					shift 2
 					;;
 				-o|--num_args)
-					CheckArgType int "$1" "$2"
-					num_args=${num_args:+$num_args,}${2}
+					num_args=${num_args:+$num_args,}${2//|/\\|}
 					shift 2
 					;;
 				-w|--weekday)
-					CheckArgType int "$1" "$2"
-					weekday=${weekday:+$weekday,}${2}
+					weekday=${weekday:+$weekday,}${2//|/\\|}
 					shift 2
 					;;
 				-j|--user_status)
-					CheckArgType userstatus "$1" "$2"
-					user_status=${user_status:+$user_status,}${2}
+					user_status=${user_status:+$user_status,}${2//|/\\|}
 					shift 2
 					;;
 				-x|--message_status)
-					CheckArgType msgstatus "$1" "$2"
-					message_status=${message_status:+$message_status,}${2}
+					message_status=${message_status:+$message_status,}${2//|/\\|}
 					shift 2
 					;;
 				--bot_reply_message)
@@ -4397,8 +4381,7 @@ _EOF
 					shift 2
 					;;
 				--bot_forward_message)
-					CheckArgType int "$1" "$2"
-					forward_message=${forward_message:+$forward_message,}${2}
+					forward_message=${forward_message:+$forward_message,}${2//|/\\|}
 					shift 2
 					;;
 				--bot_reply_markup)
@@ -4407,8 +4390,7 @@ _EOF
 					shift 2
 					;;
 				--bot_parse_mode)
-					CheckArgType parsemode "$1" "$2"
-					parse_mode=$2
+					parse_mode=${2//|/\\|}
 					shift 2
 					;;
 				--exec)
@@ -4429,12 +4411,12 @@ _EOF
 		
 		[[ $rule_name ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --name]"
 
-		for rule in "${_BOT_COMMAND_RULES_LIST_[@]}"; do
+		for rule in "${_BOT_RULES_LIST_[@]}"; do
 			IFS='|' read _ _ rule _ <<< $rule
 			[[ $rule == $rule_name ]] && MessageError API "$_ERR_RULE_ALREADY_EXISTS_" "[-s, --name]" "$rule_name"
 		done
 
-		_BOT_COMMAND_RULES_LIST_+=("${BASH_SOURCE[1]##*/}|${BASH_LINENO}|${rule_name}|${action}|${action_args}|${exec}|${message_id:-+any}|${is_bot:-+any}|${command:-+any}|${user_id:-+any}|${username:-+any}|${chat_id:-+any}|${chat_name:-+any}|${chat_type:-+any}|${language:-+any}|${text}|${entities_type:-+any}|${file_type:-+any}|${mime_type:-+any}|${query_id:-+any}|${query_data:-+any}|${chat_member:-+any}|${num_args:-+any}|${time:-+any}|${date:-+any}|${weekday:-+any}|${user_status:-+any}|${message_status:-+any}|${reply_message}|${send_message}|${forward_message}|${reply_markup}|${parse_mode}|${continue}")
+		_BOT_RULES_LIST_+=("${BASH_SOURCE[1]##*/}|${BASH_LINENO}|${rule_name}|${action}|${action_args}|${exec}|${message_id:-+any}|${is_bot:-+any}|${command:-+any}|${user_id:-+any}|${username:-+any}|${chat_id:-+any}|${chat_name:-+any}|${chat_type:-+any}|${language:-+any}|${text}|${entities_type:-+any}|${file_type:-+any}|${mime_type:-+any}|${query_id:-+any}|${query_data:-+any}|${chat_member:-+any}|${num_args:-+any}|${time:-+any}|${date:-+any}|${weekday:-+any}|${user_status:-+any}|${message_status:-+any}|${reply_message}|${send_message}|${forward_message}|${reply_markup}|${parse_mode}|${continue}")
 	
 		return $?
 	}
@@ -4484,10 +4466,10 @@ _EOF
 		[[ $__uid ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-u, --update_id]"
 
 		# Define a lista de regras (somente-leitura)
-		readonly _BOT_COMMAND_RULES_LIST_
+		readonly _BOT_RULES_LIST_
 
 		# Regras
-		for __rule in "${_BOT_COMMAND_RULES_LIST_[@]}"; do
+		for __rule in "${_BOT_RULES_LIST_[@]}"; do
 
 			IFS='|' read	__rule_source		\
 							__rule_line			\
@@ -4566,7 +4548,7 @@ _EOF
 
 				for __ent in ${__entities_type//,/ }; do
 					[[ $__ent == +any 												]]	||
-					[[ $__ent == @(${__u_message_entities_type//$_BOT_DELM_/|}) ]] 	&& break
+					[[ $__ent == @(${__u_message_entities_type//$_BOT_DELM_/|}) 	]] 	&& break
 				done
 
 				(($?)) && continue
@@ -4769,7 +4751,7 @@ _EOF
 
 
 		# Limpa as variáveis inicializadas.
-		unset ${_var_init_list_[*]} _var_init_list_
+		unset $_var_init_list_ _var_init_list_
 	
     	[[ $(jq -r '.result|length' <<< $jq_obj) -eq 0 ]] && return 0
 		[[ $_FLUSH_OFFSET_ ]] && { echo "$jq_obj"; return 0; } # flush
@@ -4810,7 +4792,7 @@ _EOF
 			fi
 	
 			unset -n byref
-			_var_init_list_+=($var)
+			[[ $var != @(${_var_init_list_// /|}) ]] && _var_init_list_=${_var_init_list_:+$_var_init_list_ }${var}
 		done
 	
 		# Restaura o descritor de erro.
