@@ -278,11 +278,7 @@ CheckArgType(){
 		bool)		[[ $value =~ ^(true|false)$ 							]] 	|| MessageError API "$_ERR_TYPE_BOOL_" "$param" "$value";;
 		token)		[[ $value =~ ^[0-9]+:[a-zA-Z0-9_-]+$ 					]] 	|| MessageError API "$_ERR_TOKEN_INVALID_" "$param" "$value";;
 		file)		[[ $value =~ ^@ && ! -f ${value#@} 						]] 	&& MessageError API "$_ERR_FILE_NOT_FOUND_" "$param" "$value";;
-		userstatus)	[[ $value == @(creator|administrator|member)			]]	||
-					[[ $value == @(restricted|left|kicked)					]]	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
-		msgstatus)	[[ $value == @(pinned|edited|forwarded)					]]	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		mediatype)	[[ $value == @(animation|document|audio|photo|video)	]]	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
-		chattype)	[[ $value == @(private|group|supergroup) 				]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		return)		[[ $value == @(json|map|value) 							]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		parsemode)	[[ $value == @(markdown|html) 							]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		point)		[[ $value == @(forehead|eyes|mouth|chin) 				]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
@@ -293,16 +289,6 @@ CheckArgType(){
 					[[ $value == @(record_audio|upload_audio) 				]] 	||
 					[[ $value == @(upload_document|find_location) 			]] 	||
 					[[ $value == @(record_video_note|upload_video_note) 	]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
-		username)	[[ $value =~ ^[a-zA-Z0-9_]+$ 							]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
-		tagcode)	[[ $value =~ ^[a-zA-Z-]+$ 								]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
-		entitie)	[[ $value == @(mention|hashtag|bot_command) 			]] 	||
-					[[ $value == @(url|email|bold|italic|code) 				]] 	||
-					[[ $value == @(pre|text_link|text_mention) 				]] 	||
-					[[ $value == @(cashtag|phone_number)					]]	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
-		chatmember)	[[ $value == @(new|left) 								]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
-		filetype)	[[ $value == @(photo|document|sticker|gif) 				]] 	||
-					[[ $value == @(video|audio|voice) 						]] 	||
-					[[ $value == @(contact|location)						]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		itime)		[[ $value =~ ^([01][0-9]|2[0-3]):[0-5][0-9]-([01][0-9]|2[0-3]):[0-5][0-9]$ ]] \
 																				|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		idate)		[[ $value =~ ^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/([0-9]{4,})-(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/([0-9]{4,})$ ]] \
