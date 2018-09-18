@@ -76,7 +76,7 @@ msg_info='Lamento, mas o horário para atendimento é das 8:00 às 18:00 de segu
 ShellBot.setMessageRules	--name 'bot_horario_operacao1' \
 							--weekday 6 \
 							--weekday 7 \
-							--reply_message "$msg_info"
+							--bot_reply_message "$msg_info"
 
 # Dias da semana fora do horário operacional.
 ShellBot.setMessageRules	--name 'bot_horario_operacao2' \
@@ -87,7 +87,7 @@ ShellBot.setMessageRules	--name 'bot_horario_operacao2' \
 							--weekday 3	\
 							--weekday 4 \
 							--weekday 5 \
-							--reply_message "$msg_info"
+							--bot_reply_message "$msg_info"
 
 # Define o comando e a quantidade de argumentos aceitos na mensagem.
 # ex: /userinfo <usuario>
@@ -155,7 +155,7 @@ ShellBot.setMessageRules	--name 'postagem_fotos' \
 							--mime_type 'image/jpeg' \
 							--chat_type supergroup \
 							--chat_type group \
-							--reply_message 'Evite postar fotos no grupo, obrigado.'
+							--bot_reply_message 'Evite postar fotos no grupo, obrigado.'
 
 while :
 do
