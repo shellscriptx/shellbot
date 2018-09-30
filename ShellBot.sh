@@ -3,7 +3,7 @@
 #-----------------------------------------------------------------------------------------------------------
 #	DATA:				07 de Março de 2017
 #	SCRIPT:				ShellBot.sh
-#	VERSÃO:				5.9
+#	VERSÃO:				6.0
 #	DESENVOLVIDO POR:	Juliano Santos [SHAMAN]
 #	PÁGINA:				http://www.shellscriptx.blogspot.com.br
 #	FANPAGE:			https://www.facebook.com/shellscriptx
@@ -44,7 +44,7 @@ readonly -A _SHELLBOT_=(
 [name]='ShellBot'
 [keywords]='Shell Script Telegram API'
 [description]='API não-oficial para criação de bots na plataforma Telegram.'
-[version]='5.9'
+[version]='6.0'
 [language]='shellscript'
 [shell]=${SHELL}
 [shell_version]=${BASH_VERSION}
@@ -123,13 +123,15 @@ declare -a _BOT_RULES_LIST_
 Json() { local obj=$(jq "$1" <<< "${*:2}"); obj=${obj#\"}; echo "${obj%\"}"; }
 
 GetAllValues(){ 
-	local obj=$(jq "[..|select(type == \"number\" or type == \"string\" or type == \"boolean\")|tostring]|join(\"${_BOT_DELM_/\"/\\\"}\")" <<< $*)
+	local obj=$(jq "[..|select(type == \"string\" or type == \"number\" or type == \"boolean\")|tostring]|join(\"${_BOT_DELM_/\"/\\\"}\")" <<< $*)
 	obj=${obj#\"}; echo "${obj%\"}"
 }
 
 GetAllKeys(){
-	local key; jq -r 'path(..)|map(if type == "number" then .|tostring|"["+.+"]" else . end)|join(".")' <<< $* | \
-	while read key; do [[ $(jq -r ".${key//.\[/\[}|type" <<< $*) == @(string|number|boolean) ]] && echo ${key//.\[/\[}; done
+	#local key; jq -r 'path(..)|map(if type == "number" then .|tostring|"["+.+"]" else . end)|join(".")' <<< $* | \
+	#while read key; do [[ $(jq -r ".${key//.\[/\[}|type" <<< $*) == @(string|number|boolean) ]] && echo ${key//.\[/\[}; done
+	local key; jq -r 'path(..|select(type == "string" or type == "number" or type == "boolean"))|map(if type == "number" then .|tostring|"["+.+"]" else . end)|join(".")' <<< $* | \
+	while read key; do echo "${key//.\[/\[}"; done
 }
 
 FlagConv()
@@ -531,7 +533,7 @@ ShellBot.init()
    					shift 2
    					;;
    				-d|--callback_data)
-   					callback_data=$2
+   					callback_data=${2//|/\\|}
    					shift 2
    					;;
    				--)
@@ -1229,8 +1231,7 @@ ShellBot.init()
     ShellBot.InlineKeyboardButton()
     {
         local 	__button __line __text __url __callback_data \
-                __switch_inline_query __switch_inline_query_current_chat \
-    			__delm
+                __switch_inline_query __switch_inline_query_current_chat
     
         local __param=$(getopt 	--name "$FUNCNAME" \
 							 	--options 'b:l:t:u:c:q:s:' \
@@ -1257,7 +1258,7 @@ ShellBot.init()
     				;;
     			-l|--line)
     				CheckArgType int "$1" "$2"
-    				__line=$2
+					__line=$(($2-1))
     				shift 2
     				;;
     			-t|--text)
@@ -1292,36 +1293,22 @@ ShellBot.init()
     	[[ $__callback_data ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --callback_data]"
     	[[ $__line ]] 			|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-l, --line]"
     	
-    	# Inicializa a variável armazenada em button, definindo seu
-    	# escopo como global, tornando-a visível em todo o projeto (source)
-    	# O ponteiro button recebe o endereço do botão armazenado.
-		declare -n __button	# Ponteiro
-    	
-    	# Abre o array para receber o novo objeto
-    	__button[$__line]="${__button[$__line]#[}"
-    	__button[$__line]="${__button[$__line]%]}"
-    
-    	# Verifica se já existe um botão na linha especificada.
-    	[[ ${__button[$__line]} ]] && __delm=','
-    
-    	# Salva as configurações do botão.
-    	#
-    	# Obrigatório: text, callback_data 
-    	# Opcional: url, switch_inline_query, switch_inline_query_current_chat
-    	__button[$__line]+="$__delm{ 
-    					\"text\":\"$__text\",
-						\"callback_data\":\"$__callback_data\"
-						${__url:+,\"url\":\"$__url\"}
-						${__switch_inline_query:+,\"switch_inline_query\":\"$__switch_inline_query\"}
-						${__switch_inline_query_current_chat:+,\"switch_inline_query_current_chat\":\"$__switch_inline_query_current_chat\"}
-						}" || return 1	# Erro ao salvar o botão. 
-    	
-    	# Fecha o array
-    	__button[$__line]="${__button[$__line]/#/[}"
-    	__button[$__line]="${__button[$__line]/%/]}"
-    
-    	# retorno
-    	return 0
+		__button=$__button[$__line]
+
+		printf -v $__button "${!__button#[}"
+		printf -v $__button "${!__button%]}"
+		
+		printf -v $__button '%s {"text": "%s", "callback_data": "%s", "url": "%s", "switch_inline_query": "%s", "switch_inline_query_current_chat": "%s"}' 	\
+							"${!__button:+${!__button},}"																									\
+							"${__text}"																														\
+							"${__callback_data}"																											\
+							"${__url}"																														\
+							"${__switch_inline_query}"																										\
+							"${__switch_inline_query_current_chat}"
+
+		printf -v $__button "[${!__button}]"
+
+    	return $?
     }
     
     ShellBot.InlineKeyboardMarkup()
@@ -1353,37 +1340,17 @@ ShellBot.init()
     	done
     	
     	[[ $__button ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-b, --button]"
-    	
-    	# Ponteiro
-    	declare -n __button
     
-    	# Salva todos elementos do array do teclado, convertendo-o em uma variável de índice 0.
-    	# Cria-se uma estrutura do tipo 'inline_keyboard' e anexa os botões e fecha a estrutura.
-    	# O ponteiro matriz é limpo para receber a nova estrutura contendo o layout do objeto.
-    	# O tipo 'inline_keyboard' é definido, adicionando os botões separando-os pelo delimitador
-    	# ',' vírgula. A posição dos botões é determinada pelo índice da linha na inicilização.
-    	#
-    	# Exemplo:
-    	#
-    	#	Linha					array
-    	#
-    	#	 1		[inline_botao1] [inline_botao2] [inline_botao3]
-    	#	 2				[inline_botao4] [inline_botao5]
-    	#	 3			            [inline_botao7]
-    	
-    	__keyboard="${__button[@]}" || return 1
-    	
-    	# Cria estrutura do teclado
-    	__keyboard="${__keyboard/#/{\"inline_keyboard\":[}"
-    	__keyboard="${__keyboard//]/],}"					
-    	__keyboard="${__keyboard%,}"						
-    	__keyboard="${__keyboard/%/]\}}"					
+		__button=$__button[@]
+
+		printf -v __keyboard '%s,' "${!__button}"
+		printf -v __keyboard "${__keyboard%,}"
+
+    	# Constroi a estrutura dos objetos + array keyboard, define os valores e salva as configurações.
+    	# Por padrão todos os valores são 'false' até que seja definido.
+		printf '{"inline_keyboard": [%s]}' "${__keyboard}"
     
-    	# Retorna a estrutura	
-    	echo $__keyboard
-    
-    	# status
-    	return 0
+		return $?
     }
     
     ShellBot.answerCallbackQuery()
@@ -1454,7 +1421,7 @@ ShellBot.init()
     ShellBot.ReplyKeyboardMarkup()
     {
     	# Variáveis locais
-    	local __button __resize_keyboard __on_time_keyboard __selective
+    	local __button __resize_keyboard __on_time_keyboard __selective __keyboard
     	
     	# Lê os parâmetros da função.
     	local __param=$(getopt 	--name "$FUNCNAME" \
@@ -1481,25 +1448,25 @@ ShellBot.init()
     		case $1 in
     			-b|--button)
 					CheckArgType var "$1" "$2"
-    				__button="$2"
+    				__button=$2
     				shift 2
     				;;
     			-r|--resize_keyboard)
     				# Tipo: boolean
     				CheckArgType bool "$1" "$2"
-    				__resize_keyboard="$2"
+    				__resize_keyboard=$2
     				shift 2
     				;;
     			-t|--one_time_keyboard)
     				# Tipo: boolean
     				CheckArgType bool "$1" "$2"
-    				__on_time_keyboard="$2"
+    				__on_time_keyboard=$2
     				shift 2
     				;;
     			-s|--selective)
     				# Tipo: boolean
     				CheckArgType bool "$1" "$2"
-    				__selective="$2"
+    				__selective=$2
     				shift 2
     				;;
     			--)
@@ -1511,23 +1478,155 @@ ShellBot.init()
     	
     	# Imprime mensagem de erro se o parâmetro obrigatório for omitido.
     	[[ $__button ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-b, --button]"
-    
-    	# Ponteiro	
-    	declare -n __button
-    
+		
+		__button=$__button[@]
+
+		printf -v __keyboard '%s,' "${!__button}"
+		printf -v __keyboard "${__keyboard%,}"
+
     	# Constroi a estrutura dos objetos + array keyboard, define os valores e salva as configurações.
-    	# Por padrão todos os valores são 'false', até que seja definido.
-    	cat << _EOF
-{"keyboard":$__button,
-"resize_keyboard":${__resize_keyboard:-false},
-"one_time_keyboard":${__on_time_keyboard:-false},
-"selective": ${__selective:-false}}
-_EOF
-    
+    	# Por padrão todos os valores são 'false' até que seja definido.
+		printf '{"keyboard": [%s], "resize_keyboard": %s, "one_time_keyboard": %s, "selective": %s}'	\
+				"${__keyboard}"																			\
+				"${__resize_keyboard:-false}" 															\
+				"${__on_time_keyboard:-false}"															\
+				"${__selective:-false}"
+
     	# status
-    	return 0
+    	return $?
     }
+
+	ShellBot.KeyboardButton()
+	{
+		local __text __contact __location __button __line
+
+		local __param=$(getopt	--name "$FUNCNAME"	\
+								--options 'b:l:t:c:o:'	\
+								--longoptions 'button:,
+												line:,
+												text:,
+												request_contact:,
+												request_location:' \
+								-- "$@")
+	
+		eval set -- "$__param"
+	
+		while :
+		do
+			case $1 in
+				-b|--button)
+					CheckArgType var "$1" "$2"
+					__button=$2
+					shift 2
+					;;
+				-l|--line)
+					CheckArgType int "$1" "$2"
+					__line=$(($2-1))
+					shift 2
+					;;
+				-t|--text)
+					__text=$2
+					shift 2
+					;;
+				-c|--request_contact)
+					CheckArgType bool "$1" "$2"
+					__contact=$2
+					shift 2
+					;;
+				-o|--request_location)
+					CheckArgType bool "$1" "$2"
+					__location=$2
+					shift 2
+					;;
+				--)
+					shift
+					break
+					;;
+			esac
+		done
+
+    	[[ $__button ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-b, --button]"
+    	[[ $__text ]] 			|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-t, --text]"
+    	[[ $__line ]] 			|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-l, --line]"
     
+		__button=$__button[$__line]
+
+		printf -v $__button "${!__button#[}"
+		printf -v $__button "${!__button%]}"
+		
+		printf -v $__button '%s {"text": "%s", "request_contact": %s, "request_location": %s}' 	\
+							"${!__button:+${!__button},}"										\
+							"${__text}"															\
+							"${__contact:-false}"												\
+							"${__location:-false}"
+
+		printf -v $__button "[${!__button}]"
+
+    	return $?
+	}
+	
+	ShellBot.ForceReply()
+	{
+		local selective
+
+		local param=$(getopt 	--name "$FUNCNAME" 			\
+								--options 's:' 				\
+								--longoptions 'selective:' 	\
+								-- "$@")
+
+		eval set -- "$param"
+
+		while :
+		do
+			case $1 in
+				-s|--selective)
+					CheckArgType bool "$1" "$2"
+					selective=$2
+					shift 2
+					;;
+				--)
+					shift
+					break
+					;;
+			esac
+		done
+
+		printf '{"force_reply": true, "selective": %s}' ${selective:-false}
+
+		return $?
+	}
+
+	ShellBot.ReplyKeyboardRemove()
+	{
+		local selective
+
+		local param=$(getopt 	--name "$FUNCNAME" 			\
+								--options 's:' 				\
+								--longoptions 'selective:' 	\
+								-- "$@")
+
+		eval set -- "$param"
+
+		while :
+		do
+			case $1 in
+				-s|--selective)
+					CheckArgType bool "$1" "$2"
+					selective=$2
+					shift 2
+					;;
+				--)
+					shift
+					break
+					;;
+			esac
+		done
+
+		printf '{"remove_keyboard": true, "selective": %s}' ${selective:-false}
+
+		return $?
+	}
+
     # Envia mensagens 
     ShellBot.sendMessage()
     {
@@ -4524,10 +4623,12 @@ _EOF
 				[[ $__weekday			== +any	|| 	$(printf '%(%u)T' $__u_message_date) 	== @(${__weekday//,/|})						]]	|| continue
 			
 				for __msgstatus in ${__message_status//,/ }; do
-					[[ $__msgstatus == +any 														]]	||
-					[[ $__msgstatus == pinned		&& ${message_pinned_message_message_id[$__uid]} ]] 	||
-					[[ $__msgstatus == edited 		&& ${edited_message_message_id[$__uid]}			]] 	||
-					[[ $__msgstatus == forwarded	&& ${message_forward_from_id[$__uid]}			]]	&& break
+					[[ $__msgstatus == +any 															]]	||
+					[[ $__msgstatus == pinned		&& ${message_pinned_message_message_id[$__uid]} 	]] 	||
+					[[ $__msgstatus == edited 		&& ${edited_message_message_id[$__uid]}				]] 	||
+					[[ $__msgstatus == forwarded	&& ${message_forward_from_id[$__uid]}				]]	||
+					[[ $__msgstatus == reply		&& ${message_reply_to_message_message_id[$__uid]}	]] 	||
+					[[ $__msgstatus == callback		&& ${callback_query_message_message_id[$__uid]}		]]	&& break
 				done
 				
 				(($?)) && continue
@@ -4669,8 +4770,9 @@ _EOF
 					read -rN 4096 __buffer <<< $__stdout
 					
 					# Envia o buffer.
-					ShellBot.sendMessage	--chat_id $__u_message_chat_id 	\
-											--text "$__buffer"				&>/dev/null
+					ShellBot.sendMessage	--chat_id $__u_message_chat_id 			\
+											--reply_to_message_id $__u_message_id	\
+											--text "$__buffer"						&>/dev/null
 
 					# Descarta os caracteres lidos.
 					__stdout=${__stdout:4096}
@@ -4752,10 +4854,6 @@ _EOF
 					"${_BOT_INFO_[1]}"
 		fi
 
-		# Salva e fecha o descritor de erro
-		exec 5<&2
-		exec 2<&-
-
 		for obj in $(GetAllKeys $jq_obj); do
 	
 			[[ $obj =~ [0-9]+ ]]
@@ -4781,9 +4879,6 @@ _EOF
 			[[ $var != @(${_var_init_list_// /|}) ]] && _var_init_list_=${_var_init_list_:+$_var_init_list_ }${var}
 		done
 	
-		# Restaura o descritor de erro.
-		exec 2<&5
-		
 		# Log (thread)	
 		[[ $_BOT_LOG_FILE_ ]] && CreateLog ${#update_id[@]} $jq_obj &
 	
@@ -4808,6 +4903,9 @@ _EOF
 				ShellBot.setWebhook 				\
 				ShellBot.init 						\
 				ShellBot.ReplyKeyboardMarkup 		\
+				ShellBot.ForceReply					\
+				ShellBot.ReplyKeyboardRemove		\
+				ShellBot.KeyboardButton				\
 				ShellBot.sendMessage 				\
 				ShellBot.forwardMessage 			\
 				ShellBot.sendPhoto 					\
