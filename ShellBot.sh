@@ -128,8 +128,6 @@ GetAllValues(){
 }
 
 GetAllKeys(){
-	#local key; jq -r 'path(..)|map(if type == "number" then .|tostring|"["+.+"]" else . end)|join(".")' <<< $* | \
-	#while read key; do [[ $(jq -r ".${key//.\[/\[}|type" <<< $*) == @(string|number|boolean) ]] && echo ${key//.\[/\[}; done
 	local key; jq -r 'path(..|select(type == "string" or type == "number" or type == "boolean"))|map(if type == "number" then .|tostring|"["+.+"]" else . end)|join(".")' <<< $* | \
 	while read key; do echo "${key//.\[/\[}"; done
 }
@@ -1152,7 +1150,7 @@ ShellBot.init()
     			reply_to_message_id reply_markup jq_obj
     
     	local param=$(getopt --name "$FUNCNAME" \
-							 --options 'c:v:t:l:n:r:m:s:' \
+							 --options 'c:v:t:l:n:r:k:' \
 							 --longoptions 'chat_id:,
     										video_note:,
     										duration:,
@@ -1197,7 +1195,7 @@ ShellBot.init()
     				reply_to_message_id=$2
     				shift 2
     				;;
-    			-m|--reply_markup)
+    			-k|--reply_markup)
     				reply_markup=$2
     				shift 2
     				;;
