@@ -1,4 +1,4 @@
-# ShellBot API v5.9
+# ShellBot API v6.0
 ![ShellBot](https://github.com/shellscriptx/ShellBot/blob/master/ShellBot.png)
 
 ## Sobre
@@ -33,7 +33,7 @@ A **Najane Lopes (Jane)** por escolher o nome da **API** e batizá-la de **Shell
 |Pacote| Descrição|
 |---------|--------------|
 |bash (4.3 ou superior)|Interpretador de comandos Bourne-Again Shell|
-|jq (1.5 ou superior)|Processador de comandos JSON|
+|jq (1.5 ou superior) [Baixar binário](https://stedolan.github.io/jq/download)|Processador de comandos JSON|
 |curl|Ferramenta para transferir dados de ou para um servidor.|
 
 > Certifique-se que todos os pacotes estão instalados.
