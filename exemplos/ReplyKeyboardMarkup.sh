@@ -26,20 +26,20 @@ unset botao
 #
 # Exemplo:
 #
-# botao="[
+# botao="
 # [\"$num1\",\"$num2\",\"$num3\"],
 # [\"$num4\",\"$num5\",\"$num6\"],
 # [\"$num7\",\"$num8\",\"$num9\"],
 # [\"$num0\"]
-# ]"
+# "
 
 # teclado - array
-botao='[
+botao='
 ["1","2","3"],
 ["4","5","6"],
 ["7","8","9"],
 ["0"]
-]'
+'
 
 # Cria o teclado, define a configuração de auto ocultação após o uso e salva em 'keyboard1'
 keyboard1="$(ShellBot.ReplyKeyboardMarkup --button 'botao' --one_time_keyboard true)"
