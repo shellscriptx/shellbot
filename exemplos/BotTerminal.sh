@@ -71,7 +71,7 @@ ShellBot.setMessageRules	--name 'listar_diretorio'		\
 ShellBot.setMessageRules	--name 'comando_invalido'		\
 							--chat_type private				\
 							--entitie_type bot_command		\
-							--reply_message 'erro: comando não encontrado.'
+							--bot_reply_message 'erro: comando não encontrado.'
 while :
 do
 	# Obtem as atualizações
