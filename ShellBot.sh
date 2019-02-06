@@ -105,7 +105,6 @@ readonly _ERR_BOT_ALREADY_INIT_='ação não permitida: o bot já foi inicializa
 readonly _ERR_FILE_NOT_FOUND_='arquivo não encontrado: não foi possível ler o arquivo especificado.'
 readonly _ERR_DIR_WRITE_DENIED_='permissão negada: não é possível gravar no diretório.'
 readonly _ERR_DIR_NOT_FOUND_='Não foi possível acessar: diretório não encontrado.'
-readonly _ERR_FILE_DOWNLOAD_='falha no download: arquivo não encontrado.'
 readonly _ERR_FILE_INVALID_ID_='id inválido: arquivo não encontrado.'
 readonly _ERR_UNKNOWN_='erro desconhecido: ocorreu uma falha inesperada. Reporte o problema ao desenvolvedor.'
 readonly _ERR_SERVICE_NOT_ROOT_='acesso negado: requer privilégios de root.'
@@ -303,7 +302,7 @@ FlushOffset()
 	local sid eid jq_obj
 
 	while :; do
-		jq_obj=$(ShellBot.getUpdates --limit 100 --offset $(ShellBot.OffsetNext) --timeout 5)
+		jq_obj=$(ShellBot.getUpdates --limit 100 --offset $(ShellBot.OffsetNext))
 		mapfile -t update_id < <(jq -r '.result|.[]|.update_id' <<< $jq_obj)
 		[[ $update_id ]] || break
 		sid=${sid:-${update_id[0]}}
@@ -3695,9 +3694,9 @@ _EOF
     
     }
    
-	ShellBot.downloadFile() {
-	
-		local file_path dir
+	ShellBot.downloadFile()
+	{
+		local file_path dir ext file jq_obj
 		local uri="https://api.telegram.org/file/bot$_TOKEN_"
 
 		local param=$(getopt --name "$FUNCNAME" \
@@ -3713,12 +3712,12 @@ _EOF
 			case $1 in
 				-f|--file_path)
 					file_path=$2
+					ext=${2##*.}
 					shift 2
 					;;
 				-d|--dir)
-					[[ -d $2 ]] && {
-						[[ -w $2 ]] || MessageError API "$_ERR_DIR_WRITE_DENIED_" "$1" "$2"
-					} || MessageError API "$_ERR_DIR_NOT_FOUND_" "$1" "$2"
+					[[ -d $2 ]] || MessageError API "$_ERR_DIR_NOT_FOUND_" "$1" "$2"
+					[[ -w $2 ]] || MessageError API "$_ERR_DIR_WRITE_DENIED_" "$1" "$2"
 					dir=${2%/}
 					shift 2
 					;;
@@ -3732,9 +3731,23 @@ _EOF
 		[[ $file_path ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-f, --file_path]"
 		[[ $dir ]] 			|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-d, --dir]"
 
-		dir=$(mktemp -u --tmpdir="$dir" "file$(date +%d%m%Y%H%M%S)-XXXXX${ext:+.$ext}")
-		wget "$uri/$file_path" -O "$dir" &>/dev/null || MessageError API "$_ERR_FILE_DOWNLOAD_" "$file_path"
-				
+		# Gera o nome do arquivo anexando o horário de criação.
+		printf -v file 'file%s.%s' "$(date +%d%m%Y%H%M%S%N)" "${ext:-dat}"
+
+		# Executa o download da uri especificada e retorna um objeto json
+		# com as informações do processo. Se tiver sucesso o diretório de
+		# destino é retornado, caso contrário uma mensagem de erro é apresentada.
+		if wget -qO "$dir/$file" "$uri/$file_path"; then
+			# Sucesso
+			printf -v jq_obj '{"ok":true,"result":{"file_path":"%s"}}' "$dir/$file"
+		else
+			# Falha
+			printf -v jq_obj '{"ok":false,"error_code":404,"description":"Bad Request: file not found"}'
+			rm -f "$dir/$file" 2>/dev/null # Remove arquivo inválido.
+		fi
+
+		MethodReturn $jq_obj || MessageError TG $jq_obj
+
 		return $?
 	}
 
