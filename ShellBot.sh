@@ -157,17 +157,17 @@ CreateLog()
 		# Flags
 		fmt=${fmt//\{OK\}/${return[ok]:-$ok}}
 		fmt=${fmt//\{UPDATE_ID\}/${update_id[$i]}}
-		fmt=${fmt//\{MESSAGE_ID\}/${return[message_id]:-${message_message_id[$i]:-${edited_message_message_id[$id]:-${callback_query_id[$i]}}}}}
-		fmt=${fmt//\{FROM_ID\}/${return[from_id]:-${message_from_id[$i]:-${edited_message_from_id[$id]:-${callback_query_from_id[$i]}}}}}
-		fmt=${fmt//\{FROM_IS_BOT\}/${return[from_is_bot]:-${message_from_is_bot[$i]:-${edited_message_from_is_bot[$id]:-${callback_query_from_is_bot[$i]}}}}}
-		fmt=${fmt//\{FROM_FIRST_NAME\}/${return[from_first_name]:-${message_from_first_name[$i]:-${edited_message_from_first_name[$id]:-${callback_query_from_first_name[$i]}}}}}
-		fmt=${fmt//\{FROM_USERNAME\}/${return[from_username]:-${message_from_username[$i]:-${edited_message_from_username[$id]:-${callback_query_from_username[$i]}}}}}
-		fmt=${fmt//\{FROM_LANGUAGE_CODE\}/${message_from_language_code[$i]:-${edited_message_from_language_code[$id]:-${callback_query_from_language_code[$i]}}}}
+		fmt=${fmt//\{MESSAGE_ID\}/${return[message_id]:-${message_message_id[$i]:-${edited_message_message_id[$id]:-${callback_query_id[$i]:-${inline_query_id[$i]:-${chosen_inline_result_result_id[$i]}}}}}}}
+		fmt=${fmt//\{FROM_ID\}/${return[from_id]:-${message_from_id[$i]:-${edited_message_from_id[$id]:-${callback_query_from_id[$i]:-${inline_query_from_id[$i]:-${chosen_inline_result_from_id[$i]}}}}}}}
+		fmt=${fmt//\{FROM_IS_BOT\}/${return[from_is_bot]:-${message_from_is_bot[$i]:-${edited_message_from_is_bot[$id]:-${callback_query_from_is_bot[$i]:-${inline_query_from_is_bot[$i]:-${chosen_inline_result_from_is_bot[$i]}}}}}}}
+		fmt=${fmt//\{FROM_FIRST_NAME\}/${return[from_first_name]:-${message_from_first_name[$i]:-${edited_message_from_first_name[$id]:-${callback_query_from_first_name[$i]:-${inline_query_from_first_name[$i]:-${chosen_inline_result_from_first_name[$i]}}}}}}}
+		fmt=${fmt//\{FROM_USERNAME\}/${return[from_username]:-${message_from_username[$i]:-${edited_message_from_username[$id]:-${callback_query_from_username[$i]:-${inline_query_from_username[$i]:-${chosen_inline_result_from_username[$i]}}}}}}}
+		fmt=${fmt//\{FROM_LANGUAGE_CODE\}/${message_from_language_code[$i]:-${edited_message_from_language_code[$id]:-${callback_query_from_language_code[$i]:-${inline_query_from_language_code[$i]:-${chosen_inline_result_from_language_code[$i]}}}}}}
 		fmt=${fmt//\{CHAT_ID\}/${return[chat_id]:-${message_chat_id[$i]:-${edited_message_chat_id[$id]:-${callback_query_message_chat_id[$i]}}}}}
 		fmt=${fmt//\{CHAT_TITLE\}/${return[chat_title]:-${message_chat_title[$i]:-${edited_message_chat_title[$id]:-${callback_query_message_chat_title[$i]}}}}}
 		fmt=${fmt//\{CHAT_TYPE\}/${return[chat_type]:-${message_chat_type[$i]:-${edited_message_chat_type[$id]:-${callback_query_message_chat_type[$i]}}}}}
 		fmt=${fmt//\{MESSAGE_DATE\}/${return[date]:-${message_date[$i]:-${edited_message_date[$id]:-${callback_query_message_date[$i]}}}}}
-		fmt=${fmt//\{MESSAGE_TEXT\}/${return[text]:-${message_text[$i]:-${edited_message_text[$id]:-${callback_query_message_text[$i]}}}}}
+		fmt=${fmt//\{MESSAGE_TEXT\}/${return[text]:-${message_text[$i]:-${edited_message_text[$id]:-${callback_query_message_text[$i]:-${inline_query_query[$i]:-${chosen_inline_result_query[$i]}}}}}}}
 		fmt=${fmt//\{ENTITIES_TYPE\}/${return[entities_type]:-${message_entities_type[$i]:-${edited_message_entities_type[$id]:-${callback_query_data[$i]}}}}}
 		fmt=${fmt//\{BOT_TOKEN\}/${_BOT_INFO_[0]}}
 		fmt=${fmt//\{BOT_ID\}/${_BOT_INFO_[1]}}
@@ -277,17 +277,9 @@ CheckArgType(){
 		bool)		[[ $value =~ ^(true|false)$ 							]] 	|| MessageError API "$_ERR_TYPE_BOOL_" "$param" "$value";;
 		token)		[[ $value =~ ^[0-9]+:[a-zA-Z0-9_-]+$ 					]] 	|| MessageError API "$_ERR_TOKEN_INVALID_" "$param" "$value";;
 		file)		[[ $value =~ ^@ && ! -f ${value#@} 						]] 	&& MessageError API "$_ERR_FILE_NOT_FOUND_" "$param" "$value";;
-		mediatype)	[[ $value == @(animation|document|audio|photo|video)	]]	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		return)		[[ $value == @(json|map|value) 							]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
-		parsemode)	[[ $value == @(markdown|html) 							]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
-		point)		[[ $value == @(forehead|eyes|mouth|chin) 				]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		cmd)		[[ $value =~ ^/[a-zA-Z0-9_]+$ 							]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		flag)		[[ $value =~ ^[a-zA-Z0-9_]+$ 							]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
-		action)		[[ $value == @(typing|upload_photo) 					]] 	||
-					[[ $value == @(record_video|upload_video) 				]] 	||
-					[[ $value == @(record_audio|upload_audio) 				]] 	||
-					[[ $value == @(upload_document|find_location) 			]] 	||
-					[[ $value == @(record_video_note|upload_video_note) 	]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		itime)		[[ $value =~ ^([01][0-9]|2[0-3]):[0-5][0-9]-([01][0-9]|2[0-3]):[0-5][0-9]$ ]] \
 																				|| MessageError API "$_ERR_ARG_" "$param" "$value";;
 		idate)		[[ $value =~ ^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/([0-9]{4,})-(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/([0-9]{4,})$ ]] \
@@ -1659,7 +1651,6 @@ ShellBot.init()
     				;;
     			-p|--parse_mode)
     				# Tipo: "markdown" ou "html"
-    				CheckArgType parsemode "$1" "$2"
     				parse_mode=$2
     				shift 2
     				;;
@@ -2303,7 +2294,6 @@ ShellBot.init()
 		do
 			case $1 in
 				-p|--point)
-					CheckArgType point "$1" "$2"
 					point=$2
 					shift 2
 					;;
@@ -3002,7 +2992,6 @@ _EOF
     				shift 2
     				;;
     			-a|--action)
-    				CheckArgType action "$1" "$2"
     				action=$2
     				shift 2
     				;;
@@ -3482,7 +3471,6 @@ _EOF
     					shift 2
     					;;
     				-p|--parse_mode)
-    					CheckArgType parsemode "$1" "$2"
     					parse_mode=$2
     					shift 2
     					;;
@@ -3712,7 +3700,8 @@ _EOF
 			case $1 in
 				-f|--file_path)
 					file_path=$2
-					ext=${2##*.}
+					ext=${2##*/}
+					ext=${ext##+([^.])}
 					shift 2
 					;;
 				-d|--dir)
@@ -3732,7 +3721,7 @@ _EOF
 		[[ $dir ]] 			|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-d, --dir]"
 
 		# Gera o nome do arquivo anexando o horário de criação.
-		printf -v file 'file%s.%s' "$(date +%d%m%Y%H%M%S%N)" "${ext:-dat}"
+		file=file$(date +%d%m%Y%H%M%S%N)${ext:-.dat}
 
 		# Executa o download da uri especificada e retorna um objeto json
 		# com as informações do processo. Se tiver sucesso o diretório de
@@ -3990,7 +3979,6 @@ _EOF
 		do
 			case $1 in
 				-t|--type)
-					CheckArgType mediatype "$1" "$2"
 					__type=$2
 					shift 2
 					;;
@@ -4009,7 +3997,6 @@ _EOF
 					shift 2
 					;;
 				-p|--parse_mode)
-					CheckArgType parsemode "$1" "$2"
 					__parse_mode=$2
 					shift 2
 					;;
@@ -4057,19 +4044,19 @@ _EOF
 		[[ $__input ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-i, --input]"
 		[[ $__media ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-m, --media]"
 
-		local -n __input
+		local -n __input=$__input
 		
-    	__input="${__input:+$__input,}{\"type\":\"$__type\","
-		__input+="\"media\":\"$__media\""
-		__input+="${__caption:+,\"caption\":\"$__caption\"}"
-		__input+="${__parse_mode:+,\"parse_mode\":\"$__parse_mode\"}"
-		__input+="${__thumb:+,\"thumb\":\"$__thumb\"}"
-		__input+="${__width:+,\"width\":\"$__width\"}"
-		__input+="${__height:+,\"height\":\"$__height\"}"
-		__input+="${__duration:+,\"duration\":\"$__duration\"}"
-		__input+="${__supports_streaming:+,\"supports_streaming\":$__supports_streaming}"
-		__input+="${__performer:+,\"performer\":\"$__performer\"}"
-		__input+="${__title:+,\"title\":\"$__title\"}}"
+    	__input=${__input:+$__input,}{\"type\":\"$__type\",
+		__input+=\"media\":\"$__media\"
+		__input+=${__caption:+,\"caption\":\"$__caption\"}
+		__input+=${__parse_mode:+,\"parse_mode\":\"$__parse_mode\"}
+		__input+=${__thumb:+,\"thumb\":\"$__thumb\"}
+		__input+=${__width:+,\"width\":$__width}
+		__input+=${__height:+,\"height\":$__height}
+		__input+=${__duration:+,\"duration\":$__duration}
+		__input+=${__supports_streaming:+,\"supports_streaming\":$__supports_streaming}
+		__input+=${__performer:+,\"performer\":\"$__performer\"}
+		__input+=${__title:+,\"title\":\"$__title\"}}
 
 		return $?
 	}
@@ -4260,7 +4247,6 @@ _EOF
 					shift 2
 					;;
 				-p|--parse_mode)
-					CheckArgType parsemode "$1" "$2"
 					parse_mode=$2
 					shift 2
 					;;
@@ -4307,6 +4293,322 @@ _EOF
     	# Status
     	return $?
 	}
+	
+	ShellBot.answerInlineQuery()
+	{
+		local inline_query_id results cache_time is_personal
+		local next_offset switch_pm_text switch_pm_parameter
+		local jq_obj
+
+		local param=$(getopt	--name "$FUNCNAME" \
+								--options 'i:r:c:p:o:s:m:' \
+								--longoptions 'inline_query_id:,
+												results:,
+												cache_time:,
+												is_personal:,
+												next_offset:,
+												switch_pm_text:,
+												switch_pm_parameter:' \
+								-- "$@")
+
+		eval set -- "$param"
+		
+		while :
+		do
+			case $1 in
+				-i|--inline_query_id)		inline_query_id=$2;		shift 2;;
+				-r|--results)				results=[$2];			shift 2;;
+				-c|--cache_time)			cache_time=$2;			shift 2;;
+				-p|--is_personal)			cache_time=$2;			shift 2;;
+				-o|--next_offset)			next_offset=$2;			shift 2;;
+				-s|--switch_pm_text)		switch_pm_text=$2;		shift 2;;
+				-m|--switch_pm_parameter)	switch_pm_parameter=$2;	shift 2;;
+				--)													shift; break;;
+			esac
+		done
+		
+		[[ $inline_query_id ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-i, --inline_query_id]"
+		[[ $results ]] 			|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-r, --results]"
+
+		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${inline_query_id:+-F inline_query_id="$inline_query_id"} \
+									${results:+-F results="$results"} \
+									${cache_time:+-F cache_time="$cache_time"} \
+									${is_personal:+-F is_personal="$is_personal"} \
+									${next_offset:+-F next_offset="$next_offset"} \
+									${switch_pm_text:+-F switch_pm_text="$switch_pm_text"} \
+									${switch_pm_parameter:+-F switch_pm_parameter="$switch_pm_parameter"})
+		
+		# Retorno do método
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
+    
+    	# Status
+    	return $?
+		
+	}
+	
+	ShellBot.InlineQueryResult()
+	{
+		local __input __type __title __caption __reply_markup __parse_mode
+		local __description __input_message_content __address __audio_duration
+	   	local __audio_file_id __audio_url __document_file_id __document_url
+		local __first_name __foursquare_id __foursquare_type __gif_duration
+		local __gif_file_id __gif_height __gif_url __gif_width __hide_url
+		local __last_name __latitude __live_period __longitude __mime_type
+		local __mpeg4_duration __mpeg4_file_id __mpeg4_height __mpeg4_url
+		local __mpeg4_width __performer __photo_file_id __photo_height 
+		local __photo_url __photo_width __sticker_file_id __vcard
+		local __thumb_height __thumb_url __thumb_width __url __id
+		local __video_duration __video_file_id __video_height __video_url
+		local __video_width __voice_duration __voice_file_id __voice_url
+
+		local __param=$(getopt	--name "$FUNCNAME" \
+								--options 'i:t:l:c:k:p:r:d:m:b:s:x:w:v:z:y:q:a:f:u:g:o:n:h:j:e:
+											N:R:D:A:X:G:C:Q:L:Y:E:V:H:Z:T:F:U:M:S:O:I:K:B:P:J:W:' \
+								--longoptions 'input:,
+												type:,
+												title:,
+												caption:,
+												reply_markup:,
+												parse_mode:,
+												id:,
+												description:,
+												input_message_content:,
+												address:,
+												audio_duration:,
+												audio_file_id:,
+												audio_url:,
+												document_file_id:,
+												document_url:,
+												first_name:,
+												foursquare_id:,
+												foursquare_type:,
+												gif_duration:,
+												gif_file_id:,
+												gif_height:,
+												gif_url:,
+												gif_width:,
+												hide_url:,
+												last_name:,
+												latitude:,
+												live_period:,
+												longitude:,
+												mime_type:,
+												mpeg4_duration:,
+												mpeg4_file_id:,
+												mpeg4_height:,
+												mpeg4_url:,
+												mpeg4_width:,
+												performer:,
+												photo_file_id:,
+												photo_height:,
+												photo_url:,
+												photo_width:,
+												sticker_file_id:,
+												thumb_height:,
+												thumb_url:,
+												thumb_width:,
+												url:,
+												vcard:,
+												video_duration:,
+												video_file_id:,
+												video_height:,
+												video_url:,
+												video_width:,
+												voice_duration:,
+												voice_file_id:,
+												voice_url:' \
+								-- "$@")
+
+		eval set -- "$__param"
+
+		while :
+		do
+			case $1 in
+				-i|--input) 				CheckArgType var "$1" "$2"
+					   						__input=$2; 				shift 2;;
+				-t|--type)					__type=$2; 					shift 2;;
+				-l|--title)					__title=$2;					shift 2;;
+				-c|--caption)				__caption=$2;				shift 2;;
+				-k|--reply_markup)			__reply_markup=$2;			shift 2;;
+				-p|--parse_mode)			__parse_mode=$2;			shift 2;;
+				-r|--id)					__id=$2;					shift 2;;
+				-d|--description)			__description=$2;			shift 2;;
+				-m|--input_message_content)	__input_message_content=$2;	shift 2;;
+				-b|--address)				__address=$2;				shift 2;;
+				-s|--audio_duration)		__audio_duration=$2;		shift 2;;
+				-x|--audio_file_id)			__audio_file_id=$2;			shift 2;;
+				-w|--audio_url)				__audio_url=$2;				shift 2;;
+				-v|--document_file_id)		__document_file_id=$2;		shift 2;;
+				-z|--document_url)			__document_url=$2;			shift 2;;
+				-y|--first_name)			__first_name=$2;			shift 2;;
+				-q|--foursquare_id)			__foursquare_id=$2;			shift 2;;
+				-a|--foursquare_type)		__foursquare_type=$2;		shift 2;;
+				-f|--gif_duration)			__gif_duration=$2;			shift 2;;
+				-u|--gif_file_id)			__gif_file_id=$2			shift 2;;
+				-g|--gif_height)			__gif_height=$2;			shift 2;;
+				-o|--gif_url)				__gif_url=$2;				shift 2;;
+				-n|--gif_width)				__gif_width=$2;				shift 2;;
+				-h|--hide_url)				__hide_url=$2;				shift 2;;
+				-j|--last_name)				__last_name=$2;				shift 2;;
+				-e|--latitude)				__latitude=$2;				shift 2;;
+				-N|--live_period)			__live_period=$2;			shift 2;;
+				-R|--longitude)				__longitude=$2;				shift 2;;
+				-D|--mime_type)				__mime_type=$2;				shift 2;;
+				-A|--mpeg4_duration)		__mpeg4_duration=$2;		shift 2;;
+				-X|--mpeg4_file_id)			__mpeg4_file_id=$2;			shift 2;;
+				-G|--mpeg4_height)			__mpeg4_height=$2;			shift 2;;
+				-C|--mpeg4_url)				__mpeg4_url=$2;				shift 2;;
+				-Q|--mpeg4_width)			__mpeg4_width=$2;			shift 2;;
+				-L|--performer)				__performer=$2;				shift 2;;
+				-Y|--photo_file_id)			__photo_file_id=$2;			shift 2;;
+				-E|--photo_height)			__photo_height=$2;			shift 2;;
+				-V|--photo_url)				__photo_url=$2;				shift 2;;
+				-H|--photo_width)			__photo_width=$2;			shift 2;;
+				-Z|--sticker_file_id)		__sticker_file_id=$2;		shift 2;;
+				-T|--thumb_height)			__thumb_height=$2;			shift 2;;
+				-F|--thumb_url)				__thumb_url=$2;				shift 2;;
+				-U|--thumb_width)			__thumb_width=$2;			shift 2;;
+				-M|--url)					__url=$2;					shift 2;;
+				-S|--vcard)					__vcard=$2;					shift 2;;
+				-O|--video_duration)		__video_duration=$2;		shift 2;;
+				-I|--video_file_id)			__video_file_id=$2;			shift 2;;
+				-K|--video_height)			__video_height=$2;			shift 2;;
+				-B|--video_url)				__video_url=$2;				shift 2;;
+				-P|--video_width)			__video_width=$2;			shift 2;;
+				-J|--voice_duration)		__voice_duration=$2;		shift 2;;
+				-W|--voice_file_id)			__voice_file_id=$2;			shift 2;;
+				--voice_url)				__voice_url=$2;				shift 2;;
+				--)														shift; break;;
+			esac
+		done
+
+		[[ $__input ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-i, --input]"
+
+		local -n __input=$__input
+
+    	__input=${__input:+$__input,}{\"type\":\"$__type\"
+		__input+=${__title:+,\"title\":\"$__title\"}
+		__input+=${__caption:+,\"caption\":\"$__caption\"}
+		__input+=${__reply_markup:+,\"reply_markup\":\"$__reply_markup\"}
+		__input+=${__parse_mode:+,\"parse_mode\":\"$__parse_mode\"}
+		__input+=${__id:+,\"id\":\"$__id\"}
+		__input+=${__description:+,\"description\":\"$__description\"}
+		__input+=${__input_message_content:+,\"input_message_content\":$__input_message_content}
+		__input+=${__address:+,\"address\":\"$__address\"}
+		__input+=${__audio_duration:+,\"audio_duration\":$__audio_duration}
+		__input+=${__audio_file_id:+,\"audio_file_id\":\"$__audio_file_id\"}
+		__input+=${__audio_url:+,\"audio_url\":\"$__audio_url\"}
+		__input+=${__document_file_id:+,\"document_file_id\":\"$__document_file_id\"}
+		__input+=${__document_url:+,\"document_url\":\"$__document_url\"}
+		__input+=${__first_name:+,\"first_name\":\"$__first_name\"}
+		__input+=${__foursquare_id:+,\"foursquare_id\":\"$__foursquare_id\"}
+		__input+=${__foursquare_type:+,\"foursquare_type\":\"$__foursquare_type\"}
+		__input+=${__gif_duration:+,\"gif_duration\":$__gif_duration}
+		__input+=${__gif_file_id:+,\"gif_file_id\":\"$__gif_file_id\"}
+		__input+=${__gif_height:+,\"gif_height\":$__gif_height}
+		__input+=${__gif_url:+,\"gif_url\":\"$__gif_url\"}
+		__input+=${__gif_width:+,\"gif_width\":$__gif_width}
+		__input+=${__hide_url:+,\"hide_url\":\"$__hide_url\"}
+		__input+=${__last_name:+,\"last_name\":\"$__last_name\"}
+		__input+=${__latitude:+,\"latitude\":$__latitude}
+		__input+=${__live_period:+,\"live_period\":$__live_period}
+		__input+=${__longitude:+,\"longitude\":$__longitude}
+		__input+=${__mime_type:+,\"mime_type\":\"$__mime_type\"}
+		__input+=${__mpeg4_duration:+,\"mpeg4_duration\":$__mpeg4_duration}
+		__input+=${__mpeg4_file_id:+,\"mpeg4_file_id\":\"$__mpeg4_file_id\"}
+		__input+=${__mpeg4_height:+,\"mpeg4_height\":$__mpeg4_height}
+		__input+=${__mpeg4_url:+,\"mpeg4_url\":\"$__mpeg4_url\"}
+		__input+=${__mpeg4_width:+,\"mpeg4_width\":$__mpeg4_width}
+		__input+=${__performer:+,\"performer\":\"$__performer\"}
+		__input+=${__photo_file_id:+,\"photo_file_id\":\"$__photo_file_id\"}
+		__input+=${__photo_height:+,\"photo_height\":$__photo_height}
+		__input+=${__photo_url:+,\"photo_url\":\"$__photo_url\"}
+		__input+=${__photo_width:+,\"photo_width\":$__photo_width}
+		__input+=${__sticker_file_id:+,\"sticker_file_id\":\"$__sticker_file_id\"}
+		__input+=${__thumb_height:+,\"thumb_height\":$__thumb_height}
+		__input+=${__thumb_url:+,\"thumb_url\":\"$__thumb_url\"}
+		__input+=${__thumb_width:+,\"thumb_width\":$__thumb_width}
+		__input+=${__url:+,\"url\":\"$__url\"}
+		__input+=${__vcard:+,\"vcard\":\"$__vcard\"}
+		__input+=${__video_duration:+,\"video_duration\":$__video_duration}
+		__input+=${__video_file_id:+,\"video_file_id\":\"$__video_file_id\"}
+		__input+=${__video_height:+,\"video_height\":$__video_height}
+		__input+=${__video_url:+,\"video_url\":\"$__video_url\"}
+		__input+=${__video_width:+,\"video_width\":$__video_width}
+		__input+=${__voice_duration:+,\"voice_duration\":$__voice_duration}
+		__input+=${__voice_file_id:+,\"voice_file_id\":\"$__voice_file_id\"}
+		__input+=${__voice_url:+,\"voice_url\":\"$__voice_url\"}}
+
+		return $?
+	}
+
+	ShellBot.InputMessageContent()
+	{
+		local message_text parse_mode disable_web_page_preview json
+		local latitude longitude live_period title address foursquare_id
+		local foursquare_type phone_number first_name last_name vcard
+
+		local param=$(getopt	--name "$FUNCNAME" \
+								--options 't:p:w:l:v:e:a:f:q:n:m:s:d:' \
+								--longoptions 'message_text:,
+												parse_mode:,
+												disable_web_page_preview:,
+												latitude:,
+												longitude:,
+												live_period:,
+												title:,
+												address:,
+												foursquare_id:,
+												foursquare_type:,
+												phone_number:,
+												first_name:,
+												last_name:,
+												vcard:' \
+								-- "$@")
+
+		eval set -- "$param"
+
+		while :
+		do
+			case $1 in
+				-t|--message_text) 				message_text=$(echo -e "$2");	shift 2;;
+				-p|--parse_mode)				parse_mode=$2; 					shift 2;;
+				-w|--disable_web_page_preview)	disable_web_page_preview=$2; 	shift 2;;
+				-l|--latitude)					latitude=$2;					shift 2;;
+				-g|--longitude)					longitude=$2;					shift 2;;
+				-v|--live_period)				live_period=$2;					shift 2;;
+				-e|--title)						title=$2;						shift 2;;
+				-a|--address)					address=$2;						shift 2;;
+				-f|--foursquare_id)				foursquare_id=$2;				shift 2;;
+				-q|--foursquare_type)			foursquare_type=$2;				shift 2;;
+				-n|--phone_number)				phone_number=$2;				shift 2;;
+				-m|--first_name)				first_name=$2;					shift 2;;
+				-s|--last_name)					last_name=$2;					shift 2;;
+				-d|--vcard)						vcard=$2;						shift 2;;
+				--) 															shift; break;;
+			esac
+		done
+		
+		json=${message_text:+\"message_text\":\"$message_text\"}
+		json+=${parse_mode:+,\"parse_mode\":\"$parse_mode\"}
+		json+=${disable_web_page_preview:+,\"disable_web_page_preview\":$disable_web_page_preview}
+		json+=${latitude:+,\"latitude\":$latitude}
+		json+=${longitude:+,\"longtitude\":$longitude}
+		json+=${live_period:+,\"live_period\":$live_period}
+		json+=${title:+,\"title\":\"$title\"}
+		json+=${address:+,\"address\":\"$address\"}
+		json+=${foursquare_id:+,\"foursquare_id\":\"$foursquare_id\"}
+		json+=${foursquare_type:+,\"foursquare_type\":\"$foursquare_type\"}
+		json+=${phone_number:+,\"phone_number\":\"$phone_number\"}
+		json+=${first_name:+,\"first_name\":\"$first_name\"}
+		json+=${last_name:+,\"last_name\":\"$last_name\"}
+		json+=${vcard:+,\"vcard\":\"$vcard\"}
+		
+		echo "{${json#,}}"
+
+		return $?
+	}
 
 	ShellBot.setMessageRules()
 	{
@@ -4320,7 +4622,7 @@ _EOF
 		local forward_message reply_markup continue
 
 		local param=$(getopt	--name "$FUNCNAME" \
-								--options 's:a:z:c:i:u:h:v:y:l:m:b:t:n:f:p:q:r:g:o:e:d:w:j:x:' \
+								--options 's:a:z:c:i:u:h:v:y:l:m:b:t:n:f:p:q:r:g:o:e:d:w:j:x:R:S:F:K:P:E:C' \
 								--longoptions	'name:,
 												action:,
 												action_args:,
@@ -4466,35 +4768,35 @@ _EOF
 					message_status=${message_status:+$message_status,}${2//|/\\|}
 					shift 2
 					;;
-				--bot_reply_message)
+				-R|--bot_reply_message)
 					reply_message=${2//\\/\\\\}
 					reply_message=${reply_message//|/\\|}
 					shift 2
 					;;
-				--bot_send_message)
+				-S|--bot_send_message)
 					send_message=${2//\\/\\\\}
 					send_message=${send_message//|/\\|}
 					shift 2
 					;;
-				--bot_forward_message)
+				-F|--bot_forward_message)
 					forward_message=${forward_message:+$forward_message,}${2//|/\\|}
 					shift 2
 					;;
-				--bot_reply_markup)
+				-K|--bot_reply_markup)
 					reply_markup=${2//\\/\\\\}
 					reply_markup=${reply_markup//|/\\|}
 					shift 2
 					;;
-				--bot_parse_mode)
+				-P|--bot_parse_mode)
 					parse_mode=${2//|/\\|}
 					shift 2
 					;;
-				--exec)
+				-E|--exec)
 					exec=${2//\\/\\\\}
 					exec=${exec//|/\\|}
 					shift 2
 					;;
-				--continue)
+				-C|--continue)
 					continue=true
 					shift
 					;;
@@ -4602,12 +4904,12 @@ _EOF
 							__parse_mode		\
 							__continue			<<< $__rule
 		
-				__u_message_text=${message_text[$__uid]:-${edited_message_text[$__uid]:-${callback_query_message_text[$__uid]}}}
-				__u_message_id=${message_message_id[$__uid]:-${edited_message_message_id[$__uid]:-${callback_query_message_message_id[$__uid]}}}
-				__u_message_from_is_bot=${message_from_is_bot[$__uid]:-${edited_message_from_is_bot[$__uid]:-${callback_query_from_is_bot[$__uid]}}}
-				__u_message_from_id=${message_from_id[$__uid]:-${edited_message_from_id[$__uid]:-${callback_query_from_id[$__uid]}}}
-				__u_message_from_username=${message_from_username[$__uid]:-${edited_message_from_username[$__uid]:-${callback_query_from_username[$__uid]}}}
-				__u_message_from_language_code=${message_from_language_code[$__uid]:-${edited_message_from_language_code[$__uid]:-${callback_query_from_language_code[$__uid]}}}
+				__u_message_text=${message_text[$__uid]:-${edited_message_text[$__uid]:-${callback_query_message_text[$__uid]:-${inline_query_query[$__uid]:-${chosen_inline_result_query[$__uid]}}}}}
+				__u_message_id=${message_message_id[$__uid]:-${edited_message_message_id[$__uid]:-${callback_query_message_message_id[$__uid]:-${inline_query_id[$__uid]:-${chosen_inline_result_result_id[$__uid]}}}}}
+				__u_message_from_is_bot=${message_from_is_bot[$__uid]:-${edited_message_from_is_bot[$__uid]:-${callback_query_from_is_bot[$__uid]:-${inline_query_from_is_bot[$__uid]:-${chosen_inline_result_from_is_bot[$__uid]}}}}}
+				__u_message_from_id=${message_from_id[$__uid]:-${edited_message_from_id[$__uid]:-${callback_query_from_id[$__uid]:-${inline_query_from_id[$__uid]:-${chosen_inline_result_from_id[$__uid]}}}}}
+				__u_message_from_username=${message_from_username[$__uid]:-${edited_message_from_username[$__uid]:-${callback_query_from_username[$__uid]:-${inline_query_from_username[$__uid]:-${chosen_inline_result_from_username[$__uid]}}}}}
+				__u_message_from_language_code=${message_from_language_code[$__uid]:-${edited_message_from_language_code[$__uid]:-${callback_query_from_language_code[$__uid]:-${inline_query_from_language_code[$__uid]:-${chosen_inline_result_from_language_code[$__uid]}}}}}
 				__u_message_chat_id=${message_chat_id[$__uid]:-${edited_message_chat_id[$__uid]:-${callback_query_message_chat_id[$__uid]}}}
 				__u_message_chat_username=${message_chat_username[$__uid]:-${edited_message_chat_username[$__uid]:-${callback_query_message_chat_username[$__uid]}}}
 				__u_message_chat_type=${message_chat_type[$__uid]:-${edited_message_chat_type[$__uid]:-${callback_query_message_chat_type[$__uid]}}}
@@ -4639,7 +4941,9 @@ _EOF
 					[[ $__msgstatus == edited 		&& ${edited_message_message_id[$__uid]}				]] 	||
 					[[ $__msgstatus == forwarded	&& ${message_forward_from_id[$__uid]}				]]	||
 					[[ $__msgstatus == reply		&& ${message_reply_to_message_message_id[$__uid]}	]] 	||
-					[[ $__msgstatus == callback		&& ${callback_query_message_message_id[$__uid]}		]]	&& break
+					[[ $__msgstatus == callback		&& ${callback_query_message_message_id[$__uid]}		]]	||
+					[[ $__msgstatus == inline		&& ${inline_query_id[$__uid]}						]]	||
+					[[ $__msgstatus == chosen		&& ${chosen_inline_result_result_id[$__uid]}		]]	&& break
 				done
 				
 				(($?)) && continue
@@ -4971,6 +5275,9 @@ _EOF
 				ShellBot.editMessageMedia 			\
 				ShellBot.inputMedia 				\
 				ShellBot.sendAnimation 				\
+				ShellBot.answerInlineQuery			\
+				ShellBot.InlineQueryResult			\
+				ShellBot.InputMessageContent		\
 				ShellBot.setMessageRules 			\
 				ShellBot.manageRules 				\
 				ShellBot.getUpdates
