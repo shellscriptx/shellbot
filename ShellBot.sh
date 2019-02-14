@@ -3,7 +3,7 @@
 #-----------------------------------------------------------------------------------------------------------
 #	DATA:				07 de Março de 2017
 #	SCRIPT:				ShellBot.sh
-#	VERSÃO:				6.0
+#	VERSÃO:				6.1
 #	DESENVOLVIDO POR:	Juliano Santos [SHAMAN]
 #	PÁGINA:				http://www.shellscriptx.blogspot.com.br
 #	FANPAGE:			https://www.facebook.com/shellscriptx
@@ -118,6 +118,7 @@ readonly _ERR_RULE_ALREADY_EXISTS_='falha ao definir: o nome da regra já existe
 
 declare -A _BOT_FUNCTION_LIST_
 declare -a _BOT_RULES_LIST_
+declare _VAR_INIT_LIST_
 
 Json() { local obj=$(jq "$1" <<< "${*:2}"); obj=${obj#\"}; echo "${obj%\"}"; }
 
@@ -136,7 +137,7 @@ FlagConv()
 	local var str=$2
 
 	while [[ $str =~ \$\{([a-z_]+)\} ]]; do
-		[[ ${BASH_REMATCH[1]} == @(${_var_init_list_// /|}) ]] && var=${BASH_REMATCH[1]}[$1] || var=_
+		[[ ${BASH_REMATCH[1]} == @(${_VAR_INIT_LIST_// /|}) ]] && var=${BASH_REMATCH[1]}[$1] || var=
 		str=${str//${BASH_REMATCH[0]}/${!var}}
 	done
 
@@ -218,7 +219,7 @@ MethodReturn()
 MessageError()
 {
 	# Variáveis locais
-	local err_message err_param err_line err_func assert ind
+	local err_message err_param assert i
 	
 	# A variável 'BASH_LINENO' é dinâmica e armazena o número da linha onde foi expandida.
 	# Quando chamada dentro de um subshell, passa ser instanciada como um array, armazenando diversos
@@ -226,16 +227,13 @@ MessageError()
 	# 'FUNCNAME', onde é armazenado o nome da função onde foi chamada.
 	
 	# Obtem o índice da função na hierarquia de chamada.
-	[[ ${FUNCNAME[1]} == CheckArgType ]] && ind=2 || ind=1
-	err_line=${BASH_LINENO[$ind]}	# linha
-	err_func=${FUNCNAME[$ind]}		# função
+	[[ ${FUNCNAME[1]} == CheckArgType ]] && i=2 || i=1
 	
 	# Lê o tipo de ocorrência.
 	# TG - Erro externo retornado pelo core do telegram.
 	# API - Erro interno gerado pela API do ShellBot.
 	case $1 in
 		TG)
-			# arquivo Json
 			err_param="$(Json '.error_code' ${*:2})"
 			err_message="$(Json '.description' ${*:2})"
 			;;
@@ -247,46 +245,42 @@ MessageError()
 	esac
 
 	# Imprime erro
-	printf "%s: erro: linha %s: %s: %s: %s\n"	\
-							"${_BOT_SCRIPT_}"	\
-							"${err_line:--}" 	\
-							"${err_func:--}" 	\
-							"${err_param:--}" 	\
-							"${err_message:-$_ERR_UNKNOWN_}" 1>&2 
+	printf "%s: erro: linha %s: %s: %s: %s\n"					\
+							"${_BOT_SCRIPT_}"					\
+							"${BASH_LINENO[$i]:--}" 			\
+							"${FUNCNAME[$i]:--}" 				\
+							"${err_param:--}" 					\
+							"${err_message:-$_ERR_UNKNOWN_}" 	1>&2 
 
 	# Finaliza script/thread em caso de erro interno, caso contrário retorna 1
 	[[ $assert ]] && exit 1 || return 1
 }
 
-CheckArgType(){
-
-	local ctype="$1"
-	local param="$2"
-	local value="$3"
-
+CheckArgType()
+{
 	# CheckArgType recebe os dados da função chamadora e verifica
 	# o dado recebido com o tipo suportado pelo parâmetro.
 	# É retornado '0' para sucesso, caso contrário uma mensagem
 	# de erro é retornada e o script/thread é finalizado com status '1'.
-	case $ctype in
-		user)		id "$value" &>/dev/null										|| MessageError API "$_ERR_SERVICE_USER_NOT_FOUND_" "$param" "$value";;
-		func)		[[ $(type -t "$value") == function						]] 	|| MessageError API "$_ERR_FUNCTION_NOT_FOUND_" "$param" "$value";;
-		var)		[[ -v $value 											]] 	|| MessageError API "$_ERR_VAR_NAME_" "$param" "$value";;
-		int)		[[ $value =~ ^-?[0-9]+$ 								]] 	|| MessageError API "$_ERR_TYPE_INT_" "$param" "$value";;
-		float)		[[ $value =~ ^-?[0-9]+\.[0-9]+$ 						]] 	|| MessageError API "$_ERR_TYPE_FLOAT_" "$param" "$value";;
-		bool)		[[ $value =~ ^(true|false)$ 							]] 	|| MessageError API "$_ERR_TYPE_BOOL_" "$param" "$value";;
-		token)		[[ $value =~ ^[0-9]+:[a-zA-Z0-9_-]+$ 					]] 	|| MessageError API "$_ERR_TOKEN_INVALID_" "$param" "$value";;
-		file)		[[ $value =~ ^@ && ! -f ${value#@} 						]] 	&& MessageError API "$_ERR_FILE_NOT_FOUND_" "$param" "$value";;
-		return)		[[ $value == @(json|map|value) 							]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
-		cmd)		[[ $value =~ ^/[a-zA-Z0-9_]+$ 							]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
-		flag)		[[ $value =~ ^[a-zA-Z0-9_]+$ 							]] 	|| MessageError API "$_ERR_ARG_" "$param" "$value";;
-		itime)		[[ $value =~ ^([01][0-9]|2[0-3]):[0-5][0-9]-([01][0-9]|2[0-3]):[0-5][0-9]$ ]] \
-																				|| MessageError API "$_ERR_ARG_" "$param" "$value";;
-		idate)		[[ $value =~ ^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/([0-9]{4,})-(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/([0-9]{4,})$ ]] \
-																				|| MessageError API "$_ERR_ARG_" "$param" "$value";;
+	case $1 in
+		user)		id "$3" &>/dev/null						|| MessageError API "$_ERR_SERVICE_USER_NOT_FOUND_" "$2" "$3";;
+		func)		[[ $(type -t "$3") == function		]] 	|| MessageError API "$_ERR_FUNCTION_NOT_FOUND_" "$2" "$3";;
+		var)		[[ -v $3 							]] 	|| MessageError API "$_ERR_VAR_NAME_" "$2" "$3";;
+		int)		[[ $3 =~ ^-?[0-9]+$ 				]] 	|| MessageError API "$_ERR_TYPE_INT_" "$2" "$3";;
+		float)		[[ $3 =~ ^-?[0-9]+\.[0-9]+$ 		]] 	|| MessageError API "$_ERR_TYPE_FLOAT_" "$2" "$3";;
+		bool)		[[ $3 =~ ^(true|false)$ 			]] 	|| MessageError API "$_ERR_TYPE_BOOL_" "$2" "$3";;
+		token)		[[ $3 =~ ^[0-9]+:[a-zA-Z0-9_-]+$	]] 	|| MessageError API "$_ERR_TOKEN_INVALID_" "$2" "$3";;
+		file)		[[ $3 =~ ^@ && ! -f ${3#@} 			]] 	&& MessageError API "$_ERR_FILE_NOT_FOUND_" "$2" "$3";;
+		return)		[[ $3 == @(json|map|value) 			]] 	|| MessageError API "$_ERR_ARG_" "$2" "$3";;
+		cmd)		[[ $3 =~ ^/[a-zA-Z0-9_]+$ 			]] 	|| MessageError API "$_ERR_ARG_" "$2" "$3";;
+		flag)		[[ $3 =~ ^[a-zA-Z0-9_]+$ 			]] 	|| MessageError API "$_ERR_ARG_" "$2" "$3";;
+		itime)		[[ $3 =~ ^([01][0-9]|2[0-3]):[0-5][0-9]-([01][0-9]|2[0-3]):[0-5][0-9]([,|]([01][0-9]|2[0-3]):[0-5][0-9]-([01][0-9]|2[0-3]):[0-5][0-9])*$ ]] \
+															|| MessageError API "$_ERR_ARG_" "$2" "$3";;
+		idate)		[[ $3 =~ ^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/([0-9]{4,})-(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/([0-9]{4,})([,|](0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/([0-9]{4,})-(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/([0-9]{4,}))*$ ]]	\
+															|| MessageError API "$_ERR_ARG_" "$2" "$3";;
     esac
 
-	return 0
+	return $?
 }
 
 FlushOffset()
@@ -295,16 +289,15 @@ FlushOffset()
 
 	while :; do
 		jq_obj=$(ShellBot.getUpdates --limit 100 --offset $(ShellBot.OffsetNext))
-		mapfile -t update_id < <(jq -r '.result|.[]|.update_id' <<< $jq_obj)
+		IFS=' ' read -a update_id <<< $(jq -r '.result|.[]|.update_id' <<< $jq_obj)
 		[[ $update_id ]] || break
 		sid=${sid:-${update_id[0]}}
 		eid=${update_id[-1]}
 	done
 	
 	echo "${sid:-0}|${eid:-0}"
-	unset _FLUSH_OFFSET_
 
-	return 0
+	return $?
 }
 
 CreateUnitService()
@@ -373,11 +366,12 @@ _eof
 # Inicializa o bot, definindo sua API e _TOKEN_.
 ShellBot.init()
 {
+	local method_return delm ret logfmt jq_obj offset
+	local token monitor flush service user logfile logfmt
+	
 	# Verifica se o bot já foi inicializado.
 	[[ $_SHELLBOT_INIT_ ]] && MessageError API "$_ERR_BOT_ALREADY_INIT_"
-	
-	local enable_service user_unit _jq_bot_info method_return delm ret logfmt
-	
+
 	local param=$(getopt --name "$FUNCNAME" \
 						 --options 't:mfsu:l:o:r:d:' \
 						 --longoptions 'token:,
@@ -393,39 +387,38 @@ ShellBot.init()
     
 	# Define os parâmetros posicionais
 	eval set -- "$param"
-   
+	
 	while :
     	do
 			case $1 in
 				-t|--token)
 	    			CheckArgType token "$1" "$2"
-	    			declare -gr _TOKEN_=$2												# TOKEN
-	    			declare -gr _API_TELEGRAM_="https://api.telegram.org/bot$_TOKEN_"	# API
+					token=$2
 	    			shift 2
 	   				;;
 	   			-m|--monitor)
 					# Ativa modo monitor
-	   				declare -gr _BOT_MONITOR_=1
+					monitor=true
 	   				shift
 	   				;;
 				-f|--flush)
 					# Define a FLAG flush para o método 'ShellBot.getUpdates'. Se ativada, faz com que
 					# o método obtenha somente as atualizações disponíveis, ignorando a extração dos
 					# objetos JSON e a inicialização das variáveis.
-					declare -x _FLUSH_OFFSET_=1
+					flush=true
 					shift
 					;;
 				-s|--service)
-					enable_service=1
+					service=true
 					shift
 					;;
 				-u|--user)
 					CheckArgType user "$1" "$2"
-					user_unit=$2
+					user=$2
 					shift 2
 					;;
 				-l|--log_file)
-					declare -gr _BOT_LOG_FILE_=$2
+					logfile=$2
 					shift 2
 					;;
 				-o|--log_format)
@@ -449,18 +442,19 @@ ShellBot.init()
 	   	done
   
 	# Parâmetro obrigatório.	
-	[[ $_TOKEN_ ]] 							|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-t, --token]"
-	[[ $user_unit && ! $enable_service ]] 	&& MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --service]" 
-	[[ $enable_service ]] 					&& CreateUnitService "$_BOT_SCRIPT_" "${user_unit:-$USER}"
+	[[ $token 					]]	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-t, --token]"
+	[[ $user && ! $service 		]] 	&& MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --service]" 
+	[[ $service 				]]	&& CreateUnitService "$_BOT_SCRIPT_" "${user:-$USER}"
 		   
+	declare -gr _TOKEN_=$token											# TOKEN
+	declare -gr _API_TELEGRAM_="https://api.telegram.org/bot$_TOKEN_"	# API
+
     # Um método simples para testar o token de autenticação do seu bot. 
     # Não requer parâmetros. Retorna informações básicas sobre o bot em forma de um objeto Usuário.
     ShellBot.getMe()
     {
     	# Chama o método getMe passando o endereço da API, seguido do nome do método.
-    	local jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.})
-
-    	_jq_bot_info=$jq_obj
+    	jq_obj=$(curl $_CURL_OPT_ GET $_API_TELEGRAM_/${FUNCNAME#*.})
 
 		# Verifica o status de retorno do método
     	MethodReturn $jq_obj || MessageError TG $jq_obj
@@ -468,22 +462,27 @@ ShellBot.init()
     	return $?
     }
 
-   	ShellBot.getMe &>/dev/null || MessageError API "$_ERR_TOKEN_UNAUTHORIZED_" '[-t, --token]'
+	ShellBot.getMe &>/dev/null || MessageError API "$_ERR_TOKEN_UNAUTHORIZED_" '[-t, --token]'
 	
 	# Salva as informações do bot.
 	declare -gr _BOT_INFO_=(
 		[0]=$_TOKEN_
-		[1]=$(Json '.result.id' $_jq_bot_info)
-		[2]=$(Json '.result.first_name' $_jq_bot_info)
-		[3]=$(Json '.result.username' $_jq_bot_info)
+		[1]=$(Json '.result.id' $jq_obj)
+		[2]=$(Json '.result.first_name' $jq_obj)
+		[3]=$(Json '.result.username' $jq_obj)
 	)
 
-	# Configuração. (padrão)
-	declare -gr _BOT_LOG_FORMAT_=${logfmt:-%(%d/%m/%Y %H:%M:%S)T: \{BASENAME\}: \{BOT_USERNAME\}: \{UPDATE_ID\}: \{METHOD\}: \{FROM_USERNAME\}: \{MESSAGE_TEXT\}}
+	# Configurações.
+	declare -gr _BOT_FLUSH_=$flush
+	declare -gr _BOT_MONITOR_=$monitor
+	declare -gr _BOT_SERVICE_=$service
+	declare -gr _BOT_USER_SERVICE_=$user
 	declare -gr _BOT_TYPE_RETURN_=${ret:-value}
 	declare -gr _BOT_DELM_=${delm:-|}
-	declare -gr _SHELLBOT_INIT_=1 
-	
+	declare -gr _BOT_LOG_FILE_=${logfile}
+	declare -gr _BOT_LOG_FORMAT_=${logfmt:-%(%d/%m/%Y %H:%M:%S)T: \{BASENAME\}: \{BOT_USERNAME\}: \{UPDATE_ID\}: \{METHOD\}: \{FROM_USERNAME\}: \{MESSAGE_TEXT\}}
+	declare -gr _SHELLBOT_INIT_=1
+
     # SHELLBOT (FUNÇÕES)
 	# Inicializa as funções para chamadas aos métodos da API do telegram.
 	ShellBot.ListUpdates(){ echo ${!update_id[@]}; }
@@ -496,6 +495,25 @@ ShellBot.init()
 	ShellBot.first_name() { echo "${_BOT_INFO_[2]}"; }
 	ShellBot.username() { echo "${_BOT_INFO_[3]}"; }
   
+	ShellBot.getConfig()
+	{
+		local jq_obj
+
+		printf -v jq_obj '{"monitor":%s,"flush":%s,"service":%s,"return":"%s","delimiter":"%s","user":"%s","log_file":"%s","log_format":"%s"}'	\
+							"${_BOT_MONITOR_:-false}"   \
+							"${_BOT_FLUSH_:-false}"  	\
+							"${_BOT_SERVICE_:-false}"   \
+							"${_BOT_TYPE_RETURN_}"      \
+							"${_BOT_DELM_}"				\
+							"${_BOT_USER_SERVICE_}"     \
+							"${_BOT_LOG_FILE_}"         \
+							"${_BOT_LOG_FORMAT_}"
+
+		MethodReturn $jq_obj
+
+		return $?	
+	}
+
     ShellBot.regHandleFunction()
     {
     	local function callback_data handle args
@@ -3699,9 +3717,9 @@ _EOF
 		do
 			case $1 in
 				-f|--file_path)
+					[[ $2 =~ \.[^.]+$ ]]
+					ext=$BASH_REMATCH
 					file_path=$2
-					ext=${2##*/}
-					ext=${ext##+([^.])}
 					shift 2
 					;;
 				-d|--dir)
@@ -4357,7 +4375,7 @@ _EOF
 		local __last_name __latitude __live_period __longitude __mime_type
 		local __mpeg4_duration __mpeg4_file_id __mpeg4_height __mpeg4_url
 		local __mpeg4_width __performer __photo_file_id __photo_height 
-		local __photo_url __photo_width __sticker_file_id __vcard
+		local __photo_url __photo_width __sticker_file_id __vcard __phone_number
 		local __thumb_height __thumb_url __thumb_width __url __id
 		local __video_duration __video_file_id __video_height __video_url
 		local __video_width __voice_duration __voice_file_id __voice_url
@@ -4417,7 +4435,8 @@ _EOF
 												video_width:,
 												voice_duration:,
 												voice_file_id:,
-												voice_url:' \
+												voice_url:,
+												phone_number:' \
 								-- "$@")
 
 		eval set -- "$__param"
@@ -4478,6 +4497,7 @@ _EOF
 				-P|--video_width)			__video_width=$2;			shift 2;;
 				-J|--voice_duration)		__voice_duration=$2;		shift 2;;
 				-W|--voice_file_id)			__voice_file_id=$2;			shift 2;;
+				--phone_number)				__phone_number=$2;			shift 2;;
 				--voice_url)				__voice_url=$2;				shift 2;;
 				--)														shift; break;;
 			esac
@@ -4538,7 +4558,8 @@ _EOF
 		__input+=${__video_width:+,\"video_width\":$__video_width}
 		__input+=${__voice_duration:+,\"voice_duration\":$__voice_duration}
 		__input+=${__voice_file_id:+,\"voice_file_id\":\"$__voice_file_id\"}
-		__input+=${__voice_url:+,\"voice_url\":\"$__voice_url\"}}
+		__input+=${__voice_url:+,\"voice_url\":\"$__voice_url\"}
+		__input+=${__phone_number:+,\"phone_number\":\"$__phone_number\"}}
 
 		return $?
 	}
@@ -4704,12 +4725,12 @@ _EOF
 					;;
 				-e|--time)
 					CheckArgType itime "$1" "$2"
-					time=${time:+$time,}${2}
+					time=${time:+$time,}${2//|/\\|}
 					shift 2
 					;;
 				-d|--date)
 					CheckArgType idate "$1" "$2"
-					date=${date:+$date,}${2}
+					date=${date:+$date,}${2//|/\\|}
 					shift 2
 					;;
 				-l|--laguage_code)
@@ -4884,7 +4905,7 @@ _EOF
 							__chat_name			\
 							__chat_type 		\
 							__language 			\
-							__text 				\
+							__text				\
 							__entities_type 	\
 							__file_type 		\
 							__mime_type 		\
@@ -4935,7 +4956,7 @@ _EOF
 				[[ $__query_data		== +any	||	${callback_query_data[$__uid]}			== @(${__query_data//,/|})					]]	&&
 				[[ $__weekday			== +any	|| 	$(printf '%(%u)T' $__u_message_date) 	== @(${__weekday//,/|})						]]	|| continue
 			
-				for __msgstatus in ${__message_status//,/ }; do
+				for __msgstatus in ${__message_status//[,|]/ }; do
 					[[ $__msgstatus == +any 															]]	||
 					[[ $__msgstatus == pinned		&& ${message_pinned_message_message_id[$__uid]} 	]] 	||
 					[[ $__msgstatus == edited 		&& ${edited_message_message_id[$__uid]}				]] 	||
@@ -4948,14 +4969,14 @@ _EOF
 				
 				(($?)) && continue
 
-				for __ent in ${__entities_type//,/ }; do
+				for __ent in ${__entities_type//[,|]/ }; do
 					[[ $__ent == +any 												]]	||
 					[[ $__ent == @(${__u_message_entities_type//$_BOT_DELM_/|}) 	]] 	&& break
 				done
 
 				(($?)) && continue
 	
-				for __mem in ${__chat_member//,/ }; do
+				for __mem in ${__chat_member//[,|]/ }; do
 					[[ $__mem == +any												]] ||
 					[[ $__mem == new 	&& ${message_new_chat_member_id[$__uid]} 	]] ||
 					[[ $__mem == left 	&& ${message_left_chat_member_id[$__uid]} 	]] && break
@@ -4963,7 +4984,7 @@ _EOF
 			
 				(($?)) && continue
 
-				for __type in ${__file_type//,/ }; do
+				for __type in ${__file_type//[,|]/ }; do
 					[[ $__type == +any 																								]] 	||
 					[[ $__type == document 	&& ${message_document_file_id[$__uid]}	&& 	! ${message_document_thumb_file_id[$__uid]}	]] 	||
 					[[ $__type == gif 		&& ${message_document_file_id[$__uid]}  &&	${message_document_thumb_file_id[$__uid]}	]] 	||
@@ -4978,7 +4999,7 @@ _EOF
 					
 				(($?)) && continue
 
-				for __tm in ${__time//,/ }; do
+				for __tm in ${__time//[,|]/ }; do
 					IFS='-' read __stime __etime <<< $__tm
 					printf -v __ctime '%(%H:%M)T' $__u_message_date
 
@@ -4989,7 +5010,7 @@ _EOF
 					
 				(($?)) && continue
 	
-				for __dt in ${__date//,/ }; do
+				for __dt in ${__date//[,|]/ }; do
 
 					IFS='-' read __sdate __edate <<< $__dt
 					IFS='/' read -a __sdate <<< $__sdate
@@ -5068,7 +5089,7 @@ _EOF
 																${__reply_markup:+--reply_markup "$__reply_markup"}		\
 																${__parse_mode:+--parse_mode $__parse_mode}				&>/dev/null
 				
-				for __fwid in ${__forward_message//,/ }; do
+				for __fwid in ${__forward_message//[,|]/ }; do
 					ShellBot.forwardMessage		--chat_id $__fwid					\
 												--from_chat_id $__u_message_chat_id \
 												--message_id $__u_message_id		&>/dev/null
@@ -5082,7 +5103,7 @@ _EOF
 
 				while [[ $__stdout ]]; do
 					# Salva em buffer os primeiros 4096 caracteres.
-					read -rN 4096 __buffer <<< $__stdout
+					read -rN 4096 __buffer <<< "$__stdout"
 					
 					# Envia o buffer.
 					ShellBot.sendMessage	--chat_id $__u_message_chat_id 			\
@@ -5154,10 +5175,15 @@ _EOF
 
 
 		# Limpa as variáveis inicializadas.
-		unset $_var_init_list_ _var_init_list_
-	
+		unset $_VAR_INIT_LIST_; _VAR_INIT_LIST_=
+		
+		# Se há atualizações.
     	[[ $(jq -r '.result|length' <<< $jq_obj) -eq 0 ]] && return 0
-		[[ $_FLUSH_OFFSET_ ]] && { echo "$jq_obj"; return 0; } # flush
+	
+		# Se o método 'ShellBot.getUpdates' for invocado a partir de um subshell,
+		# as atualizações são retornadas em um estrutura de dados json, o método
+		# é finalizado e variáveis não são inicializadas.
+		[[ $BASH_SUBSHELL -gt 0 ]] && { echo "$jq_obj"; return 0; }
 
 		if [[ $_BOT_MONITOR_ ]]; then
 			printf -v bar '=%.s' {1..50}
@@ -5191,7 +5217,7 @@ _EOF
 			fi
 	
 			unset -n byref
-			[[ $var != @(${_var_init_list_// /|}) ]] && _var_init_list_=${_var_init_list_:+$_var_init_list_ }${var}
+			[[ $var != @(${_VAR_INIT_LIST_// /|}) ]] && _VAR_INIT_LIST_=${_VAR_INIT_LIST_:+$_VAR_INIT_LIST_ }${var}
 		done
 	
 		# Log (thread)	
@@ -5206,6 +5232,7 @@ _EOF
 				ShellBot.id 						\
 				ShellBot.username 					\
 				ShellBot.first_name 				\
+				ShellBot.getConfig					\
 				ShellBot.regHandleFunction 			\
 				ShellBot.watchHandle 				\
 				ShellBot.ListUpdates 				\
@@ -5282,14 +5309,19 @@ _EOF
 				ShellBot.manageRules 				\
 				ShellBot.getUpdates
 
-   	# Retorna objetos
-	printf '%s|%s|%s|%s\n'	"${_BOT_INFO_[1]}" \
-							"${_BOT_INFO_[2]}" \
-							"${_BOT_INFO_[3]}" \
-							"${_FLUSH_OFFSET_:+$(FlushOffset)}"
+	offset=${_BOT_FLUSH_:+$(FlushOffset)}	# flush
+	printf -v jq_obj '{"token":"%s","id":%d,"first_name":"%s","username":"%s","offset_start":%d,"offset_end":%d}'	\
+						"${_BOT_INFO_[0]}" 	\
+						"${_BOT_INFO_[1]}" 	\
+						"${_BOT_INFO_[2]}" 	\
+						"${_BOT_INFO_[3]}" 	\
+						"${offset%|*}"		\
+						"${offset#*|}"
 
-	# status
-   	return 0
+	# Retorna informações do bot.
+	MethodReturn $jq_obj
+
+   	return $?
 }
 
 # Funções (somente leitura)
