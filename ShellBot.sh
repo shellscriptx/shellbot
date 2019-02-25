@@ -118,9 +118,10 @@ readonly _ERR_RULE_ALREADY_EXISTS_='falha ao definir: o nome da regra já existe
 
 declare -A _BOT_FUNCTION_LIST_
 declare -a _BOT_RULES_LIST_
+declare -A _BOT_SET_RULE_
 declare _VAR_INIT_LIST_
 
-Json() { local obj=$(jq "$1" <<< "${*:2}"); obj=${obj#\"}; echo "${obj%\"}"; }
+Json() { local obj=$(jq -Mc "$1" <<< "${*:2}"); obj=${obj#\"}; echo "${obj%\"}"; }
 
 GetAllValues(){ 
 	local obj=$(jq "[..|select(type == \"string\" or type == \"number\" or type == \"boolean\")|tostring]|join(\"${_BOT_DELM_/\"/\\\"}\")" <<< $*)
@@ -4635,11 +4636,11 @@ _EOF
 	{
 		local action command user_id username chat_id 
 		local chat_type time date language message_id 
-		local is_bot text entities_type file_type
+		local is_bot text entities_type file_type name
 		local query_data query_id query_text send_message
 		local chat_member mime_type num_args exec rule
 		local action_args weekday user_status chat_name 
-		local message_status reply_message rule_name parse_mode
+		local message_status reply_message parse_mode
 		local forward_message reply_markup continue
 
 		local param=$(getopt	--name "$FUNCNAME" \
@@ -4685,136 +4686,131 @@ _EOF
 			case $1 in
 				-s|--name)
 					CheckArgType flag "$1" "$2"
-					rule_name=$2
+					name=${2//\"/\\\"}
 					shift 2
 					;;
 				-a|--action)
 					CheckArgType func "$1" "$2"
-					action=$2
+					action=${2//\"/\\\"}
 					shift 2
 					;;
 				-z|--action_args)
-					action_args=${2//\\/\\\\}
-					action_args=${action_args//|/\\|}
+					action_args=${2//\"/\\\"}
 					shift 2
 					;;
 				-c|--command)
 					CheckArgType cmd "$1" "$2"
-					command=${command:+$command,}${2}
+					command=${command:+$command,}${2//\"/\\\"}
 					shift 2
 					;;
 				-i|--user_id)
-					user_id=${user_id:+$user_id,}${2//|/\\|}
+					user_id=${user_id:+$user_id,}${2//\"/\\\"}
 					shift 2
 					;;
 				-u|--username)
-					username=${username:+$username,}${2//|/\\|}
+					username=${username:+$username,}${2//\"/\\\"}
 					shift 2
 					;;
 				-h|--chat_id)
-					chat_id=${chat_id:+$chat_id,}${2//|/\\|}
+					chat_id=${chat_id:+$chat_id,}${2//\"/\\\"}
 					shift 2
 					;;
 				-v|--chat_name)
-					chat_name=${chat_name:+$chat_name,}${2//|/\\|}
+					chat_name=${chat_name:+$chat_name,}${2//\"/\\\"}
 					shift 2
 					;;
 				-y|--chat_type)
-					chat_type=${chat_type:+$chat_type,}${2//|/\\|}
+					chat_type=${chat_type:+$chat_type,}${2//\"/\\\"}
 					shift 2
 					;;
 				-e|--time)
 					CheckArgType itime "$1" "$2"
-					time=${time:+$time,}${2//|/\\|}
+					time=${time:+$time,}${2//\"/\\\"}
 					shift 2
 					;;
 				-d|--date)
 					CheckArgType idate "$1" "$2"
-					date=${date:+$date,}${2//|/\\|}
+					date=${date:+$date,}${2//\"/\\\"}
 					shift 2
 					;;
 				-l|--laguage_code)
-					language=${language:+$language,}${2//|/\\|}
+					language=${language:+$language,}${2//\"/\\\"}
 					shift 2
 					;;
 				-m|--message_id)
-					message_id=${message_id:+$message_id,}${2//|/\\|}
+					message_id=${message_id:+$message_id,}${2//\"/\\\"}
 					shift 2
 					;;
 				-b|--is_bot)
-					is_bot=${is_bot:+$is_bot,}${2//|/\\|}
+					is_bot=${is_bot:+$is_bot,}${2//\"/\\\"}
 					shift 2
 					;;
 				-t|--text)
-					text=${2//|/\\|}
+					text=${2//\"/\\\"}
 					shift 2
 					;;
 				-n|--entitie_type)
-					entities_type=${entities_type:+$entities_type,}${2//|/\\|}
+					entities_type=${entities_type:+$entities_type,}${2//\"/\\\"}
 					shift 2
 					;;
 				-f|--file_type)
-					file_type=${file_type:+$file_type,}${2//|/\\|}
+					file_type=${file_type:+$file_type,}${2//\"/\\\"}
 					shift 2
 					;;
 				-p|--mime_type)
-					mime_type=${mime_type:+$mime_type,}${2//|/\\|}
+					mime_type=${mime_type:+$mime_type,}${2//\"/\\\"}
 					shift 2
 					;;
 				-q|--query_data)
-					query_data=${query_data:+$query_data,}${2//|/\\|}
+					query_data=${query_data:+$query_data,}${2//\"/\\\"}
 					shift 2
 					;;
 				-r|--query_id)
-					query_id=${query_id:+$query_id,}${2//|/\\|}
+					query_id=${query_id:+$query_id,}${2//\"/\\\"}
 					shift 2
 					;;
 				-g|--chat_member)
-					chat_member=${chat_member:+$chat_member,}${2//|/\\|}
+					chat_member=${chat_member:+$chat_member,}${2//\"/\\\"}
 					shift 2
 					;;
 				-o|--num_args)
-					num_args=${num_args:+$num_args,}${2//|/\\|}
+					num_args=${num_args:+$num_args,}${2//\"/\\\"}
 					shift 2
 					;;
 				-w|--weekday)
-					weekday=${weekday:+$weekday,}${2//|/\\|}
+					weekday=${weekday:+$weekday,}${2//\"/\\\"}
 					shift 2
 					;;
 				-j|--user_status)
-					user_status=${user_status:+$user_status,}${2//|/\\|}
+					user_status=${user_status:+$user_status,}${2//\"/\\\"}
 					shift 2
 					;;
 				-x|--message_status)
-					message_status=${message_status:+$message_status,}${2//|/\\|}
+					message_status=${message_status:+$message_status,}${2//\"/\\\"}
 					shift 2
 					;;
 				-R|--bot_reply_message)
-					reply_message=${2//\\/\\\\}
-					reply_message=${reply_message//|/\\|}
+					reply_message=${2//\"/\\\"}
 					shift 2
 					;;
 				-S|--bot_send_message)
-					send_message=${2//\\/\\\\}
-					send_message=${send_message//|/\\|}
+					send_message=${2//\"/\\\"}
 					shift 2
 					;;
 				-F|--bot_forward_message)
-					forward_message=${forward_message:+$forward_message,}${2//|/\\|}
+					forward_message=${forward_message:+$forward_message,}${2//\"/\\\"}
 					shift 2
 					;;
 				-K|--bot_reply_markup)
-					reply_markup=${2//\\/\\\\}
-					reply_markup=${reply_markup//|/\\|}
+					reply_markup=${2//\"/\\\"}
 					shift 2
 					;;
 				-P|--bot_parse_mode)
-					parse_mode=${2//|/\\|}
+					parse_mode=${2//\"/\\\"}
 					shift 2
 					;;
 				-E|--exec)
-					exec=${2//\\/\\\\}
-					exec=${exec//|/\\|}
+					exec=${2//\"/\\\"}
 					shift 2
 					;;
 				-C|--continue)
@@ -4828,51 +4824,83 @@ _EOF
 			esac
 		done
 		
-		[[ $rule_name ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --name]"
+		[[ $name ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --name]"
+		[[ ${_BOT_SET_RULE_[$name]} ]] && MessageError API "$_ERR_RULE_ALREADY_EXISTS_" "[-s, --name]" "$name"
 
-		for rule in "${_BOT_RULES_LIST_[@]}"; do
-			IFS='|' read _ _ rule _ <<< $rule
-			[[ $rule == $rule_name ]] && MessageError API "$_ERR_RULE_ALREADY_EXISTS_" "[-s, --name]" "$rule_name"
-		done
+		rule=\"source\":\"${BASH_SOURCE[1]##*/}\",
+		rule+=\"line\":\"${BASH_LINENO}\",
+		rule+=\"name\":\"${name}\",
+		rule+=\"action\":\"${action}\",
+		rule+=\"action_args\":\"${action_args}\",
+		rule+=\"user_id\":\"${user_id:-+any}\",
+		rule+=\"username\":\"${username:-+any}\",
+		rule+=\"chat_id\":\"${chat_id:-+any}\",
+		rule+=\"chat_name\":\"${chat_name:-+any}\",
+		rule+=\"chat_type\":\"${chat_type:-+any}\",
+		rule+=\"language_code\":\"${language:-+any}\",
+		rule+=\"message_id\":\"${message_id:-+any}\",
+		rule+=\"is_bot\":\"${is_bot:-+any}\",
+		rule+=\"command\":\"${command:-+any}\",
+		rule+=\"text\":\"${text}\",
+		rule+=\"entities_type\":\"${entities_type:-+any}\",
+		rule+=\"file_type\":\"${file_type:-+any}\",
+		rule+=\"mime_type\":\"${mime_type:-+any}\",
+		rule+=\"query_data\":\"${query_data:-+any}\",
+		rule+=\"query_id\":\"${query_id:-+any}\",
+		rule+=\"chat_member\":\"${chat_member:-+any}\",
+		rule+=\"num_args\":\"${num_args:-+any}\",
+		rule+=\"time\":\"${time:-+any}\",
+		rule+=\"date\":\"${date:-+any}\",
+		rule+=\"weekday\":\"${weekday:-+any}\",
+		rule+=\"user_status\":\"${user_status:-+any}\",
+		rule+=\"message_status\":\"${message_status:-+any}\",
+		rule+=\"bot_reply_message\":\"${reply_message}\",
+		rule+=\"bot_send_message\":\"${send_message}\",
+		rule+=\"bot_forward_message\":\"${forward_message}\",
+		rule+=\"bot_reply_markup\":\"${reply_markup}\",
+		rule+=\"bot_parse_mode\":\"${parse_mode}\",
+		rule+=\"exec\":\"${exec}\",
+		rule+=\"continue\":\"${continue}\"
 
-		_BOT_RULES_LIST_+=("${BASH_SOURCE[1]##*/}|${BASH_LINENO}|${rule_name}|${action}|${action_args}|${exec}|${message_id:-+any}|${is_bot:-+any}|${command:-+any}|${user_id:-+any}|${username:-+any}|${chat_id:-+any}|${chat_name:-+any}|${chat_type:-+any}|${language:-+any}|${text}|${entities_type:-+any}|${file_type:-+any}|${mime_type:-+any}|${query_id:-+any}|${query_data:-+any}|${chat_member:-+any}|${num_args:-+any}|${time:-+any}|${date:-+any}|${weekday:-+any}|${user_status:-+any}|${message_status:-+any}|${reply_message}|${send_message}|${forward_message}|${reply_markup}|${parse_mode}|${continue}")
-	
+		_BOT_RULES_LIST_+=${_BOT_RULES_LIST_:+,}{$rule}
+		_BOT_SET_RULE_[$name]=true
+
 		return $?
 	}
 
 	ShellBot.manageRules()
 	{
-		local __uid __rule __action __command __user_id __username
-		local __message_id __is_bot __text __entities_type __file_type
-		local __chat_id __chat_type __language __time __date __botcmd 
-		local __err __tm __stime __etime __ctime __mime_type __weekday
-		local __dt __sdate __edate __cdate __query_data __query_id
-		local __chat_member __mem __ent __type __num_args __args
-		local __action_args __user_status __status __out __reply_message
-		local __rule_name __rule_line __rule_source __chat_name __fwid
-		local __reply_markup __send_message __forward_message __parse_mode
-		local __stdout __buffer __exec __continue
+		local uid rule action command user_id username
+		local message_id is_bot text entities_type file_type
+		local chat_id chat_type language time date botcmd 
+		local err tm stime etime ctime mime_type weekday
+		local dt sdate edate cdate query_data query_id
+		local chat_member mem ent type num_args args
+		local action_args user_status status out reply_message
+		local rule_name rule_line rule_source chat_name fwid
+		local reply_markup send_message forward_message parse_mode
+		local stdout buffer exec continue i
 
-		local __u_message_text __u_message_id __u_message_from_is_bot 
-		local __u_message_from_id __u_message_from_username __msgstatus __argpos
-		local __u_message_from_language_code __u_message_chat_id __message_status
-		local __u_message_chat_type __u_message_date __u_message_entities_type
-		local __u_message_mime_type
+		local u_message_text u_message_id u_message_from_is_bot 
+		local u_message_from_id u_message_from_username msgstatus argpos
+		local u_message_from_language_code u_message_chat_id message_status
+		local u_message_chat_type u_message_date u_message_entities_type
+		local u_message_mime_type
 
-		local 	__param=$(getopt	--name "$FUNCNAME" \
+		local 	param=$(getopt	--name "$FUNCNAME" \
 									--options 'u:' \
 									--longoptions 'update_id:' \
 									-- "$@")
 
 				
-		eval set -- "$__param"
+		eval set -- "$param"
 		
 		while :
 		do
 			case $1 in
 				-u|--update_id)
 					CheckArgType int "$1" "$2"
-					__uid=$2
+					uid=$2
 					shift 2
 					;;
 				--)
@@ -4882,239 +4910,240 @@ _EOF
 			esac			
 		done
 		
-		[[ $__uid ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-u, --update_id]"
+		[[ $uid ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-u, --update_id]"
 
-		# Define a lista de regras (somente-leitura)
-		readonly _BOT_RULES_LIST_
+		# Regras (somente-leitura)
+		_BOT_RULES_LIST_={\"rule\":[$_BOT_RULES_LIST_]}
+		readonly _BOT_RULES_LIST_ _BOT_SET_RULE_
 
 		# Regras
-		for __rule in "${_BOT_RULES_LIST_[@]}"; do
+		for ((i=0; i < $(jq '.rule|length' <<< $_BOT_RULES_LIST_); i++)); do
 
-			IFS='|' read	__rule_source		\
-							__rule_line			\
-							__rule_name			\
-							__action 			\
-							__action_args 		\
-							__exec				\
-							__message_id 		\
-							__is_bot 			\
-							__command 			\
-							__user_id 			\
-							__username 			\
-							__chat_id 			\
-							__chat_name			\
-							__chat_type 		\
-							__language 			\
-							__text				\
-							__entities_type 	\
-							__file_type 		\
-							__mime_type 		\
-							__query_id 			\
-							__query_data 		\
-							__chat_member 		\
-							__num_args 			\
-							__time 				\
-							__date 				\
-							__weekday			\
-							__user_status		\
-							__message_status	\
-							__reply_message		\
-							__send_message		\
-							__forward_message	\
-							__reply_markup		\
-							__parse_mode		\
-							__continue			<<< $__rule
-		
-				__u_message_text=${message_text[$__uid]:-${edited_message_text[$__uid]:-${callback_query_message_text[$__uid]:-${inline_query_query[$__uid]:-${chosen_inline_result_query[$__uid]}}}}}
-				__u_message_id=${message_message_id[$__uid]:-${edited_message_message_id[$__uid]:-${callback_query_message_message_id[$__uid]:-${inline_query_id[$__uid]:-${chosen_inline_result_result_id[$__uid]}}}}}
-				__u_message_from_is_bot=${message_from_is_bot[$__uid]:-${edited_message_from_is_bot[$__uid]:-${callback_query_from_is_bot[$__uid]:-${inline_query_from_is_bot[$__uid]:-${chosen_inline_result_from_is_bot[$__uid]}}}}}
-				__u_message_from_id=${message_from_id[$__uid]:-${edited_message_from_id[$__uid]:-${callback_query_from_id[$__uid]:-${inline_query_from_id[$__uid]:-${chosen_inline_result_from_id[$__uid]}}}}}
-				__u_message_from_username=${message_from_username[$__uid]:-${edited_message_from_username[$__uid]:-${callback_query_from_username[$__uid]:-${inline_query_from_username[$__uid]:-${chosen_inline_result_from_username[$__uid]}}}}}
-				__u_message_from_language_code=${message_from_language_code[$__uid]:-${edited_message_from_language_code[$__uid]:-${callback_query_from_language_code[$__uid]:-${inline_query_from_language_code[$__uid]:-${chosen_inline_result_from_language_code[$__uid]}}}}}
-				__u_message_chat_id=${message_chat_id[$__uid]:-${edited_message_chat_id[$__uid]:-${callback_query_message_chat_id[$__uid]}}}
-				__u_message_chat_username=${message_chat_username[$__uid]:-${edited_message_chat_username[$__uid]:-${callback_query_message_chat_username[$__uid]}}}
-				__u_message_chat_type=${message_chat_type[$__uid]:-${edited_message_chat_type[$__uid]:-${callback_query_message_chat_type[$__uid]}}}
-				__u_message_date=${message_date[$__uid]:-${edited_message_edit_date[$__uid]:-${callback_query_message_date[$__uid]}}}
-				__u_message_entities_type=${message_entities_type[$__uid]:-${edited_message_entities_type[$__uid]:-${callback_query_message_entities_type[$__uid]}}}
-				__u_message_mime_type=${message_document_mime_type[$__uid]:-${message_video_mime_type[$__uid]:-${message_audio_mime_type[$__uid]:-${message_voice_mime_type[$__uid]}}}}
+			rule_source=$(jq -r ".rule[$i].source" <<< $_BOT_RULES_LIST_)
+			rule_line=$(jq -r ".rule[$i].line" <<< $_BOT_RULES_LIST_)
+			rule_name=$(jq -r ".rule[$i].name" <<< $_BOT_RULES_LIST_)
+			action=$(jq -r ".rule[$i].action" <<< $_BOT_RULES_LIST_)
+			action_args=$(jq -r ".rule[$i].action_args" <<< $_BOT_RULES_LIST_)
+			exec=$(jq -r ".rule[$i].exec" <<< $_BOT_RULES_LIST_)
+			message_id=$(jq -r ".rule[$i].message_id" <<< $_BOT_RULES_LIST_)
+			is_bot=$(jq -r  ".rule[$i].is_bot" <<< $_BOT_RULES_LIST_)
+			command=$(jq -r ".rule[$i].command" <<< $_BOT_RULES_LIST_)
+			user_id=$(jq -r ".rule[$i].user_id" <<< $_BOT_RULES_LIST_)
+			username=$(jq -r ".rule[$i].username" <<< $_BOT_RULES_LIST_)
+			chat_id=$(jq -r ".rule[$i].chat_id" <<< $_BOT_RULES_LIST_)
+			chat_name=$(jq -r ".rule[$i].chat_name" <<< $_BOT_RULES_LIST_)
+			chat_type=$(jq -r ".rule[$i].chat_type" <<< $_BOT_RULES_LIST_)
+			language=$(jq -r ".rule[$i].language_code" <<< $_BOT_RULES_LIST_)
+			text=$(jq -r ".rule[$i].text" <<< $_BOT_RULES_LIST_)
+			entities_type=$(jq -r ".rule[$i].entities_type" <<< $_BOT_RULES_LIST_)
+			file_type=$(jq -r ".rule[$i].file_type" <<< $_BOT_RULES_LIST_)
+			mime_type=$(jq -r ".rule[$i].mime_type" <<< $_BOT_RULES_LIST_)
+			query_id=$(jq -r ".rule[$i].query_id" <<< $_BOT_RULES_LIST_)
+			query_data=$(jq -r ".rule[$i].query_data" <<< $_BOT_RULES_LIST_)
+			chat_member=$(jq -r ".rule[$i].chat_member" <<< $_BOT_RULES_LIST_)
+			num_args=$(jq -r ".rule[$i].num_args" <<< $_BOT_RULES_LIST_)
+			time=$(jq -r ".rule[$i].time" <<< $_BOT_RULES_LIST_)
+			date=$(jq -r ".rule[$i].date" <<< $_BOT_RULES_LIST_)
+			weekday=$(jq -r ".rule[$i].weekday" <<< $_BOT_RULES_LIST_)
+			user_status=$(jq -r ".rule[$i].user_status" <<< $_BOT_RULES_LIST_)
+			message_status=$(jq -r ".rule[$i].message_status" <<< $_BOT_RULES_LIST_)
+			reply_message=$(jq -r ".rule[$i].bot_reply_message" <<< $_BOT_RULES_LIST_)
+			send_message=$(jq -r ".rule[$i].bot_send_message" <<< $_BOT_RULES_LIST_)
+			forward_message=$(jq -r ".rule[$i].bot_forward_message" <<< $_BOT_RULES_LIST_)
+			reply_markup=$(jq -r ".rule[$i].bot_reply_markup" <<< $_BOT_RULES_LIST_)
+			parse_mode=$(jq -r ".rule[$i].bot_parse_mode" <<< $_BOT_RULES_LIST_)
+			continue=$(jq -r ".rule[$i].continue" <<< $_BOT_RULES_LIST_)
+
+			u_message_text=${message_text[$uid]:-${edited_message_text[$uid]:-${callback_query_message_text[$uid]:-${inline_query_query[$uid]:-${chosen_inline_result_query[$uid]}}}}}
+			u_message_id=${message_message_id[$uid]:-${edited_message_message_id[$uid]:-${callback_query_message_message_id[$uid]:-${inline_query_id[$uid]:-${chosen_inline_result_result_id[$uid]}}}}}
+			u_message_from_is_bot=${message_from_is_bot[$uid]:-${edited_message_from_is_bot[$uid]:-${callback_query_from_is_bot[$uid]:-${inline_query_from_is_bot[$uid]:-${chosen_inline_result_from_is_bot[$uid]}}}}}
+			u_message_from_id=${message_from_id[$uid]:-${edited_message_from_id[$uid]:-${callback_query_from_id[$uid]:-${inline_query_from_id[$uid]:-${chosen_inline_result_from_id[$uid]}}}}}
+			u_message_from_username=${message_from_username[$uid]:-${edited_message_from_username[$uid]:-${callback_query_from_username[$uid]:-${inline_query_from_username[$uid]:-${chosen_inline_result_from_username[$uid]}}}}}
+			u_message_from_language_code=${message_from_language_code[$uid]:-${edited_message_from_language_code[$uid]:-${callback_query_from_language_code[$uid]:-${inline_query_from_language_code[$uid]:-${chosen_inline_result_from_language_code[$uid]}}}}}
+			u_message_chat_id=${message_chat_id[$uid]:-${edited_message_chat_id[$uid]:-${callback_query_message_chat_id[$uid]}}}
+			u_message_chat_username=${message_chat_username[$uid]:-${edited_message_chat_username[$uid]:-${callback_query_message_chat_username[$uid]}}}
+			u_message_chat_type=${message_chat_type[$uid]:-${edited_message_chat_type[$uid]:-${callback_query_message_chat_type[$uid]}}}
+			u_message_date=${message_date[$uid]:-${edited_message_edit_date[$uid]:-${callback_query_message_date[$uid]}}}
+			u_message_entities_type=${message_entities_type[$uid]:-${edited_message_entities_type[$uid]:-${callback_query_message_entities_type[$uid]}}}
+			u_message_mime_type=${message_document_mime_type[$uid]:-${message_video_mime_type[$uid]:-${message_audio_mime_type[$uid]:-${message_voice_mime_type[$uid]}}}}
 	
-				IFS=' ' read -ra __args <<< $__u_message_text
+			IFS=' ' read -ra args <<< $u_message_text
 			
-				[[ $__num_args			== +any ||	${#__args[@]}							== @(${__num_args//,/|})					]]	&&
-				[[ $__command			== +any	||	${__u_message_text%% *}					== @(${__command//,/|})?(@${_BOT_INFO_[3]}) ]]	&&
-				[[ $__message_id 		== +any	||	$__u_message_id 						== @(${__message_id//,/|})					]] 	&&
-				[[ $__is_bot 			== +any ||	$__u_message_from_is_bot				== @(${__is_bot//,/|})						]]	&&
-				[[ $__user_id			== +any ||	$__u_message_from_id					== @(${__user_id//,/|})						]]	&&
-				[[ $__username			== +any ||	$__u_message_from_username				== @(${__username//,/|}) 					]]	&&
-				[[ $__language			== +any	||	$__u_message_from_language_code			== @(${__language//,/|}) 					]]	&&
-				[[ $__chat_id			== +any	||	$__u_message_chat_id					== @(${__chat_id//,/|})						]] 	&&
-				[[ $__chat_name			== +any	||	$__u_message_chat_username				== @(${__chat_name//,/|})					]] 	&&
-				[[ $__chat_type			== +any	||	$__u_message_chat_type					== @(${__chat_type//,/|})					]]	&&
-				[[ ! $__text					||	$__u_message_text						=~ $__text									]]	&&
-				[[ $__mime_type			== +any	||	$__u_message_mime_type					== @(${__mime_type//,/|})					]]	&&
-				[[ $__query_id			== +any	||	${callback_query_id[$__uid]}			== @(${__query_id//,/|})					]]	&&
-				[[ $__query_data		== +any	||	${callback_query_data[$__uid]}			== @(${__query_data//,/|})					]]	&&
-				[[ $__weekday			== +any	|| 	$(printf '%(%u)T' $__u_message_date) 	== @(${__weekday//,/|})						]]	|| continue
+			[[ $num_args		== +any ||	${#args[@]}							== @(${num_args//,/|})						]]	&&
+			[[ $command			== +any	||	${u_message_text%% *}				== @(${command//,/|})?(@${_BOT_INFO_[3]}) 	]]	&&
+			[[ $message_id 		== +any	||	$u_message_id 						== @(${message_id//,/|})					]] 	&&
+			[[ $is_bot 			== +any ||	$u_message_from_is_bot				== @(${is_bot//,/|})						]]	&&
+			[[ $user_id			== +any ||	$u_message_from_id					== @(${user_id//,/|})						]]	&&
+			[[ $username		== +any ||	$u_message_from_username			== @(${username//,/|}) 						]]	&&
+			[[ $language		== +any	||	$u_message_from_language_code		== @(${language//,/|}) 						]]	&&
+			[[ $chat_id			== +any	||	$u_message_chat_id					== @(${chat_id//,/|})						]] 	&&
+			[[ $chat_name		== +any	||	$u_message_chat_username			== @(${chat_name//,/|})						]] 	&&
+			[[ $chat_type		== +any	||	$u_message_chat_type				== @(${chat_type//,/|})						]]	&&
+			[[ ! $text					||	$u_message_text						=~ $text									]]	&&
+			[[ $mime_type		== +any	||	$u_message_mime_type				== @(${mime_type//,/|})						]]	&&
+			[[ $query_id		== +any	||	${callback_query_id[$uid]}			== @(${query_id//,/|})						]]	&&
+			[[ $query_data		== +any	||	${callback_query_data[$uid]}		== @(${query_data//,/|})					]]	&&
+			[[ $weekday			== +any	|| 	$(printf '%(%u)T' $u_message_date) 	== @(${weekday//,/|})						]]	|| continue
 			
-				for __msgstatus in ${__message_status//[,|]/ }; do
-					[[ $__msgstatus == +any 															]]	||
-					[[ $__msgstatus == pinned		&& ${message_pinned_message_message_id[$__uid]} 	]] 	||
-					[[ $__msgstatus == edited 		&& ${edited_message_message_id[$__uid]}				]] 	||
-					[[ $__msgstatus == forwarded	&& ${message_forward_from_id[$__uid]}				]]	||
-					[[ $__msgstatus == reply		&& ${message_reply_to_message_message_id[$__uid]}	]] 	||
-					[[ $__msgstatus == callback		&& ${callback_query_message_message_id[$__uid]}		]]	||
-					[[ $__msgstatus == inline		&& ${inline_query_id[$__uid]}						]]	||
-					[[ $__msgstatus == chosen		&& ${chosen_inline_result_result_id[$__uid]}		]]	&& break
-				done
+			for msgstatus in ${message_status//[,|]/ }; do
+				[[ $msgstatus == +any 														]]	||
+				[[ $msgstatus == pinned		&& ${message_pinned_message_message_id[$uid]} 	]] 	||
+				[[ $msgstatus == edited 	&& ${edited_message_message_id[$uid]}			]] 	||
+				[[ $msgstatus == forwarded	&& ${message_forward_from_id[$uid]}				]]	||
+				[[ $msgstatus == reply		&& ${message_reply_to_message_message_id[$uid]}	]] 	||
+				[[ $msgstatus == callback	&& ${callback_query_message_message_id[$uid]}	]]	||
+				[[ $msgstatus == inline		&& ${inline_query_id[$uid]}						]]	||
+				[[ $msgstatus == chosen		&& ${chosen_inline_result_result_id[$uid]}		]]	&& break
+			done
 				
-				(($?)) && continue
+			(($?)) && continue
 
-				for __ent in ${__entities_type//[,|]/ }; do
-					[[ $__ent == +any 												]]	||
-					[[ $__ent == @(${__u_message_entities_type//$_BOT_DELM_/|}) 	]] 	&& break
-				done
+			for ent in ${entities_type//[,|]/ }; do
+				[[ $ent == +any 										]]	||
+				[[ $ent == @(${u_message_entities_type//$_BOT_DELM_/|})	]] 	&& break
+			done
 
-				(($?)) && continue
+			(($?)) && continue
 	
-				for __mem in ${__chat_member//[,|]/ }; do
-					[[ $__mem == +any												]] ||
-					[[ $__mem == new 	&& ${message_new_chat_member_id[$__uid]} 	]] ||
-					[[ $__mem == left 	&& ${message_left_chat_member_id[$__uid]} 	]] && break
-				done
+			for mem in ${chat_member//[,|]/ }; do
+				[[ $mem == +any											]] ||
+				[[ $mem == new 	&& ${message_new_chat_member_id[$uid]} 	]] ||
+				[[ $mem == left	&& ${message_left_chat_member_id[$uid]} ]] && break
+			done
 			
-				(($?)) && continue
+			(($?)) && continue
 
-				for __type in ${__file_type//[,|]/ }; do
-					[[ $__type == +any 																								]] 	||
-					[[ $__type == document 	&& ${message_document_file_id[$__uid]}	&& 	! ${message_document_thumb_file_id[$__uid]}	]] 	||
-					[[ $__type == gif 		&& ${message_document_file_id[$__uid]}  &&	${message_document_thumb_file_id[$__uid]}	]] 	||
-					[[ $__type == photo		&& ${message_photo_file_id[$__uid]} 													]] 	||
-					[[ $__type == sticker 	&& ${message_sticker_file_id[$__uid]} 													]]	||
-					[[ $__type == video		&& ${message_video_file_id[$__uid]} 													]]	||
-					[[ $__type == audio		&& ${message_audio_file_id[$__uid]} 													]]	||
-					[[ $__type == voice		&& ${message_voice_file_id[$__uid]} 													]]	||
-					[[ $__type == contact	&& ${message_contact_user_id[$__uid]} 													]]	||
-					[[ $__type == location	&& ${message_location_latitude[$__uid]}													]]	&& break
-				done
+			for type in ${file_type//[,|]/ }; do
+				[[ $type == +any 																								]] 	||
+				[[ $type == document 	&& ${message_document_file_id[$uid]}	&& 	! ${message_document_thumb_file_id[$uid]}	]] 	||
+				[[ $type == gif 		&& ${message_document_file_id[$uid]}  	&&	${message_document_thumb_file_id[$uid]}		]] 	||
+				[[ $type == photo		&& ${message_photo_file_id[$uid]} 														]] 	||
+				[[ $type == sticker 	&& ${message_sticker_file_id[$uid]} 													]]	||
+				[[ $type == video		&& ${message_video_file_id[$uid]} 														]]	||
+				[[ $type == audio		&& ${message_audio_file_id[$uid]} 														]]	||
+				[[ $type == voice		&& ${message_voice_file_id[$uid]} 														]]	||
+				[[ $type == contact	&& ${message_contact_user_id[$uid]} 														]]	||
+				[[ $type == location	&& ${message_location_latitude[$uid]}													]]	&& break
+			done
 					
-				(($?)) && continue
+			(($?)) && continue
 
-				for __tm in ${__time//[,|]/ }; do
-					IFS='-' read __stime __etime <<< $__tm
-					printf -v __ctime '%(%H:%M)T' $__u_message_date
+			for tm in ${time//[,|]/ }; do
+				IFS='-' read stime etime <<< $tm
+				printf -v ctime '%(%H:%M)T' $u_message_date
 
-					[[ $__time	== +any 				]]				||
-					[[ $__ctime == @($__stime|$__etime) ]] 				||
-					[[ $__ctime > $__stime && $__ctime < $__etime ]]	&& break
-				done
+				[[ $time	== +any 					]]	||
+				[[ $ctime == @($stime|$etime) 			]]	||
+				[[ $ctime > $stime && $ctime < $etime 	]]	&& break
+			done
 					
-				(($?)) && continue
+			(($?)) && continue
 	
-				for __dt in ${__date//[,|]/ }; do
+			for dt in ${date//[,|]/ }; do
 
-					IFS='-' read __sdate __edate <<< $__dt
-					IFS='/' read -a __sdate <<< $__sdate
-					IFS='/' read -a __edate <<< $__edate
+				IFS='-' read sdate edate <<< $dt
+				IFS='/' read -a sdate <<< $sdate
+				IFS='/' read -a edate <<< $edate
 					
-					__sdate=${__sdate[2]}/${__sdate[1]}/${__sdate[0]}
-					__edate=${__edate[2]}/${__edate[1]}/${__edate[0]}
+				sdate=${sdate[2]}/${sdate[1]}/${sdate[0]}
+				edate=${edate[2]}/${edate[1]}/${edate[0]}
 
-					printf -v __cdate '%(%Y/%m/%d)T' $__u_message_date
+				printf -v cdate '%(%Y/%m/%d)T' $u_message_date
 					
-					[[ $__date	== +any 							]] 	||
-					[[ $__cdate == @($__sdate|$__edate) 			]] 	||
-					[[ $__cdate > $__sdate && $__cdate < $__edate 	]]	&& break
-				done
+				[[ $date	== +any 					]] 	||
+				[[ $cdate == @($sdate|$edate) 			]] 	||
+				[[ $cdate > $sdate && $cdate < $edate 	]]	&& break
+			done
 
-				(($?)) && continue
+			(($?)) && continue
 	
-				if [[ $__user_status != +any ]]; then
-					case $_BOT_TYPE_RETURN_ in
-						value)
-							__out=$(ShellBot.getChatMember 	--chat_id $__u_message_chat_id \
-															--user_id $__u_message_from_id 2>/dev/null)
+			if [[ $user_status != +any ]]; then
+				case $_BOT_TYPE_RETURN_ in
+					value)
+						out=$(ShellBot.getChatMember 	--chat_id $u_message_chat_id \
+														--user_id $u_message_from_id 2>/dev/null)
 							
-							IFS=$_BOT_DELM_ read -a __out <<< $__out
-							[[ ${__out[2]} == true ]]
-							__status=${__out[$(($? ? 6 : 5))]}
-							;;
-						json)
-							__out=$(ShellBot.getChatMember 	--chat_id $__u_message_chat_id \
-															--user_id $__u_message_from_id 2>/dev/null)
+						IFS=$_BOT_DELM_ read -a out <<< $out
+						[[ ${out[2]} == true ]]
+						status=${out[$(($? ? 6 : 5))]}
+						;;
+					json)
+						out=$(ShellBot.getChatMember 	--chat_id $u_message_chat_id \
+														--user_id $u_message_from_id 2>/dev/null)
 							
-							__status=$(Json '.result.status' $__out)
-							;;
-						map)	
-							ShellBot.getChatMember 	--chat_id $__u_message_chat_id \
-													--user_id $__u_message_from_id &>/dev/null
+						status=$(Json '.result.status' $out)
+						;;
+					map)	
+						ShellBot.getChatMember 	--chat_id $u_message_chat_id \
+												--user_id $u_message_from_id &>/dev/null
 
-							__status=${return[status]}
-							;;
-					esac
-					[[ $__status == @(${__user_status//,/|}) ]]	|| continue
-				fi
-				
-				# Monitor
-				[[ $_BOT_MONITOR_ ]]	&& 	printf '[%s]: %s: %s: %s: %s: %s: %s: %s: %s: %s: %s\n'		\
-											"${FUNCNAME}"												\
-											"$((__uid+1))"												\
-											"$(printf '%(%d/%m/%Y %H:%M:%S)T' ${__u_message_date})"		\
-											"${__u_message_chat_type}"									\
-											"${__u_message_chat_username:--}"							\
-											"${__u_message_from_username:--}"							\
-											"${__rule_source}"											\
-											"${__rule_line}"											\
-											"${__rule_name}" 											\
-											"${__action:--}"											\
-											"${__exec:--}"
+						status=${return[status]}
+						;;
+				esac
+				[[ $status == @(${user_status//,/|}) ]]	|| continue
+			fi
 			
-				# Log	
-				[[ $_BOT_LOG_FILE_ ]] 	&&	printf '%s: %s: %s: %s: %s: %s: %s\n'						\
-										 	"$(printf '%(%d/%m/%Y %H:%M:%S)T')"							\
-									 	 	"${FUNCNAME}"												\
-										 	"${__rule_source}"											\
-										 	"${__rule_line}"											\
-										 	"${__rule_name}"											\
-											"${__action:--}"											\
-											"${__exec:--}"												>> "$_BOT_LOG_FILE_"
+			# Monitor
+			[[ $_BOT_MONITOR_ ]]	&& 	printf '[%s]: %s: %s: %s: %s: %s: %s: %s: %s: %s: %s\n'	\
+										"${FUNCNAME}"											\
+										"$((uid+1))"											\
+										"$(printf '%(%d/%m/%Y %H:%M:%S)T' ${u_message_date})"	\
+										"${u_message_chat_type}"								\
+										"${u_message_chat_username:--}"							\
+										"${u_message_from_username:--}"							\
+										"${rule_source}"										\
+										"${rule_line}"											\
+										"${rule_name}" 											\
+										"${action:--}"											\
+										"${exec:--}"
+			
+			# Log	
+			[[ $_BOT_LOG_FILE_ ]] 	&&	printf '%s: %s: %s: %s: %s: %s: %s\n'	\
+									 	"$(printf '%(%d/%m/%Y %H:%M:%S)T')"		\
+								 	 	"${FUNCNAME}"							\
+									 	"${rule_source}"						\
+									 	"${rule_line}"							\
+									 	"${rule_name}"							\
+										"${action:--}"							\
+										"${exec:--}"							>> "$_BOT_LOG_FILE_"
 
-				[[ $__reply_message ]] && ShellBot.sendMessage	--chat_id $__u_message_chat_id							\
-																--reply_to_message_id $__u_message_id 					\
-																--text "$(FlagConv $__uid "$__reply_message")"			\
-																${__reply_markup:+--reply_markup "$__reply_markup"}		\
-																${__parse_mode:+--parse_mode $__parse_mode}				&>/dev/null
+			[[ $reply_message ]] && ShellBot.sendMessage	--chat_id $u_message_chat_id						\
+															--reply_to_message_id $u_message_id 				\
+															--text "$(FlagConv $uid "$reply_message")"			\
+															${reply_markup:+--reply_markup "$reply_markup"}		\
+															${parse_mode:+--parse_mode $parse_mode}				&>/dev/null
 				
-				[[ $__send_message ]] && ShellBot.sendMessage	--chat_id $__u_message_chat_id							\
-																--text "$(FlagConv $__uid "$__send_message")" 			\
-																${__reply_markup:+--reply_markup "$__reply_markup"}		\
-																${__parse_mode:+--parse_mode $__parse_mode}				&>/dev/null
+			[[ $send_message ]] && ShellBot.sendMessage	--chat_id $u_message_chat_id							\
+															--text "$(FlagConv $uid "$send_message")" 			\
+															${reply_markup:+--reply_markup "$reply_markup"}		\
+															${parse_mode:+--parse_mode $parse_mode}				&>/dev/null
 				
-				for __fwid in ${__forward_message//[,|]/ }; do
-					ShellBot.forwardMessage		--chat_id $__fwid					\
-												--from_chat_id $__u_message_chat_id \
-												--message_id $__u_message_id		&>/dev/null
-				done
+			for fwid in ${forward_message//[,|]/ }; do
+				ShellBot.forwardMessage		--chat_id $fwid						\
+											--from_chat_id $u_message_chat_id 	\
+											--message_id $u_message_id			&>/dev/null
+			done
 
-				# Chama a função passando os argumentos posicionais. (se existir)
-				${__action:+$__action ${__action_args:-${__args[*]}}}
+			# Chama a função passando os argumentos posicionais. (se existir)
+			${action:+$action ${action_args:-${args[*]}}}
 		
-				# Executa a linha de comando e salva o retorno.
-				__stdout=${__exec:+$(set -- ${__args[*]}; eval $(FlagConv $__uid "$__exec") 2>&1)}
+			# Executa a linha de comando e salva o retorno.
+			stdout=${exec:+$(set -- ${args[*]}; eval $(FlagConv $uid "$exec") 2>&1)}
 
-				while [[ $__stdout ]]; do
-					# Salva em buffer os primeiros 4096 caracteres.
-					read -rN 4096 __buffer <<< "$__stdout"
+			while [[ $stdout ]]; do
+				# Salva em buffer os primeiros 4096 caracteres.
+				read -rN 4096 buffer <<< "$stdout"
 					
-					# Envia o buffer.
-					ShellBot.sendMessage	--chat_id $__u_message_chat_id 			\
-											--reply_to_message_id $__u_message_id	\
-											--text "$__buffer"						&>/dev/null
+				# Envia o buffer.
+				ShellBot.sendMessage	--chat_id $u_message_chat_id 			\
+										--reply_to_message_id $u_message_id		\
+										--text "$buffer"						&>/dev/null
 
-					# Descarta os caracteres lidos.
-					__stdout=${__stdout:4096}
-				done 
+				# Descarta os caracteres lidos.
+				stdout=${stdout:4096}
+			done 
 
-				${__continue:-return 0}
+			${continue:-return 0}
 		done
 
 		return 1
