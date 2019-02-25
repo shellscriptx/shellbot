@@ -4876,6 +4876,7 @@ _EOF
 		[[ $name ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --name]"
 		[[ ${_BOT_SET_RULE_[$name]} ]] && MessageError API "$_ERR_RULE_ALREADY_EXISTS_" "[-s, --name]" "$name"
 
+		# Regra (JSON)
 		rule=\"source\":\"${BASH_SOURCE[1]##*/}\",
 		rule+=\"line\":\"${BASH_LINENO}\",
 		rule+=\"name\":\"${name}\",
@@ -4911,7 +4912,13 @@ _EOF
 		rule+=\"exec\":\"${exec}\",
 		rule+=\"continue\":\"${continue}\"
 
-		_BOT_RULES_LIST_+=${_BOT_RULES_LIST_:+,}{$rule}
+		# Atualiza lista de regras.	
+		_BOT_RULES_LIST_=${_BOT_RULES_LIST_#\{\"rule\":[}
+		_BOT_RULES_LIST_=${_BOT_RULES_LIST_%]\}}
+		_BOT_RULES_LIST_=${_BOT_RULES_LIST_}${_BOT_RULES_LIST_:+,}{$rule}
+		_BOT_RULES_LIST_={\"rule\":[$_BOT_RULES_LIST_]}
+
+		# Registra regra.
 		_BOT_SET_RULE_[$name]=true
 
 		return $?
@@ -4962,7 +4969,6 @@ _EOF
 		[[ $uid ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-u, --update_id]"
 
 		# Regras (somente-leitura)
-		_BOT_RULES_LIST_={\"rule\":[$_BOT_RULES_LIST_]}
 		readonly _BOT_RULES_LIST_ _BOT_SET_RULE_
 
 		# Regras
