@@ -115,8 +115,9 @@ readonly _ERR_VAR_NAME_='variável não encontrada: o identificador é inválido
 readonly _ERR_FUNCTION_NOT_FOUND_='função não encontrada: o identificador especificado é inválido ou não existe.'
 readonly _ERR_ARG_='argumento inválido: o argumento não é suportado pelo parâmetro especificado.'
 readonly _ERR_RULE_ALREADY_EXISTS_='falha ao definir: o nome da regra já existe.'
+readonly _ERR_HANDLE_EXISTS_='erro ao registar: já existe um handle vinculado ao callback'
 
-declare -A _BOT_FUNCTION_LIST_
+declare -A _BOT_HANDLE_LIST_
 declare -a _BOT_RULES_LIST_
 declare -A _BOT_SET_RULE_
 declare _VAR_INIT_LIST_
@@ -517,7 +518,7 @@ ShellBot.init()
 
     ShellBot.regHandleFunction()
     {
-    	local function callback_data handle args
+    	local function data handle args
     
 		local param=$(getopt	--name "$FUNCNAME" \
 								--options 'f:a:d:' \
@@ -541,7 +542,7 @@ ShellBot.init()
    					shift 2
    					;;
    				-d|--callback_data)
-   					callback_data=${2//|/\\|}
+   					data=$2
    					shift 2
    					;;
    				--)
@@ -552,20 +553,63 @@ ShellBot.init()
    		done
 
 		[[ $function ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-f, --function]"
-   		[[ $callback_data ]] 	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-d, --callback_data]"
-   
-   		_BOT_FUNCTION_LIST_[$callback_data]+="$function $args|"
+   		[[ $data ]] 			|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-d, --callback_data]"
+
+   		[[ ${_BOT_HANDLE_LIST_[$data]} ]] && MessageError API "$_ERR_HANDLE_EXISTS_" '[-d, --callback_data]'
+
+   		_BOT_HANDLE_LIST_[$data]=func:$function' '$args
+
+   		return 0
+    }
+    
+	ShellBot.regHandleExec()
+    {
+    	local cmd data
+    
+		local param=$(getopt	--name "$FUNCNAME" \
+								--options 'c:d:' \
+								--longoptions	'command:,
+												callback_data:' \
+								-- "$@")
+    
+		eval set -- "$param"
+    		
+		while :
+		do
+   			case $1 in
+   				-c|--command)
+   					cmd=$2
+   					shift 2
+   					;;
+   				-d|--callback_data)
+   					data=$2
+   					shift 2
+   					;;
+   				--)
+   					shift
+   					break
+   					;;
+   			esac
+   		done
+
+		[[ $cmd ]]	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --command]"
+   		[[ $data ]]	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-d, --callback_data]"
+
+   		[[ ${_BOT_HANDLE_LIST_[$data]} ]] && MessageError API "$_ERR_HANDLE_EXISTS_" "[-d, --callback_data]"
+
+   		_BOT_HANDLE_LIST_[$data]=exec:$cmd
 
    		return 0
     }
     
     ShellBot.watchHandle()
     {
-    	local 	callback_data func func_handle \
-    			param=$(getopt --name "$FUNCNAME" \
-								--options 'd' \
-								--longoptions 'callback_data' \
-								-- "$@")
+    	local data flag cmd
+
+		local param=$(getopt --name "$FUNCNAME" \
+							--options 'd' \
+							--longoptions 'callback_data' \
+							-- "$@")
     
     	eval set -- "$param"
     
@@ -574,7 +618,7 @@ ShellBot.init()
     		case $1 in
     			-d|--callback_data)
     				shift 2
-    				callback_data=$1
+    				data=$1
     				;;
     			*)
     				shift
@@ -583,12 +627,17 @@ ShellBot.init()
     		esac
     	done
     	
-    	# O parâmetro callback_data é parcial, ou seja, Se o handle for válido, os elementos
-    	# serão listados. Caso contrário a função é finalizada.
-    	[[ $callback_data ]] || return 1
+		# Handles (somente-leitura)
+		readonly _BOT_HANDLE_LIST_
+
+    	[[ $data ]] || return 1 # vazio
    	
-		while read -d'|' func; do $func
-		done <<< ${_BOT_FUNCTION_LIST_[$callback_data]}
+		IFS=':' read -r flag cmd <<< "${_BOT_HANDLE_LIST_[$data]}"
+
+		case $flag in
+			func) $cmd;;
+			exec) eval "$cmd";;
+		esac
     
     	# retorno
     	return 0
@@ -5263,6 +5312,7 @@ _EOF
 				ShellBot.first_name 				\
 				ShellBot.getConfig					\
 				ShellBot.regHandleFunction 			\
+				ShellBot.regHandleExec				\
 				ShellBot.watchHandle 				\
 				ShellBot.ListUpdates 				\
 				ShellBot.TotalUpdates 				\
