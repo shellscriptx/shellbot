@@ -117,10 +117,10 @@ readonly _ERR_ARG_='argumento inválido: o argumento não é suportado pelo par�
 readonly _ERR_RULE_ALREADY_EXISTS_='falha ao definir: o nome da regra já existe.'
 readonly _ERR_HANDLE_EXISTS_='erro ao registar: já existe um handle vinculado ao callback'
 
-declare -A _BOT_HANDLE_LIST_
-declare -a _BOT_RULES_LIST_
+declare -A _BOT_HANDLE_
+declare -a _BOT_RULES_
 declare -A _BOT_SET_RULE_
-declare _VAR_INIT_LIST_
+declare _VAR_INIT_
 
 Json() { local obj=$(jq -Mc "$1" <<< "${*:2}"); obj=${obj#\"}; echo "${obj%\"}"; }
 
@@ -139,7 +139,7 @@ FlagConv()
 	local var str=$2
 
 	while [[ $str =~ \$\{([a-z_]+)\} ]]; do
-		[[ ${BASH_REMATCH[1]} == @(${_VAR_INIT_LIST_// /|}) ]] && var=${BASH_REMATCH[1]}[$1] || var=
+		[[ ${BASH_REMATCH[1]} == @(${_VAR_INIT_// /|}) ]] && var=${BASH_REMATCH[1]}[$1] || var=
 		str=${str//${BASH_REMATCH[0]}/${!var}}
 	done
 
@@ -555,9 +555,9 @@ ShellBot.init()
 		[[ $function ]] 		|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-f, --function]"
    		[[ $data ]] 			|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-d, --callback_data]"
 
-   		[[ ${_BOT_HANDLE_LIST_[$data]} ]] && MessageError API "$_ERR_HANDLE_EXISTS_" '[-d, --callback_data]'
+   		[[ ${_BOT_HANDLE_[$data]} ]] && MessageError API "$_ERR_HANDLE_EXISTS_" '[-d, --callback_data]'
 
-   		_BOT_HANDLE_LIST_[$data]=func:$function' '$args
+   		_BOT_HANDLE_[$data]=func:$function' '$args
 
    		return 0
     }
@@ -595,9 +595,9 @@ ShellBot.init()
 		[[ $cmd ]]	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --command]"
    		[[ $data ]]	|| MessageError API "$_ERR_PARAM_REQUIRED_" "[-d, --callback_data]"
 
-   		[[ ${_BOT_HANDLE_LIST_[$data]} ]] && MessageError API "$_ERR_HANDLE_EXISTS_" "[-d, --callback_data]"
+   		[[ ${_BOT_HANDLE_[$data]} ]] && MessageError API "$_ERR_HANDLE_EXISTS_" "[-d, --callback_data]"
 
-   		_BOT_HANDLE_LIST_[$data]=exec:$cmd
+   		_BOT_HANDLE_[$data]=exec:$cmd
 
    		return 0
     }
@@ -628,11 +628,11 @@ ShellBot.init()
     	done
     	
 		# Handles (somente-leitura)
-		readonly _BOT_HANDLE_LIST_
+		readonly _BOT_HANDLE_
 
     	[[ $data ]] || return 1 # vazio
    	
-		IFS=':' read -r flag cmd <<< "${_BOT_HANDLE_LIST_[$data]}"
+		IFS=':' read -r flag cmd <<< "${_BOT_HANDLE_[$data]}"
 
 		case $flag in
 			func) $cmd;;
@@ -4913,10 +4913,10 @@ _EOF
 		rule+=\"continue\":\"${continue}\"
 
 		# Atualiza lista de regras.	
-		_BOT_RULES_LIST_=${_BOT_RULES_LIST_#\{\"rule\":[}
-		_BOT_RULES_LIST_=${_BOT_RULES_LIST_%]\}}
-		_BOT_RULES_LIST_=${_BOT_RULES_LIST_}${_BOT_RULES_LIST_:+,}{$rule}
-		_BOT_RULES_LIST_={\"rule\":[$_BOT_RULES_LIST_]}
+		_BOT_RULES_=${_BOT_RULES_#\{\"rule\":[}
+		_BOT_RULES_=${_BOT_RULES_%]\}}
+		_BOT_RULES_=${_BOT_RULES_}${_BOT_RULES_:+,}{$rule}
+		_BOT_RULES_={\"rule\":[$_BOT_RULES_]}
 
 		# Registra regra.
 		_BOT_SET_RULE_[$name]=true
@@ -4969,45 +4969,45 @@ _EOF
 		[[ $uid ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-u, --update_id]"
 
 		# Regras (somente-leitura)
-		readonly _BOT_RULES_LIST_ _BOT_SET_RULE_
+		readonly _BOT_RULES_ _BOT_SET_RULE_
 
 		# Regras
-		for ((i=0; i < $(jq '.rule|length' <<< $_BOT_RULES_LIST_); i++)); do
+		for ((i=0; i < $(jq '.rule|length' <<< $_BOT_RULES_); i++)); do
 
-			rule_source=$(jq -r ".rule[$i].source" <<< $_BOT_RULES_LIST_)
-			rule_line=$(jq -r ".rule[$i].line" <<< $_BOT_RULES_LIST_)
-			rule_name=$(jq -r ".rule[$i].name" <<< $_BOT_RULES_LIST_)
-			action=$(jq -r ".rule[$i].action" <<< $_BOT_RULES_LIST_)
-			action_args=$(jq -r ".rule[$i].action_args" <<< $_BOT_RULES_LIST_)
-			exec=$(jq -r ".rule[$i].exec" <<< $_BOT_RULES_LIST_)
-			message_id=$(jq -r ".rule[$i].message_id" <<< $_BOT_RULES_LIST_)
-			is_bot=$(jq -r  ".rule[$i].is_bot" <<< $_BOT_RULES_LIST_)
-			command=$(jq -r ".rule[$i].command" <<< $_BOT_RULES_LIST_)
-			user_id=$(jq -r ".rule[$i].user_id" <<< $_BOT_RULES_LIST_)
-			username=$(jq -r ".rule[$i].username" <<< $_BOT_RULES_LIST_)
-			chat_id=$(jq -r ".rule[$i].chat_id" <<< $_BOT_RULES_LIST_)
-			chat_name=$(jq -r ".rule[$i].chat_name" <<< $_BOT_RULES_LIST_)
-			chat_type=$(jq -r ".rule[$i].chat_type" <<< $_BOT_RULES_LIST_)
-			language=$(jq -r ".rule[$i].language_code" <<< $_BOT_RULES_LIST_)
-			text=$(jq -r ".rule[$i].text" <<< $_BOT_RULES_LIST_)
-			entities_type=$(jq -r ".rule[$i].entities_type" <<< $_BOT_RULES_LIST_)
-			file_type=$(jq -r ".rule[$i].file_type" <<< $_BOT_RULES_LIST_)
-			mime_type=$(jq -r ".rule[$i].mime_type" <<< $_BOT_RULES_LIST_)
-			query_id=$(jq -r ".rule[$i].query_id" <<< $_BOT_RULES_LIST_)
-			query_data=$(jq -r ".rule[$i].query_data" <<< $_BOT_RULES_LIST_)
-			chat_member=$(jq -r ".rule[$i].chat_member" <<< $_BOT_RULES_LIST_)
-			num_args=$(jq -r ".rule[$i].num_args" <<< $_BOT_RULES_LIST_)
-			time=$(jq -r ".rule[$i].time" <<< $_BOT_RULES_LIST_)
-			date=$(jq -r ".rule[$i].date" <<< $_BOT_RULES_LIST_)
-			weekday=$(jq -r ".rule[$i].weekday" <<< $_BOT_RULES_LIST_)
-			user_status=$(jq -r ".rule[$i].user_status" <<< $_BOT_RULES_LIST_)
-			message_status=$(jq -r ".rule[$i].message_status" <<< $_BOT_RULES_LIST_)
-			reply_message=$(jq -r ".rule[$i].bot_reply_message" <<< $_BOT_RULES_LIST_)
-			send_message=$(jq -r ".rule[$i].bot_send_message" <<< $_BOT_RULES_LIST_)
-			forward_message=$(jq -r ".rule[$i].bot_forward_message" <<< $_BOT_RULES_LIST_)
-			reply_markup=$(jq -r ".rule[$i].bot_reply_markup" <<< $_BOT_RULES_LIST_)
-			parse_mode=$(jq -r ".rule[$i].bot_parse_mode" <<< $_BOT_RULES_LIST_)
-			continue=$(jq -r ".rule[$i].continue" <<< $_BOT_RULES_LIST_)
+			rule_source=$(jq -r ".rule[$i].source" <<< $_BOT_RULES_)
+			rule_line=$(jq -r ".rule[$i].line" <<< $_BOT_RULES_)
+			rule_name=$(jq -r ".rule[$i].name" <<< $_BOT_RULES_)
+			action=$(jq -r ".rule[$i].action" <<< $_BOT_RULES_)
+			action_args=$(jq -r ".rule[$i].action_args" <<< $_BOT_RULES_)
+			exec=$(jq -r ".rule[$i].exec" <<< $_BOT_RULES_)
+			message_id=$(jq -r ".rule[$i].message_id" <<< $_BOT_RULES_)
+			is_bot=$(jq -r  ".rule[$i].is_bot" <<< $_BOT_RULES_)
+			command=$(jq -r ".rule[$i].command" <<< $_BOT_RULES_)
+			user_id=$(jq -r ".rule[$i].user_id" <<< $_BOT_RULES_)
+			username=$(jq -r ".rule[$i].username" <<< $_BOT_RULES_)
+			chat_id=$(jq -r ".rule[$i].chat_id" <<< $_BOT_RULES_)
+			chat_name=$(jq -r ".rule[$i].chat_name" <<< $_BOT_RULES_)
+			chat_type=$(jq -r ".rule[$i].chat_type" <<< $_BOT_RULES_)
+			language=$(jq -r ".rule[$i].language_code" <<< $_BOT_RULES_)
+			text=$(jq -r ".rule[$i].text" <<< $_BOT_RULES_)
+			entities_type=$(jq -r ".rule[$i].entities_type" <<< $_BOT_RULES_)
+			file_type=$(jq -r ".rule[$i].file_type" <<< $_BOT_RULES_)
+			mime_type=$(jq -r ".rule[$i].mime_type" <<< $_BOT_RULES_)
+			query_id=$(jq -r ".rule[$i].query_id" <<< $_BOT_RULES_)
+			query_data=$(jq -r ".rule[$i].query_data" <<< $_BOT_RULES_)
+			chat_member=$(jq -r ".rule[$i].chat_member" <<< $_BOT_RULES_)
+			num_args=$(jq -r ".rule[$i].num_args" <<< $_BOT_RULES_)
+			time=$(jq -r ".rule[$i].time" <<< $_BOT_RULES_)
+			date=$(jq -r ".rule[$i].date" <<< $_BOT_RULES_)
+			weekday=$(jq -r ".rule[$i].weekday" <<< $_BOT_RULES_)
+			user_status=$(jq -r ".rule[$i].user_status" <<< $_BOT_RULES_)
+			message_status=$(jq -r ".rule[$i].message_status" <<< $_BOT_RULES_)
+			reply_message=$(jq -r ".rule[$i].bot_reply_message" <<< $_BOT_RULES_)
+			send_message=$(jq -r ".rule[$i].bot_send_message" <<< $_BOT_RULES_)
+			forward_message=$(jq -r ".rule[$i].bot_forward_message" <<< $_BOT_RULES_)
+			reply_markup=$(jq -r ".rule[$i].bot_reply_markup" <<< $_BOT_RULES_)
+			parse_mode=$(jq -r ".rule[$i].bot_parse_mode" <<< $_BOT_RULES_)
+			continue=$(jq -r ".rule[$i].continue" <<< $_BOT_RULES_)
 
 			u_message_text=${message_text[$uid]:-${edited_message_text[$uid]:-${callback_query_message_text[$uid]:-${inline_query_query[$uid]:-${chosen_inline_result_query[$uid]}}}}}
 			u_message_id=${message_message_id[$uid]:-${edited_message_message_id[$uid]:-${callback_query_message_message_id[$uid]:-${inline_query_id[$uid]:-${chosen_inline_result_result_id[$uid]}}}}}
@@ -5259,7 +5259,7 @@ _EOF
 
 
 		# Limpa as variáveis inicializadas.
-		unset $_VAR_INIT_LIST_; _VAR_INIT_LIST_=
+		unset $_VAR_INIT_; _VAR_INIT_=
 		
 		# Se há atualizações.
     	[[ $(jq -r '.result|length' <<< $jq_obj) -eq 0 ]] && return 0
@@ -5301,7 +5301,7 @@ _EOF
 			fi
 	
 			unset -n byref
-			[[ $var != @(${_VAR_INIT_LIST_// /|}) ]] && _VAR_INIT_LIST_=${_VAR_INIT_LIST_:+$_VAR_INIT_LIST_ }${var}
+			[[ $var != @(${_VAR_INIT_// /|}) ]] && _VAR_INIT_=${_VAR_INIT_:+$_VAR_INIT_ }${var}
 		done
 	
 		# Log (thread)	
