@@ -3,7 +3,7 @@
 #-----------------------------------------------------------------------------------------------------------
 #	DATA:				07 de Março de 2017
 #	SCRIPT:				ShellBot.sh
-#	VERSÃO:				6.1
+#	VERSÃO:				6.2
 #	DESENVOLVIDO POR:	Juliano Santos [SHAMAN]
 #	PÁGINA:				http://www.shellscriptx.blogspot.com.br
 #	FANPAGE:			https://www.facebook.com/shellscriptx
@@ -117,9 +117,12 @@ readonly _ERR_ARG_='argumento inválido: o argumento não é suportado pelo par�
 readonly _ERR_RULE_ALREADY_EXISTS_='falha ao definir: o nome da regra já existe.'
 readonly _ERR_HANDLE_EXISTS_='erro ao registar: já existe um handle vinculado ao callback'
 
+# Maps
 declare -A _BOT_HANDLE_
-declare -a _BOT_RULES_
-declare -A _BOT_SET_RULE_
+declare -A _BOT_RULES_
+declare -A return
+
+declare _BOT_RULES_INDEX_
 declare _VAR_INIT_
 
 Json() { local obj=$(jq -Mc "$1" <<< "${*:2}"); obj=${obj#\"}; echo "${obj%\"}"; }
@@ -148,35 +151,145 @@ FlagConv()
 
 CreateLog()
 {
-	local i fmt
+	local fid fbot fname fuser lcode cid ctype 
+	local ctitle mid mdate mtext etype
+	local i fmt obj oid
 
 	for ((i=0; i < $1; i++)); do
+		
 		printf -v fmt "$_BOT_LOG_FORMAT_" || MessageError API
-
+		
 		# Suprimir erros.
 		exec 5<&2
 		exec 2<&-
 
+		# Objeto (tipo)
+		if 		[[ ${message_contact_phone_number[$i]} 		]]; then obj=contact
+		elif	[[ ${message_sticker_file_id[$i]}			]]; then obj=sticker
+		elif	[[ ${message_animation_file_id[$i]}			]]; then obj=animation
+		elif	[[ ${message_photo_file_id[$i]}				]]; then obj=photo
+		elif	[[ ${message_audio_file_id[$i]}				]]; then obj=audio
+		elif	[[ ${message_video_file_id[$i]}				]]; then obj=video
+		elif	[[ ${message_voice_file_id[$i]}				]]; then obj=voice
+		elif	[[ ${message_document_file_id[$i]}			]]; then obj=document
+		elif	[[ ${message_venue_location_latitude[$i]}	]]; then obj=venue
+		elif	[[ ${message_location_latitude[$i]}			]]; then obj=location
+		elif	[[ ${message_text[$i]}						]]; then obj=text
+		elif 	[[ ${callback_query_id[$i]}					]]; then obj=callback
+		elif 	[[ ${inline_query_id[$i]}					]]; then obj=inline
+		elif	[[ ${chosen_inline_result_result_id[$i]}	]]; then obj=chosen
+		fi
+	
+		# Objeto (id)	
+		[[ ${oid:=${message_contact_phone_number[$i]}} 		]] ||
+		[[ ${oid:=${message_sticker_file_id[$i]}}			]] ||
+		[[ ${oid:=${message_animation_file_id[$i]}}			]] ||
+		[[ ${oid:=${message_photo_file_id[$i]}}				]] ||
+		[[ ${oid:=${message_audio_file_id[$i]}}				]] ||
+		[[ ${oid:=${message_video_file_id[$i]}}				]] ||
+		[[ ${oid:=${message_voice_file_id[$i]}}				]] ||
+		[[ ${oid:=${message_document_file_id[$i]}}			]] ||
+		[[ ${oid:=${callback_query_id[$i]}}					]] ||
+		[[ ${oid:=${inline_query_id[$i]}} 					]] ||
+		[[ ${oid:=${chosen_inline_result_result_id[$i]}}	]] ||
+		[[ ${oid:=${message_message_id[$i]}}				]]
+
+		# Remetente (id)
+		[[ ${fid:=${message_from_id[$i]}}				]] ||
+		[[ ${fid:=${edited_message_from_id[$i]}} 		]] ||
+		[[ ${fid:=${callback_query_from_id[$i]}} 		]] ||
+		[[ ${fid:=${inline_query_from_id[$i]}} 			]] ||
+		[[ ${fid:=${chosen_inline_result_from_id[$i]}} 	]]
+
+		# Bot
+		[[ ${fbot:=${message_from_is_bot[$i]}} 				]] ||
+		[[ ${fbot:=${edited_message_from_is_bot[$i]}} 		]] ||
+		[[ ${fbot:=${callback_query_from_is_bot[$i]}} 		]] ||
+		[[ ${fbot:=${inline_query_from_is_bot[$i]}} 		]] ||
+		[[ ${fbot:=${chosen_inline_result_from_is_bot[$i]}} ]]
+
+		# Usuário (nome)
+		[[ ${fname:=${message_from_first_name[$i]}} 				]] ||
+		[[ ${fname:=${edited_message_from_first_name[$i]}}			]] ||
+		[[ ${fname:=${callback_query_from_first_name[$i]}} 			]] ||
+		[[ ${fname:=${inline_query_from_first_name[$i]}}			]] ||
+		[[ ${fname:=${chosen_inline_result_from_first_name[$i]}}	]]
+
+		# Usuário (conta)
+		[[ ${fuser:=${message_from_username[$i]}}				]] ||
+		[[ ${fuser:=${edited_message_from_username[$i]}} 		]] ||
+		[[ ${fuser:=${callback_query_from_username[$i]}} 		]] ||
+		[[ ${fuser:=${inline_query_from_username[$i]}} 			]] ||
+		[[ ${fuser:=${chosen_inline_result_from_username[$i]}} 	]]
+
+		# Idioma
+		[[ ${lcode:=${message_from_language_code[$i]}} 				]] ||
+		[[ ${lcode:=${edited_message_from_language_code[$i]}} 		]] ||
+		[[ ${lcode:=${callback_query_from_language_code[$i]}} 		]] ||
+		[[ ${lcode:=${inline_query_from_language_code[$i]}} 		]] ||
+		[[ ${lcode:=${chosen_inline_result_from_language_code[$i]}} ]]
+
+		# Bate-papo (id)
+		[[ ${cid:=${message_chat_id[$i]}}					]] ||
+		[[ ${cid:=${edited_message_chat_id[$i]}}			]] ||
+		[[ ${cid:=${callback_query_message_chat_id[$i]}} 	]]
+
+		# Bate-papo (tipo)
+		[[ ${ctype:=${message_chat_type[$i]}} 					]] ||
+		[[ ${ctype:=${edited_message_chat_type[$i]}} 			]] ||
+		[[ ${ctype:=${callback_query_message_chat_type[$i]}} 	]]
+
+		# Bate-papo (título)
+		[[ ${ctitle:=${message_chat_title[$i]}}					]] ||
+		[[ ${ctitle:=${edited_message_chat_title[$i]}} 			]] ||
+		[[ ${ctitle:=${callback_query_message_chat_title[$i]}} 	]]
+
+		# Mensagem (id)
+		[[ ${mid:=${message_message_id[$i]}} 				]] ||
+		[[ ${mid:=${edited_message_message_id[$i]}} 		]] ||
+		[[ ${mid:=${callback_query_id[$i]}} 				]] ||
+		[[ ${mid:=${inline_query_id[$i]}} 					]] ||
+		[[ ${mid:=${chosen_inline_result_result_id[$i]}}	]]
+
+		# Mensagem (data)
+		[[ ${mdate:=${message_date[$i]}}				]] ||
+		[[ ${mdate:=${edited_message_date[$i]}} 		]] ||
+		[[ ${mdate:=${callback_query_message_date[$i]}}	]]
+
+		# Mensagem (texto)
+		[[ ${mtext:=${message_text[$i]}} 				]] ||
+		[[ ${mtext:=${edited_message_text[$i]}} 		]] ||
+		[[ ${mtext:=${callback_query_message_text[$i]}} ]] ||
+		[[ ${mtext:=${inline_query_query[$i]}} 			]] ||
+		[[ ${mtext:=${chosen_inline_result_query[$i]}}	]]
+
+		# Mensagem (tipo)
+		[[ ${etype:=${message_entities_type[$i]}} 					]] ||
+		[[ ${etype:=${edited_message_entities_type[$i]}} 			]] ||
+		[[ ${etype:=${callback_query_message_entities_type[$i]}}	]]
+
 		# Flags
-		fmt=${fmt//\{OK\}/${return[ok]:-$ok}}
-		fmt=${fmt//\{UPDATE_ID\}/${update_id[$i]}}
-		fmt=${fmt//\{MESSAGE_ID\}/${return[message_id]:-${message_message_id[$i]:-${edited_message_message_id[$id]:-${callback_query_id[$i]:-${inline_query_id[$i]:-${chosen_inline_result_result_id[$i]}}}}}}}
-		fmt=${fmt//\{FROM_ID\}/${return[from_id]:-${message_from_id[$i]:-${edited_message_from_id[$id]:-${callback_query_from_id[$i]:-${inline_query_from_id[$i]:-${chosen_inline_result_from_id[$i]}}}}}}}
-		fmt=${fmt//\{FROM_IS_BOT\}/${return[from_is_bot]:-${message_from_is_bot[$i]:-${edited_message_from_is_bot[$id]:-${callback_query_from_is_bot[$i]:-${inline_query_from_is_bot[$i]:-${chosen_inline_result_from_is_bot[$i]}}}}}}}
-		fmt=${fmt//\{FROM_FIRST_NAME\}/${return[from_first_name]:-${message_from_first_name[$i]:-${edited_message_from_first_name[$id]:-${callback_query_from_first_name[$i]:-${inline_query_from_first_name[$i]:-${chosen_inline_result_from_first_name[$i]}}}}}}}
-		fmt=${fmt//\{FROM_USERNAME\}/${return[from_username]:-${message_from_username[$i]:-${edited_message_from_username[$id]:-${callback_query_from_username[$i]:-${inline_query_from_username[$i]:-${chosen_inline_result_from_username[$i]}}}}}}}
-		fmt=${fmt//\{FROM_LANGUAGE_CODE\}/${message_from_language_code[$i]:-${edited_message_from_language_code[$id]:-${callback_query_from_language_code[$i]:-${inline_query_from_language_code[$i]:-${chosen_inline_result_from_language_code[$i]}}}}}}
-		fmt=${fmt//\{CHAT_ID\}/${return[chat_id]:-${message_chat_id[$i]:-${edited_message_chat_id[$id]:-${callback_query_message_chat_id[$i]}}}}}
-		fmt=${fmt//\{CHAT_TITLE\}/${return[chat_title]:-${message_chat_title[$i]:-${edited_message_chat_title[$id]:-${callback_query_message_chat_title[$i]}}}}}
-		fmt=${fmt//\{CHAT_TYPE\}/${return[chat_type]:-${message_chat_type[$i]:-${edited_message_chat_type[$id]:-${callback_query_message_chat_type[$i]}}}}}
-		fmt=${fmt//\{MESSAGE_DATE\}/${return[date]:-${message_date[$i]:-${edited_message_date[$id]:-${callback_query_message_date[$i]}}}}}
-		fmt=${fmt//\{MESSAGE_TEXT\}/${return[text]:-${message_text[$i]:-${edited_message_text[$id]:-${callback_query_message_text[$i]:-${inline_query_query[$i]:-${chosen_inline_result_query[$i]}}}}}}}
-		fmt=${fmt//\{ENTITIES_TYPE\}/${return[entities_type]:-${message_entities_type[$i]:-${edited_message_entities_type[$id]:-${callback_query_data[$i]}}}}}
-		fmt=${fmt//\{BOT_TOKEN\}/${_BOT_INFO_[0]}}
-		fmt=${fmt//\{BOT_ID\}/${_BOT_INFO_[1]}}
-		fmt=${fmt//\{BOT_FIRST_NAME\}/${_BOT_INFO_[2]}}
-		fmt=${fmt//\{BOT_USERNAME\}/${_BOT_INFO_[3]}}
-		fmt=${fmt//\{BASENAME\}/$_BOT_SCRIPT_}
+		fmt=${fmt//\{BOT_TOKEN\}/${_BOT_INFO_[0]:--}}
+		fmt=${fmt//\{BOT_ID\}/${_BOT_INFO_[1]:--}}
+		fmt=${fmt//\{BOT_FIRST_NAME\}/${_BOT_INFO_[2]:--}}
+		fmt=${fmt//\{BOT_USERNAME\}/${_BOT_INFO_[3]:--}}
+		fmt=${fmt//\{BASENAME\}/${_BOT_SCRIPT_:--}}
+		fmt=${fmt//\{OK\}/${return[ok]:-${ok:--}}}
+		fmt=${fmt//\{UPDATE_ID\}/${update_id[$i]:-}}
+		fmt=${fmt//\{OBJECT_TYPE\}/${obj:--}}
+		fmt=${fmt//\{OBJECT_ID\}/${oid:--}}
+		fmt=${fmt//\{FROM_ID\}/${fid:--}}
+		fmt=${fmt//\{FROM_IS_BOT\}/${fbot:--}}
+		fmt=${fmt//\{FROM_FIRST_NAME\}/${fname:--}}
+		fmt=${fmt//\{FROM_USERNAME\}/${fuser:--}}
+		fmt=${fmt//\{FROM_LANGUAGE_CODE\}/${lcode:--}}
+		fmt=${fmt//\{CHAT_ID\}/${cid:--}}
+		fmt=${fmt//\{CHAT_TYPE\}/${ctype:--}}
+		fmt=${fmt//\{CHAT_TITLE\}/${ctitle:--}}
+		fmt=${fmt//\{MESSAGE_ID\}/${mid:--}}
+		fmt=${fmt//\{MESSAGE_DATE\}/${mdate:--}}
+		fmt=${fmt//\{MESSAGE_TEXT\}/${mtext:--}}
+		fmt=${fmt//\{ENTITIES_TYPE\}/${etype:--}}
 		fmt=${fmt//\{METHOD\}/${FUNCNAME[2]/main/ShellBot.getUpdates}}
 		fmt=${fmt//\{RETURN\}/$(GetAllValues ${*:2})}
 
@@ -184,6 +297,10 @@ CreateLog()
 
 		# log
 		[[ $fmt ]] && { echo "$fmt" >> "$_BOT_LOG_FILE_" || MessageError API; }
+
+		# Limpa objetos
+		fid= fbot= fname= fuser= lcode= cid= ctype= 
+		ctitle= mid= mdate= mtext= etype= obj= oid=
 	done
 
 	return $?
@@ -197,7 +314,7 @@ MethodReturn()
 		value) GetAllValues $*;;
 		map)
 			local key val obj
-			declare -Ag return=() || MessageError API
+			return=()
 
 			for obj in $(GetAllKeys $*); do
 				key=${obj//[0-9\[\]]/}
@@ -212,7 +329,6 @@ MethodReturn()
 			;;
 	esac
 	
-	[[ $_BOT_LOG_FILE_ ]] && CreateLog 1 $* &
 	[[ $(jq -r '.ok' <<< $*) == true ]]
 
 	return $?
@@ -482,7 +598,7 @@ ShellBot.init()
 	declare -gr _BOT_TYPE_RETURN_=${ret:-value}
 	declare -gr _BOT_DELM_=${delm:-|}
 	declare -gr _BOT_LOG_FILE_=${logfile}
-	declare -gr _BOT_LOG_FORMAT_=${logfmt:-%(%d/%m/%Y %H:%M:%S)T: \{BASENAME\}: \{BOT_USERNAME\}: \{UPDATE_ID\}: \{METHOD\}: \{FROM_USERNAME\}: \{MESSAGE_TEXT\}}
+	declare -gr _BOT_LOG_FORMAT_=${logfmt:-%(%d/%m/%Y %H:%M:%S)T: \{BASENAME\}: \{BOT_USERNAME\}: \{UPDATE_ID\}: \{METHOD\}: \{FROM_USERNAME\}: \{OBJECT_TYPE\}: \{OBJECT_ID\}: \{MESSAGE_TEXT\}}
 	declare -gr _SHELLBOT_INIT_=1
 
     # SHELLBOT (FUNÇÕES)
@@ -4690,7 +4806,7 @@ _EOF
 		local chat_member mime_type num_args exec rule
 		local action_args weekday user_status chat_name 
 		local message_status reply_message parse_mode
-		local forward_message reply_markup continue
+		local forward_message reply_markup continue i
 
 		local param=$(getopt	--name "$FUNCNAME" \
 								--options 's:a:z:c:i:u:h:v:y:l:m:b:t:n:f:p:q:r:g:o:e:d:w:j:x:R:S:F:K:P:E:C' \
@@ -4735,131 +4851,131 @@ _EOF
 			case $1 in
 				-s|--name)
 					CheckArgType flag "$1" "$2"
-					name=${2//\"/\\\"}
+					name=$2
 					shift 2
 					;;
 				-a|--action)
 					CheckArgType func "$1" "$2"
-					action=${2//\"/\\\"}
+					action=$2
 					shift 2
 					;;
 				-z|--action_args)
-					action_args=${2//\"/\\\"}
+					action_args=$2
 					shift 2
 					;;
 				-c|--command)
 					CheckArgType cmd "$1" "$2"
-					command=${command:+$command,}${2//\"/\\\"}
+					command=${command:+$command,}$2
 					shift 2
 					;;
 				-i|--user_id)
-					user_id=${user_id:+$user_id,}${2//\"/\\\"}
+					user_id=${user_id:+$user_id,}$2
 					shift 2
 					;;
 				-u|--username)
-					username=${username:+$username,}${2//\"/\\\"}
+					username=${username:+$username,}$2
 					shift 2
 					;;
 				-h|--chat_id)
-					chat_id=${chat_id:+$chat_id,}${2//\"/\\\"}
+					chat_id=${chat_id:+$chat_id,}$2
 					shift 2
 					;;
 				-v|--chat_name)
-					chat_name=${chat_name:+$chat_name,}${2//\"/\\\"}
+					chat_name=${chat_name:+$chat_name,}$2
 					shift 2
 					;;
 				-y|--chat_type)
-					chat_type=${chat_type:+$chat_type,}${2//\"/\\\"}
+					chat_type=${chat_type:+$chat_type,}$2
 					shift 2
 					;;
 				-e|--time)
 					CheckArgType itime "$1" "$2"
-					time=${time:+$time,}${2//\"/\\\"}
+					time=${time:+$time,}$2
 					shift 2
 					;;
 				-d|--date)
 					CheckArgType idate "$1" "$2"
-					date=${date:+$date,}${2//\"/\\\"}
+					date=${date:+$date,}$2
 					shift 2
 					;;
 				-l|--laguage_code)
-					language=${language:+$language,}${2//\"/\\\"}
+					language=${language:+$language,}$2
 					shift 2
 					;;
 				-m|--message_id)
-					message_id=${message_id:+$message_id,}${2//\"/\\\"}
+					message_id=${message_id:+$message_id,}$2
 					shift 2
 					;;
 				-b|--is_bot)
-					is_bot=${is_bot:+$is_bot,}${2//\"/\\\"}
+					is_bot=${is_bot:+$is_bot,}$2
 					shift 2
 					;;
 				-t|--text)
-					text=${2//\"/\\\"}
+					text=$2
 					shift 2
 					;;
 				-n|--entitie_type)
-					entities_type=${entities_type:+$entities_type,}${2//\"/\\\"}
+					entities_type=${entities_type:+$entities_type,}$2
 					shift 2
 					;;
 				-f|--file_type)
-					file_type=${file_type:+$file_type,}${2//\"/\\\"}
+					file_type=${file_type:+$file_type,}$2
 					shift 2
 					;;
 				-p|--mime_type)
-					mime_type=${mime_type:+$mime_type,}${2//\"/\\\"}
+					mime_type=${mime_type:+$mime_type,}$2
 					shift 2
 					;;
 				-q|--query_data)
-					query_data=${query_data:+$query_data,}${2//\"/\\\"}
+					query_data=${query_data:+$query_data,}$2
 					shift 2
 					;;
 				-r|--query_id)
-					query_id=${query_id:+$query_id,}${2//\"/\\\"}
+					query_id=${query_id:+$query_id,}$2
 					shift 2
 					;;
 				-g|--chat_member)
-					chat_member=${chat_member:+$chat_member,}${2//\"/\\\"}
+					chat_member=${chat_member:+$chat_member,}$2
 					shift 2
 					;;
 				-o|--num_args)
-					num_args=${num_args:+$num_args,}${2//\"/\\\"}
+					num_args=${num_args:+$num_args,}$2
 					shift 2
 					;;
 				-w|--weekday)
-					weekday=${weekday:+$weekday,}${2//\"/\\\"}
+					weekday=${weekday:+$weekday,}$2
 					shift 2
 					;;
 				-j|--user_status)
-					user_status=${user_status:+$user_status,}${2//\"/\\\"}
+					user_status=${user_status:+$user_status,}$2
 					shift 2
 					;;
 				-x|--message_status)
-					message_status=${message_status:+$message_status,}${2//\"/\\\"}
+					message_status=${message_status:+$message_status,}$2
 					shift 2
 					;;
 				-R|--bot_reply_message)
-					reply_message=${2//\"/\\\"}
+					reply_message=$2
 					shift 2
 					;;
 				-S|--bot_send_message)
-					send_message=${2//\"/\\\"}
+					send_message=$2
 					shift 2
 					;;
 				-F|--bot_forward_message)
-					forward_message=${forward_message:+$forward_message,}${2//\"/\\\"}
+					forward_message=${forward_message:+$forward_message,}$2
 					shift 2
 					;;
 				-K|--bot_reply_markup)
-					reply_markup=${2//\"/\\\"}
+					reply_markup=$2
 					shift 2
 					;;
 				-P|--bot_parse_mode)
-					parse_mode=${2//\"/\\\"}
+					parse_mode=$2
 					shift 2
 					;;
 				-E|--exec)
-					exec=${2//\"/\\\"}
+					exec=$2
 					shift 2
 					;;
 				-C|--continue)
@@ -4874,52 +4990,49 @@ _EOF
 		done
 		
 		[[ $name ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --name]"
-		[[ ${_BOT_SET_RULE_[$name]} ]] && MessageError API "$_ERR_RULE_ALREADY_EXISTS_" "[-s, --name]" "$name"
+		[[ ${_BOT_RULES_[$name]} ]] && MessageError API "$_ERR_RULE_ALREADY_EXISTS_" "[-s, --name]" "$name"
 
-		# Regra (JSON)
-		rule=\"source\":\"${BASH_SOURCE[1]##*/}\",
-		rule+=\"line\":\"${BASH_LINENO}\",
-		rule+=\"name\":\"${name}\",
-		rule+=\"action\":\"${action}\",
-		rule+=\"action_args\":\"${action_args}\",
-		rule+=\"user_id\":\"${user_id:-+any}\",
-		rule+=\"username\":\"${username:-+any}\",
-		rule+=\"chat_id\":\"${chat_id:-+any}\",
-		rule+=\"chat_name\":\"${chat_name:-+any}\",
-		rule+=\"chat_type\":\"${chat_type:-+any}\",
-		rule+=\"language_code\":\"${language:-+any}\",
-		rule+=\"message_id\":\"${message_id:-+any}\",
-		rule+=\"is_bot\":\"${is_bot:-+any}\",
-		rule+=\"command\":\"${command:-+any}\",
-		rule+=\"text\":\"${text}\",
-		rule+=\"entities_type\":\"${entities_type:-+any}\",
-		rule+=\"file_type\":\"${file_type:-+any}\",
-		rule+=\"mime_type\":\"${mime_type:-+any}\",
-		rule+=\"query_data\":\"${query_data:-+any}\",
-		rule+=\"query_id\":\"${query_id:-+any}\",
-		rule+=\"chat_member\":\"${chat_member:-+any}\",
-		rule+=\"num_args\":\"${num_args:-+any}\",
-		rule+=\"time\":\"${time:-+any}\",
-		rule+=\"date\":\"${date:-+any}\",
-		rule+=\"weekday\":\"${weekday:-+any}\",
-		rule+=\"user_status\":\"${user_status:-+any}\",
-		rule+=\"message_status\":\"${message_status:-+any}\",
-		rule+=\"bot_reply_message\":\"${reply_message}\",
-		rule+=\"bot_send_message\":\"${send_message}\",
-		rule+=\"bot_forward_message\":\"${forward_message}\",
-		rule+=\"bot_reply_markup\":\"${reply_markup}\",
-		rule+=\"bot_parse_mode\":\"${parse_mode}\",
-		rule+=\"exec\":\"${exec}\",
-		rule+=\"continue\":\"${continue}\"
+		i=${_BOT_RULES_INDEX_:-0}
 
-		# Atualiza lista de regras.	
-		_BOT_RULES_=${_BOT_RULES_#\{\"rule\":[}
-		_BOT_RULES_=${_BOT_RULES_%]\}}
-		_BOT_RULES_=${_BOT_RULES_}${_BOT_RULES_:+,}{$rule}
-		_BOT_RULES_={\"rule\":[$_BOT_RULES_]}
+		_BOT_RULES_[$name:index]=$i	
+		_BOT_RULES_[$i:source]=${BASH_SOURCE[1]##*/}
+		_BOT_RULES_[$i:line]=${BASH_LINENO}
+		_BOT_RULES_[$i:name]=${name}
+		_BOT_RULES_[$i:action]=${action}
+		_BOT_RULES_[$i:action_args]=${action_args}
+		_BOT_RULES_[$i:user_id]=${user_id:-+any}
+		_BOT_RULES_[$i:username]=${username:-+any}
+		_BOT_RULES_[$i:chat_id]=${chat_id:-+any}
+		_BOT_RULES_[$i:chat_name]=${chat_name:-+any}
+		_BOT_RULES_[$i:chat_type]=${chat_type:-+any}
+		_BOT_RULES_[$i:language_code]=${language:-+any}
+		_BOT_RULES_[$i:message_id]=${message_id:-+any}
+		_BOT_RULES_[$i:is_bot]=${is_bot:-+any}
+		_BOT_RULES_[$i:command]=${command:-+any}
+		_BOT_RULES_[$i:text]=${text}
+		_BOT_RULES_[$i:entities_type]=${entities_type:-+any}
+		_BOT_RULES_[$i:file_type]=${file_type:-+any}
+		_BOT_RULES_[$i:mime_type]=${mime_type:-+any}
+		_BOT_RULES_[$i:query_data]=${query_data:-+any}
+		_BOT_RULES_[$i:query_id]=${query_id:-+any}
+		_BOT_RULES_[$i:chat_member]=${chat_member:-+any}
+		_BOT_RULES_[$i:num_args]=${num_args:-+any}
+		_BOT_RULES_[$i:time]=${time:-+any}
+		_BOT_RULES_[$i:date]=${date:-+any}
+		_BOT_RULES_[$i:weekday]=${weekday:-+any}
+		_BOT_RULES_[$i:user_status]=${user_status:-+any}
+		_BOT_RULES_[$i:message_status]=${message_status:-+any}
+		_BOT_RULES_[$i:bot_reply_message]=${reply_message}
+		_BOT_RULES_[$i:bot_send_message]=${send_message}
+		_BOT_RULES_[$i:bot_forward_message]=${forward_message}
+		_BOT_RULES_[$i:bot_reply_markup]=${reply_markup}
+		_BOT_RULES_[$i:bot_parse_mode]=${parse_mode}
+		_BOT_RULES_[$i:exec]=${exec}
+		_BOT_RULES_[$i:continue]=${continue}
+		_BOT_RULES_[$name]=true
 
-		# Registra regra.
-		_BOT_SET_RULE_[$name]=true
+		# Incrementa indice.
+		((_BOT_RULES_INDEX_++))
 
 		return $?
 	}
@@ -4969,59 +5082,107 @@ _EOF
 		[[ $uid ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-u, --update_id]"
 
 		# Regras (somente-leitura)
-		readonly _BOT_RULES_ _BOT_SET_RULE_
+		readonly _BOT_RULES_ _BOT_RULES_INDEX_
+		
+		[[ ${u_message_text:=${message_text[$uid]}} 				]] ||
+		[[ ${u_message_text:=${edited_message_text[$uid]}} 			]] ||
+		[[ ${u_message_text:=${callback_query_message_text[$uid]}}	]] ||
+		[[ ${u_message_text:=${inline_query_query[$uid]}} 			]] ||
+		[[ ${u_message_text:=${chosen_inline_result_query[$uid]}}	]]
+
+		[[ ${u_message_id:=${message_message_id[$uid]}}					]] ||
+		[[ ${u_message_id:=${edited_message_message_id[$uid]}} 			]] ||
+		[[ ${u_message_id:=${callback_query_message_message_id[$uid]}} 	]] ||
+		[[ ${u_message_id:=${inline_query_id[$uid]}} 					]] ||
+		[[ ${u_message_id:=${chosen_inline_result_result_id[$uid]}}		]]
+
+		[[ ${u_message_from_is_bot:=${message_from_is_bot[$uid]}} 				]] ||
+		[[ ${u_message_from_is_bot:=${edited_message_from_is_bot[$uid]}} 		]] ||
+		[[ ${u_message_from_is_bot:=${callback_query_from_is_bot[$uid]}} 		]] ||
+		[[ ${u_message_from_is_bot:=${inline_query_from_is_bot[$uid]}} 			]] ||
+		[[ ${u_message_from_is_bot:=${chosen_inline_result_from_is_bot[$uid]}}	]]
+
+		[[ ${u_message_from_id:=${message_from_id[$uid]}} 				]] ||
+		[[ ${u_message_from_id:=${edited_message_from_id[$uid]}} 		]] ||
+		[[ ${u_message_from_id:=${callback_query_from_id[$uid]}} 		]] ||
+		[[ ${u_message_from_id:=${inline_query_from_id[$uid]}} 			]] ||
+		[[ ${u_message_from_id:=${chosen_inline_result_from_id[$uid]}}	]]
+
+		[[ ${u_message_from_username:=${message_from_username[$uid]}} 				]] ||
+		[[ ${u_message_from_username:=${edited_message_from_username[$uid]}} 		]] ||
+		[[ ${u_message_from_username:=${callback_query_from_username[$uid]}} 		]] ||
+		[[ ${u_message_from_username:=${inline_query_from_username[$uid]}} 			]] ||
+		[[ ${u_message_from_username:=${chosen_inline_result_from_username[$uid]}}	]]
+
+		[[ ${u_message_from_language_code:=${message_from_language_code[$uid]}} 				]] ||
+		[[ ${u_message_from_language_code:=${edited_message_from_language_code[$uid]}} 			]] ||
+		[[ ${u_message_from_language_code:=${callback_query_from_language_code[$uid]}} 			]] ||
+		[[ ${u_message_from_language_code:=${inline_query_from_language_code[$uid]}} 			]] ||
+		[[ ${u_message_from_language_code:=${chosen_inline_result_from_language_code[$uid]}}	]]
+
+		[[ ${u_message_chat_id:=${message_chat_id[$uid]}} 					]] ||
+		[[ ${u_message_chat_id:=${edited_message_chat_id[$uid]}} 			]] ||
+		[[ ${u_message_chat_id:=${callback_query_message_chat_id[$uid]}}	]]
+
+		[[ ${u_message_chat_username:=${message_chat_username[$uid]}}					]] ||
+		[[ ${u_message_chat_username:=${edited_message_chat_username[$uid]}} 			]] ||
+		[[ ${u_message_chat_username:=${callback_query_message_chat_username[$uid]}}	]]
+
+		[[ ${u_message_chat_type:=${message_chat_type[$uid]}} 					]] ||
+		[[ ${u_message_chat_type:=${edited_message_chat_type[$uid]}} 			]] ||
+		[[ ${u_message_chat_type:=${callback_query_message_chat_type[$uid]}}	]]
+
+		[[ ${u_message_date:=${message_date[$uid]}} 				]] ||
+		[[ ${u_message_date:=${edited_message_edit_date[$uid]}} 	]] ||
+		[[ ${u_message_date:=${callback_query_message_date[$uid]}}	]]
+
+		[[ ${u_message_entities_type:=${message_entities_type[$uid]}} 					]] ||
+		[[ ${u_message_entities_type:=${edited_message_entities_type[$uid]}} 			]] ||
+		[[ ${u_message_entities_type:=${callback_query_message_entities_type[$uid]}}	]]
+
+		[[ ${u_message_mime_type:=${message_document_mime_type[$uid]}} 	]] ||
+		[[ ${u_message_mime_type:=${message_video_mime_type[$uid]}} 	]] ||
+		[[ ${u_message_mime_type:=${message_audio_mime_type[$uid]}} 	]] ||
+		[[ ${u_message_mime_type:=${message_voice_mime_type[$uid]}}		]]
 
 		# Regras
-		for ((i=0; i < $(jq '.rule|length' <<< $_BOT_RULES_); i++)); do
+		for ((i=0; i < _BOT_RULES_INDEX_; i++)); do
+			
+			rule_source=${_BOT_RULES_[$i:source]}
+			rule_line=${_BOT_RULES_[$i:line]}
+			rule_name=${_BOT_RULES_[$i:name]}
+			action=${_BOT_RULES_[$i:action]}
+			action_args=${_BOT_RULES_[$i:action_args]}
+			exec=${_BOT_RULES_[$i:exec]}
+			message_id=${_BOT_RULES_[$i:message_id]}
+			is_bot=${_BOT_RULES_[$i:is_bot]}
+			command=${_BOT_RULES_[$i:command]}
+			user_id=${_BOT_RULES_[$i:user_id]}
+			username=${_BOT_RULES_[$i:username]}
+			chat_id=${_BOT_RULES_[$i:chat_id]}
+			chat_name=${_BOT_RULES_[$i:chat_name]}
+			chat_type=${_BOT_RULES_[$i:chat_type]}
+			language=${_BOT_RULES_[$i:language_code]}
+			text=${_BOT_RULES_[$i:text]}
+			entities_type=${_BOT_RULES_[$i:entities_type]}
+			file_type=${_BOT_RULES_[$i:file_type]}
+			mime_type=${_BOT_RULES_[$i:mime_type]}
+			query_id=${_BOT_RULES_[$i:query_id]}
+			query_data=${_BOT_RULES_[$i:query_data]}
+			chat_member=${_BOT_RULES_[$i:chat_member]}
+			num_args=${_BOT_RULES_[$i:num_args]}
+			time=${_BOT_RULES_[$i:time]}
+			date=${_BOT_RULES_[$i:date]}
+			weekday=${_BOT_RULES_[$i:weekday]}
+			user_status=${_BOT_RULES_[$i:user_status]}
+			message_status=${_BOT_RULES_[$i:message_status]}
+			reply_message=${_BOT_RULES_[$i:bot_reply_message]}
+			send_message=${_BOT_RULES_[$i:bot_send_message]}
+			forward_message=${_BOT_RULES_[$i:bot_forward_message]}
+			reply_markup=${_BOT_RULES_[$i:bot_reply_markup]}
+			parse_mode=${_BOT_RULES_[$i:bot_parse_mode]}
+			continue=${_BOT_RULES_[$i:continue]}
 
-			rule_source=$(jq -r ".rule[$i].source" <<< $_BOT_RULES_)
-			rule_line=$(jq -r ".rule[$i].line" <<< $_BOT_RULES_)
-			rule_name=$(jq -r ".rule[$i].name" <<< $_BOT_RULES_)
-			action=$(jq -r ".rule[$i].action" <<< $_BOT_RULES_)
-			action_args=$(jq -r ".rule[$i].action_args" <<< $_BOT_RULES_)
-			exec=$(jq -r ".rule[$i].exec" <<< $_BOT_RULES_)
-			message_id=$(jq -r ".rule[$i].message_id" <<< $_BOT_RULES_)
-			is_bot=$(jq -r  ".rule[$i].is_bot" <<< $_BOT_RULES_)
-			command=$(jq -r ".rule[$i].command" <<< $_BOT_RULES_)
-			user_id=$(jq -r ".rule[$i].user_id" <<< $_BOT_RULES_)
-			username=$(jq -r ".rule[$i].username" <<< $_BOT_RULES_)
-			chat_id=$(jq -r ".rule[$i].chat_id" <<< $_BOT_RULES_)
-			chat_name=$(jq -r ".rule[$i].chat_name" <<< $_BOT_RULES_)
-			chat_type=$(jq -r ".rule[$i].chat_type" <<< $_BOT_RULES_)
-			language=$(jq -r ".rule[$i].language_code" <<< $_BOT_RULES_)
-			text=$(jq -r ".rule[$i].text" <<< $_BOT_RULES_)
-			entities_type=$(jq -r ".rule[$i].entities_type" <<< $_BOT_RULES_)
-			file_type=$(jq -r ".rule[$i].file_type" <<< $_BOT_RULES_)
-			mime_type=$(jq -r ".rule[$i].mime_type" <<< $_BOT_RULES_)
-			query_id=$(jq -r ".rule[$i].query_id" <<< $_BOT_RULES_)
-			query_data=$(jq -r ".rule[$i].query_data" <<< $_BOT_RULES_)
-			chat_member=$(jq -r ".rule[$i].chat_member" <<< $_BOT_RULES_)
-			num_args=$(jq -r ".rule[$i].num_args" <<< $_BOT_RULES_)
-			time=$(jq -r ".rule[$i].time" <<< $_BOT_RULES_)
-			date=$(jq -r ".rule[$i].date" <<< $_BOT_RULES_)
-			weekday=$(jq -r ".rule[$i].weekday" <<< $_BOT_RULES_)
-			user_status=$(jq -r ".rule[$i].user_status" <<< $_BOT_RULES_)
-			message_status=$(jq -r ".rule[$i].message_status" <<< $_BOT_RULES_)
-			reply_message=$(jq -r ".rule[$i].bot_reply_message" <<< $_BOT_RULES_)
-			send_message=$(jq -r ".rule[$i].bot_send_message" <<< $_BOT_RULES_)
-			forward_message=$(jq -r ".rule[$i].bot_forward_message" <<< $_BOT_RULES_)
-			reply_markup=$(jq -r ".rule[$i].bot_reply_markup" <<< $_BOT_RULES_)
-			parse_mode=$(jq -r ".rule[$i].bot_parse_mode" <<< $_BOT_RULES_)
-			continue=$(jq -r ".rule[$i].continue" <<< $_BOT_RULES_)
-
-			u_message_text=${message_text[$uid]:-${edited_message_text[$uid]:-${callback_query_message_text[$uid]:-${inline_query_query[$uid]:-${chosen_inline_result_query[$uid]}}}}}
-			u_message_id=${message_message_id[$uid]:-${edited_message_message_id[$uid]:-${callback_query_message_message_id[$uid]:-${inline_query_id[$uid]:-${chosen_inline_result_result_id[$uid]}}}}}
-			u_message_from_is_bot=${message_from_is_bot[$uid]:-${edited_message_from_is_bot[$uid]:-${callback_query_from_is_bot[$uid]:-${inline_query_from_is_bot[$uid]:-${chosen_inline_result_from_is_bot[$uid]}}}}}
-			u_message_from_id=${message_from_id[$uid]:-${edited_message_from_id[$uid]:-${callback_query_from_id[$uid]:-${inline_query_from_id[$uid]:-${chosen_inline_result_from_id[$uid]}}}}}
-			u_message_from_username=${message_from_username[$uid]:-${edited_message_from_username[$uid]:-${callback_query_from_username[$uid]:-${inline_query_from_username[$uid]:-${chosen_inline_result_from_username[$uid]}}}}}
-			u_message_from_language_code=${message_from_language_code[$uid]:-${edited_message_from_language_code[$uid]:-${callback_query_from_language_code[$uid]:-${inline_query_from_language_code[$uid]:-${chosen_inline_result_from_language_code[$uid]}}}}}
-			u_message_chat_id=${message_chat_id[$uid]:-${edited_message_chat_id[$uid]:-${callback_query_message_chat_id[$uid]}}}
-			u_message_chat_username=${message_chat_username[$uid]:-${edited_message_chat_username[$uid]:-${callback_query_message_chat_username[$uid]}}}
-			u_message_chat_type=${message_chat_type[$uid]:-${edited_message_chat_type[$uid]:-${callback_query_message_chat_type[$uid]}}}
-			u_message_date=${message_date[$uid]:-${edited_message_edit_date[$uid]:-${callback_query_message_date[$uid]}}}
-			u_message_entities_type=${message_entities_type[$uid]:-${edited_message_entities_type[$uid]:-${callback_query_message_entities_type[$uid]}}}
-			u_message_mime_type=${message_document_mime_type[$uid]:-${message_video_mime_type[$uid]:-${message_audio_mime_type[$uid]:-${message_voice_mime_type[$uid]}}}}
-	
 			IFS=' ' read -ra args <<< $u_message_text
 			
 			[[ $num_args		== +any ||	${#args[@]}							== @(${num_args//,/|})						]]	&&
@@ -5199,6 +5360,7 @@ _EOF
 			done 
 
 			${continue:-return 0}
+		
 		done
 
 		return 1
@@ -5305,8 +5467,8 @@ _EOF
 		done
 	
 		# Log (thread)	
-		[[ $_BOT_LOG_FILE_ ]] && CreateLog ${#update_id[@]} $jq_obj &
-	
+		[[ $_BOT_LOG_FILE_ ]] && CreateLog ${#update_id[@]} $jq_obj
+
    		 # Status
    	 	return $?
 	}
