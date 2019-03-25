@@ -122,7 +122,7 @@ declare -A _BOT_HANDLE_
 declare -A _BOT_RULES_
 declare -A return
 
-declare _BOT_RULES_INDEX_
+declare -i _BOT_RULES_INDEX_
 declare _VAR_INIT_
 
 Json() { local obj=$(jq -Mc "$1" <<< "${*:2}"); obj=${obj#\"}; echo "${obj%\"}"; }
@@ -4992,9 +4992,8 @@ _EOF
 		[[ $name ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-s, --name]"
 		[[ ${_BOT_RULES_[$name]} ]] && MessageError API "$_ERR_RULE_ALREADY_EXISTS_" "[-s, --name]" "$name"
 
-		i=${_BOT_RULES_INDEX_:-0}
+		i=${_BOT_RULES_INDEX_:=0}
 
-		_BOT_RULES_[$name:index]=$i	
 		_BOT_RULES_[$i:source]=${BASH_SOURCE[1]##*/}
 		_BOT_RULES_[$i:line]=${BASH_LINENO}
 		_BOT_RULES_[$i:name]=${name}
