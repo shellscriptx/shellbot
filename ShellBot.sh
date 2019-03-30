@@ -4999,28 +4999,28 @@ _EOF
 		_BOT_RULES_[$i:name]=${name}
 		_BOT_RULES_[$i:action]=${action}
 		_BOT_RULES_[$i:action_args]=${action_args}
-		_BOT_RULES_[$i:user_id]=${user_id:-+any}
-		_BOT_RULES_[$i:username]=${username:-+any}
-		_BOT_RULES_[$i:chat_id]=${chat_id:-+any}
-		_BOT_RULES_[$i:chat_name]=${chat_name:-+any}
-		_BOT_RULES_[$i:chat_type]=${chat_type:-+any}
-		_BOT_RULES_[$i:language_code]=${language:-+any}
-		_BOT_RULES_[$i:message_id]=${message_id:-+any}
-		_BOT_RULES_[$i:is_bot]=${is_bot:-+any}
-		_BOT_RULES_[$i:command]=${command:-+any}
+		_BOT_RULES_[$i:user_id]=${user_id}
+		_BOT_RULES_[$i:username]=${username}
+		_BOT_RULES_[$i:chat_id]=${chat_id}
+		_BOT_RULES_[$i:chat_name]=${chat_name}
+		_BOT_RULES_[$i:chat_type]=${chat_type}
+		_BOT_RULES_[$i:language_code]=${language}
+		_BOT_RULES_[$i:message_id]=${message_id}
+		_BOT_RULES_[$i:is_bot]=${is_bot}
+		_BOT_RULES_[$i:command]=${command}
 		_BOT_RULES_[$i:text]=${text}
-		_BOT_RULES_[$i:entities_type]=${entities_type:-+any}
-		_BOT_RULES_[$i:file_type]=${file_type:-+any}
-		_BOT_RULES_[$i:mime_type]=${mime_type:-+any}
-		_BOT_RULES_[$i:query_data]=${query_data:-+any}
-		_BOT_RULES_[$i:query_id]=${query_id:-+any}
-		_BOT_RULES_[$i:chat_member]=${chat_member:-+any}
-		_BOT_RULES_[$i:num_args]=${num_args:-+any}
-		_BOT_RULES_[$i:time]=${time:-+any}
-		_BOT_RULES_[$i:date]=${date:-+any}
-		_BOT_RULES_[$i:weekday]=${weekday:-+any}
-		_BOT_RULES_[$i:user_status]=${user_status:-+any}
-		_BOT_RULES_[$i:message_status]=${message_status:-+any}
+		_BOT_RULES_[$i:entities_type]=${entities_type}
+		_BOT_RULES_[$i:file_type]=${file_type}
+		_BOT_RULES_[$i:mime_type]=${mime_type}
+		_BOT_RULES_[$i:query_data]=${query_data}
+		_BOT_RULES_[$i:query_id]=${query_id}
+		_BOT_RULES_[$i:chat_member]=${chat_member}
+		_BOT_RULES_[$i:num_args]=${num_args}
+		_BOT_RULES_[$i:time]=${time}
+		_BOT_RULES_[$i:date]=${date}
+		_BOT_RULES_[$i:weekday]=${weekday}
+		_BOT_RULES_[$i:user_status]=${user_status}
+		_BOT_RULES_[$i:message_status]=${message_status}
 		_BOT_RULES_[$i:bot_reply_message]=${reply_message}
 		_BOT_RULES_[$i:bot_send_message]=${send_message}
 		_BOT_RULES_[$i:bot_forward_message]=${forward_message}
@@ -5038,16 +5038,9 @@ _EOF
 
 	ShellBot.manageRules()
 	{
-		local uid rule action command user_id username
-		local message_id is_bot text entities_type file_type
-		local chat_id chat_type language time date botcmd 
-		local err tm stime etime ctime mime_type weekday
-		local dt sdate edate cdate query_data query_id
-		local chat_member mem ent type num_args args
-		local action_args user_status status out reply_message
-		local rule_name rule_line rule_source chat_name fwid
-		local reply_markup send_message forward_message parse_mode
-		local stdout buffer exec continue i
+		local uid rule botcmd err tm stime etime ctime mime_type weekday
+		local dt sdate edate cdate mem ent type args status out fwid
+	   	local stdout buffer i
 
 		local u_message_text u_message_id u_message_from_is_bot 
 		local u_message_from_id u_message_from_username msgstatus argpos
@@ -5146,62 +5139,27 @@ _EOF
 
 		# Regras
 		for ((i=0; i < _BOT_RULES_INDEX_; i++)); do
-			
-			rule_source=${_BOT_RULES_[$i:source]}
-			rule_line=${_BOT_RULES_[$i:line]}
-			rule_name=${_BOT_RULES_[$i:name]}
-			action=${_BOT_RULES_[$i:action]}
-			action_args=${_BOT_RULES_[$i:action_args]}
-			exec=${_BOT_RULES_[$i:exec]}
-			message_id=${_BOT_RULES_[$i:message_id]}
-			is_bot=${_BOT_RULES_[$i:is_bot]}
-			command=${_BOT_RULES_[$i:command]}
-			user_id=${_BOT_RULES_[$i:user_id]}
-			username=${_BOT_RULES_[$i:username]}
-			chat_id=${_BOT_RULES_[$i:chat_id]}
-			chat_name=${_BOT_RULES_[$i:chat_name]}
-			chat_type=${_BOT_RULES_[$i:chat_type]}
-			language=${_BOT_RULES_[$i:language_code]}
-			text=${_BOT_RULES_[$i:text]}
-			entities_type=${_BOT_RULES_[$i:entities_type]}
-			file_type=${_BOT_RULES_[$i:file_type]}
-			mime_type=${_BOT_RULES_[$i:mime_type]}
-			query_id=${_BOT_RULES_[$i:query_id]}
-			query_data=${_BOT_RULES_[$i:query_data]}
-			chat_member=${_BOT_RULES_[$i:chat_member]}
-			num_args=${_BOT_RULES_[$i:num_args]}
-			time=${_BOT_RULES_[$i:time]}
-			date=${_BOT_RULES_[$i:date]}
-			weekday=${_BOT_RULES_[$i:weekday]}
-			user_status=${_BOT_RULES_[$i:user_status]}
-			message_status=${_BOT_RULES_[$i:message_status]}
-			reply_message=${_BOT_RULES_[$i:bot_reply_message]}
-			send_message=${_BOT_RULES_[$i:bot_send_message]}
-			forward_message=${_BOT_RULES_[$i:bot_forward_message]}
-			reply_markup=${_BOT_RULES_[$i:bot_reply_markup]}
-			parse_mode=${_BOT_RULES_[$i:bot_parse_mode]}
-			continue=${_BOT_RULES_[$i:continue]}
-
+		
 			IFS=' ' read -ra args <<< $u_message_text
 			
-			[[ $num_args		== +any ||	${#args[@]}							== @(${num_args//,/|})						]]	&&
-			[[ $command			== +any	||	${u_message_text%% *}				== @(${command//,/|})?(@${_BOT_INFO_[3]}) 	]]	&&
-			[[ $message_id 		== +any	||	$u_message_id 						== @(${message_id//,/|})					]] 	&&
-			[[ $is_bot 			== +any ||	$u_message_from_is_bot				== @(${is_bot//,/|})						]]	&&
-			[[ $user_id			== +any ||	$u_message_from_id					== @(${user_id//,/|})						]]	&&
-			[[ $username		== +any ||	$u_message_from_username			== @(${username//,/|}) 						]]	&&
-			[[ $language		== +any	||	$u_message_from_language_code		== @(${language//,/|}) 						]]	&&
-			[[ $chat_id			== +any	||	$u_message_chat_id					== @(${chat_id//,/|})						]] 	&&
-			[[ $chat_name		== +any	||	$u_message_chat_username			== @(${chat_name//,/|})						]] 	&&
-			[[ $chat_type		== +any	||	$u_message_chat_type				== @(${chat_type//,/|})						]]	&&
-			[[ ! $text					||	$u_message_text						=~ $text									]]	&&
-			[[ $mime_type		== +any	||	$u_message_mime_type				== @(${mime_type//,/|})						]]	&&
-			[[ $query_id		== +any	||	${callback_query_id[$uid]}			== @(${query_id//,/|})						]]	&&
-			[[ $query_data		== +any	||	${callback_query_data[$uid]}		== @(${query_data//,/|})					]]	&&
-			[[ $weekday			== +any	|| 	$(printf '%(%u)T' $u_message_date) 	== @(${weekday//,/|})						]]	|| continue
+			[[ ! ${_BOT_RULES_[$i:num_args]}	||	${#args[@]}							== @(${_BOT_RULES_[$i:num_args]//,/|})						]]	&&
+			[[ ! ${_BOT_RULES_[$i:command]}		||	${u_message_text%% *}				== @(${_BOT_RULES_[$i:command]//,/|})?(@${_BOT_INFO_[3]}) 	]]	&&
+			[[ ! ${_BOT_RULES_[$i:message_id]} 	||	$u_message_id 						== @(${_BOT_RULES_[$i:message_id]//,/|})					]] 	&&
+			[[ ! ${_BOT_RULES_[$i:is_bot]} 		||	$u_message_from_is_bot				== @(${_BOT_RULES_[$i:is_bot]//,/|})						]]	&&
+			[[ ! ${_BOT_RULES_[$i:user_id]}		||	$u_message_from_id					== @(${_BOT_RULES_[$i:user_id]//,/|})						]]	&&
+			[[ ! ${_BOT_RULES_[$i:username]}	||	$u_message_from_username			== @(${_BOT_RULES_[$i:username]//,/|}) 						]]	&&
+			[[ ! ${_BOT_RULES_[$i:language]}	||	$u_message_from_language_code		== @(${_BOT_RULES_[$i:language]//,/|}) 						]]	&&
+			[[ ! ${_BOT_RULES_[$i:chat_id]}		||	$u_message_chat_id					== @(${_BOT_RULES_[$i:chat_id]//,/|})						]] 	&&
+			[[ ! ${_BOT_RULES_[$i:chat_name]}	||	$u_message_chat_username			== @(${_BOT_RULES_[$i:chat_name]//,/|})						]] 	&&
+			[[ ! ${_BOT_RULES_[$i:chat_type]}	||	$u_message_chat_type				== @(${_BOT_RULES_[$i:chat_type]//,/|})						]]	&&
+			[[ ! ${_BOT_RULES_[$i:text]}		||	$u_message_text						=~ ${_BOT_RULES_[$i:text]}									]]	&&
+			[[ ! ${_BOT_RULES_[$i:mime_type]}	||	$u_message_mime_type				== @(${_BOT_RULES_[$i:mime_type]//,/|})						]]	&&
+			[[ ! ${_BOT_RULES_[$i:query_id]}	||	${callback_query_id[$uid]}			== @(${_BOT_RULES_[$i:query_id]//,/|})						]]	&&
+			[[ ! ${_BOT_RULES_[$i:query_data]}	||	${callback_query_data[$uid]}		== @(${_BOT_RULES_[$i:query_data]//,/|})					]]	&&
+			[[ ! ${_BOT_RULES_[$i:weekday]}		|| 	$(printf '%(%u)T' $u_message_date) 	== @(${_BOT_RULES_[$i:weekday]//,/|})						]]	|| continue
 			
-			for msgstatus in ${message_status//[,|]/ }; do
-				[[ $msgstatus == +any 														]]	||
+			for msgstatus in ${_BOT_RULES_[$i:message_status]//[,|]/ }; do
+				[[ ! $msgstatus  															]]	||
 				[[ $msgstatus == pinned		&& ${message_pinned_message_message_id[$uid]} 	]] 	||
 				[[ $msgstatus == edited 	&& ${edited_message_message_id[$uid]}			]] 	||
 				[[ $msgstatus == forwarded	&& ${message_forward_from_id[$uid]}				]]	||
@@ -5213,23 +5171,23 @@ _EOF
 				
 			(($?)) && continue
 
-			for ent in ${entities_type//[,|]/ }; do
-				[[ $ent == +any 										]]	||
+			for ent in ${_BOT_RULES_[$i:entities_type]//[,|]/ }; do
+				[[ ! $ent 		 										]]	||
 				[[ $ent == @(${u_message_entities_type//$_BOT_DELM_/|})	]] 	&& break
 			done
 
 			(($?)) && continue
 	
-			for mem in ${chat_member//[,|]/ }; do
-				[[ $mem == +any											]] ||
+			for mem in ${_BOT_RULES_[$i:chat_member]//[,|]/ }; do
+				[[ ! $mem												]] ||
 				[[ $mem == new 	&& ${message_new_chat_member_id[$uid]} 	]] ||
 				[[ $mem == left	&& ${message_left_chat_member_id[$uid]} ]] && break
 			done
 			
 			(($?)) && continue
 
-			for type in ${file_type//[,|]/ }; do
-				[[ $type == +any 																								]] 	||
+			for type in ${_BOT_RULES_[$i:file_type]//[,|]/ }; do
+				[[ ! $type		 																								]] 	||
 				[[ $type == document 	&& ${message_document_file_id[$uid]}	&& 	! ${message_document_thumb_file_id[$uid]}	]] 	||
 				[[ $type == gif 		&& ${message_document_file_id[$uid]}  	&&	${message_document_thumb_file_id[$uid]}		]] 	||
 				[[ $type == photo		&& ${message_photo_file_id[$uid]} 														]] 	||
@@ -5237,24 +5195,24 @@ _EOF
 				[[ $type == video		&& ${message_video_file_id[$uid]} 														]]	||
 				[[ $type == audio		&& ${message_audio_file_id[$uid]} 														]]	||
 				[[ $type == voice		&& ${message_voice_file_id[$uid]} 														]]	||
-				[[ $type == contact	&& ${message_contact_user_id[$uid]} 														]]	||
+				[[ $type == contact		&& ${message_contact_user_id[$uid]} 													]]	||
 				[[ $type == location	&& ${message_location_latitude[$uid]}													]]	&& break
 			done
 					
 			(($?)) && continue
 
-			for tm in ${time//[,|]/ }; do
+			for tm in ${_BOT_RULES_[$i:time]//[,|]/ }; do
 				IFS='-' read stime etime <<< $tm
 				printf -v ctime '%(%H:%M)T' $u_message_date
 
-				[[ $time	== +any 					]]	||
+				[[ ! ${_BOT_RULES_[$i:time]}			]]	||
 				[[ $ctime == @($stime|$etime) 			]]	||
 				[[ $ctime > $stime && $ctime < $etime 	]]	&& break
 			done
 					
 			(($?)) && continue
 	
-			for dt in ${date//[,|]/ }; do
+			for dt in ${_BOT_RULES_[$i:date]//[,|]/ }; do
 
 				IFS='-' read sdate edate <<< $dt
 				IFS='/' read -a sdate <<< $sdate
@@ -5265,14 +5223,14 @@ _EOF
 
 				printf -v cdate '%(%Y/%m/%d)T' $u_message_date
 					
-				[[ $date	== +any 					]] 	||
+				[[ ! ${_BOT_RULES_[$i:date]}			]] 	||
 				[[ $cdate == @($sdate|$edate) 			]] 	||
 				[[ $cdate > $sdate && $cdate < $edate 	]]	&& break
 			done
 
 			(($?)) && continue
 	
-			if [[ $user_status != +any ]]; then
+			if [[ ${_BOT_RULES_[$i:user_status]} ]]; then
 				case $_BOT_TYPE_RETURN_ in
 					value)
 						out=$(ShellBot.getChatMember 	--chat_id $u_message_chat_id \
@@ -5295,7 +5253,7 @@ _EOF
 						status=${return[status]}
 						;;
 				esac
-				[[ $status == @(${user_status//,/|}) ]]	|| continue
+				[[ $status == @(${_BOT_RULES_[$i:user_status]//,/|}) ]]	|| continue
 			fi
 			
 			# Monitor
@@ -5306,44 +5264,44 @@ _EOF
 										"${u_message_chat_type}"								\
 										"${u_message_chat_username:--}"							\
 										"${u_message_from_username:--}"							\
-										"${rule_source}"										\
-										"${rule_line}"											\
-										"${rule_name}" 											\
-										"${action:--}"											\
-										"${exec:--}"
+										"${_BOT_RULES_[$i:source]}"								\
+										"${_BOT_RULES_[$i:line]}"								\
+										"${_BOT_RULES_[$i:name]}" 								\
+										"${_BOT_RULES_[$i:action]:--}"							\
+										"${_BOT_RULES_[$i:exec]:--}"
 			
 			# Log	
 			[[ $_BOT_LOG_FILE_ ]] 	&&	printf '%s: %s: %s: %s: %s: %s: %s\n'	\
 									 	"$(printf '%(%d/%m/%Y %H:%M:%S)T')"		\
 								 	 	"${FUNCNAME}"							\
-									 	"${rule_source}"						\
-									 	"${rule_line}"							\
-									 	"${rule_name}"							\
-										"${action:--}"							\
-										"${exec:--}"							>> "$_BOT_LOG_FILE_"
+									 	"${_BOT_RULES_[$i:source]}"				\
+									 	"${_BOT_RULES_[$i:line]}"				\
+									 	"${_BOT_RULES_[$i:name]}"				\
+										"${_BOT_RULES_[$i:action]:--}"			\
+										"${_BOT_RULES_[$i:exec]:--}"			>> "$_BOT_LOG_FILE_"
 
-			[[ $reply_message ]] && ShellBot.sendMessage	--chat_id $u_message_chat_id						\
-															--reply_to_message_id $u_message_id 				\
-															--text "$(FlagConv $uid "$reply_message")"			\
-															${reply_markup:+--reply_markup "$reply_markup"}		\
-															${parse_mode:+--parse_mode $parse_mode}				&>/dev/null
+			[[ ${_BOT_RULES_[$i:bot_reply_message]} ]] && ShellBot.sendMessage	--chat_id $u_message_chat_id																\
+																				--reply_to_message_id $u_message_id 														\
+																				--text "$(FlagConv $uid "${_BOT_RULES_[$i:bot_reply_message]}")"							\
+																				${_BOT_RULES_[$i:bot_reply_markup]:+--reply_markup "${_BOT_RULES_[$i:bot_reply_markup]}"}	\
+																				${_BOT_RULES_[$i:bot_parse_mode]:+--parse_mode ${_BOT_RULES_[$i:bot_parse_mode]}}			&>/dev/null
 				
-			[[ $send_message ]] && ShellBot.sendMessage	--chat_id $u_message_chat_id							\
-															--text "$(FlagConv $uid "$send_message")" 			\
-															${reply_markup:+--reply_markup "$reply_markup"}		\
-															${parse_mode:+--parse_mode $parse_mode}				&>/dev/null
+			[[ ${_BOT_RULES_[$i:bot_send_message]} ]] && ShellBot.sendMessage	--chat_id $u_message_chat_id																\
+																				--text "$(FlagConv $uid "${_BOT_RULES_[$i:bot_send_message]}")" 							\
+																				${_BOT_RULES_[$i:bot_reply_markup]:+--reply_markup "${_BOT_RULES_[$i:bot_reply_markup]}"}	\
+																				${_BOT_RULES_[$i:bot_parse_mode]:+--parse_mode ${_BOT_RULES_[$i:bot_parse_mode]}}			&>/dev/null
 				
-			for fwid in ${forward_message//[,|]/ }; do
+			for fwid in ${_BOT_RULES_[$i:bot_forward_message]//[,|]/ }; do
 				ShellBot.forwardMessage		--chat_id $fwid						\
 											--from_chat_id $u_message_chat_id 	\
 											--message_id $u_message_id			&>/dev/null
 			done
 
 			# Chama a função passando os argumentos posicionais. (se existir)
-			${action:+$action ${action_args:-${args[*]}}}
+			${_BOT_RULES_[$i:action]:+${_BOT_RULES_[$i:action]} ${_BOT_RULES_[$i:action_args]:-${args[*]}}}
 		
 			# Executa a linha de comando e salva o retorno.
-			stdout=${exec:+$(set -- ${args[*]}; eval $(FlagConv $uid "$exec") 2>&1)}
+			stdout=${_BOT_RULES_[$i:exec]:+$(set -- ${args[*]}; eval $(FlagConv $uid "${_BOT_RULES_[$i:exec]}") 2>&1)}
 
 			while [[ $stdout ]]; do
 				# Salva em buffer os primeiros 4096 caracteres.
@@ -5358,7 +5316,7 @@ _EOF
 				stdout=${stdout:4096}
 			done 
 
-			${continue:-return 0}
+			${_BOT_RULES_[$i:continue]:-return 0}
 		
 		done
 
