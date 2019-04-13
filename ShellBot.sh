@@ -164,36 +164,73 @@ CreateLog()
 		exec 2<&-
 
 		# Objeto (tipo)
-		if 		[[ ${message_contact_phone_number[$i]:-${channel_post_contact_phone_number[$i]}}		]]; then obj=contact
-		elif	[[ ${message_sticker_file_id[$i]:-${channel_post_sticker_file_id[$i]}}					]]; then obj=sticker
-		elif	[[ ${message_animation_file_id[$i]:-${channel_post_animation_file_id[$i]}}				]]; then obj=animation
-		elif	[[ ${message_photo_file_id[$i]:-${channel_post_photo_file_id[$i]}}						]]; then obj=photo
-		elif	[[ ${message_audio_file_id[$i]:-${channel_post_audio_file_id[$i]}}						]]; then obj=audio
-		elif	[[ ${message_video_file_id[$i]:-${channel_post_video_file_id[$i]}}						]]; then obj=video
-		elif	[[ ${message_voice_file_id[$i]:-${channel_post_voice_file_id[$i]}}						]]; then obj=voice
-		elif	[[ ${message_document_file_id[$i]:-${channel_post_document_file_id[$i]}}				]]; then obj=document
-		elif	[[ ${message_venue_location_latitude[$i]:-${channel_post_venue_location_latitude[$i]}}	]]; then obj=venue
-		elif	[[ ${message_location_latitude[$i]:-${channel_post_location_latitude[$i]}}				]]; then obj=location
-		elif	[[ ${message_text[$i]:-${channel_post_text[$i]}}										]]; then obj=text
-		elif 	[[ ${callback_query_id[$i]}																]]; then obj=callback
-		elif 	[[ ${inline_query_id[$i]}																]]; then obj=inline
-		elif	[[ ${chosen_inline_result_result_id[$i]}												]]; then obj=chosen
+		if 		[[ ${message_contact_phone_number[$i]:-${edited_message_contact_phone_number[$i]}}					]] ||
+				[[ ${channel_post_contact_phone_number[$i]:-${edited_channel_post_contact_phone_number[$i]}}		]]; then obj=contact
+		elif	[[ ${message_sticker_file_id[$i]:-${edited_message_sticker_file_id[$i]}}							]] ||
+				[[ ${channel_post_sticker_file_id[$i]:-${edited_channel_post_sticker_file_id[$i]}}					]]; then obj=sticker
+		elif	[[ ${message_animation_file_id[$i]:-${edited_message_animation_file_id[$i]}}						]] ||
+				[[ ${channel_post_animation_file_id[$i]:-${edited_channel_post_animation_file_id[$i]}}				]]; then obj=animation
+		elif	[[ ${message_photo_file_id[$i]:-${edited_message_photo_file_id[$i]}}								]] ||
+				[[ ${channel_post_photo_file_id[$i]:-${edited_channel_post_photo_file_id[$i]}}						]]; then obj=photo
+		elif	[[ ${message_audio_file_id[$i]:-${edited_message_audio_file_id[$i]}}								]] ||
+				[[ ${channel_post_audio_file_id[$i]:-${edited_channel_post_audio_file_id[$i]}}						]]; then obj=audio
+		elif	[[ ${message_video_file_id[$i]:-${edited_message_video_file_id[$i]}}								]] ||
+				[[ ${channel_post_video_file_id[$i]:-${edited_channel_post_video_file_id[$i]}}						]]; then obj=video
+		elif	[[ ${message_voice_file_id[$i]:-${edited_message_voice_file_id[$i]}}								]] ||
+				[[ ${channel_post_voice_file_id[$i]:-${edited_channel_post_voice_file_id[$i]}}						]]; then obj=voice
+		elif	[[ ${message_document_file_id[$i]:-${edited_message_document_file_id[$i]}}							]] ||
+				[[ ${channel_post_document_file_id[$i]:-${edited_channel_post_document_file_id[$i]}}				]]; then obj=document
+		elif	[[ ${message_venue_location_latitude[$i]:-${edited_message_venue_location_latitude[$i]}}			]] ||
+				[[ ${channel_post_venue_location_latitude[$i]-${edited_channel_post_venue_location_latitude[$i]}}	]]; then obj=venue
+		elif	[[ ${message_location_latitude[$i]:-${edited_message_location_latitude[$i]}}						]] ||
+				[[ ${channel_post_location_latitude[$i]:-${edited_channel_post_location_latitude[$i]}}				]]; then obj=location
+		elif	[[ ${message_text[$i]:-${edited_message_text[$i]}}													]] ||
+				[[ ${channel_post_text[$i]:-${edited_channel_post_text[$i]}}										]]; then obj=text
+		elif 	[[ ${callback_query_id[$i]}																			]]; then obj=callback
+		elif 	[[ ${inline_query_id[$i]}																			]]; then obj=inline
+		elif	[[ ${chosen_inline_result_result_id[$i]}															]]; then obj=chosen
 		fi
 	
 		# Objeto (id)	
-		[[ ${oid:=${message_contact_phone_number[$i]}} 		]] ||
-		[[ ${oid:=${message_sticker_file_id[$i]}}			]] ||
-		[[ ${oid:=${message_animation_file_id[$i]}}			]] ||
-		[[ ${oid:=${message_photo_file_id[$i]}}				]] ||
-		[[ ${oid:=${message_audio_file_id[$i]}}				]] ||
-		[[ ${oid:=${message_video_file_id[$i]}}				]] ||
-		[[ ${oid:=${message_voice_file_id[$i]}}				]] ||
-		[[ ${oid:=${message_document_file_id[$i]}}			]] ||
-		[[ ${oid:=${callback_query_id[$i]}}					]] ||
-		[[ ${oid:=${inline_query_id[$i]}} 					]] ||
-		[[ ${oid:=${chosen_inline_result_result_id[$i]}}	]] ||
-		[[ ${oid:=${message_message_id[$i]}}				]] ||
-		[[ ${oid:=${channel_post_message_id[$i]}}			]]
+		[[ ${oid:=${message_contact_phone_number[$i]}} 				]] ||
+		[[ ${oid:=${message_sticker_file_id[$i]}}					]] ||
+		[[ ${oid:=${message_animation_file_id[$i]}}					]] ||
+		[[ ${oid:=${message_photo_file_id[$i]}}						]] ||
+		[[ ${oid:=${message_audio_file_id[$i]}}						]] ||
+		[[ ${oid:=${message_video_file_id[$i]}}						]] ||
+		[[ ${oid:=${message_voice_file_id[$i]}}						]] ||
+		[[ ${oid:=${message_document_file_id[$i]}}					]] ||
+		[[ ${oid:=${edited_message_contact_phone_number[$i]}} 		]] ||
+		[[ ${oid:=${edited_message_sticker_file_id[$i]}}			]] ||
+		[[ ${oid:=${edited_message_animation_file_id[$i]}}			]] ||
+		[[ ${oid:=${edited_message_photo_file_id[$i]}}				]] ||
+		[[ ${oid:=${edited_message_audio_file_id[$i]}}				]] ||
+		[[ ${oid:=${edited_message_video_file_id[$i]}}				]] ||
+		[[ ${oid:=${edited_message_voice_file_id[$i]}}				]] ||
+		[[ ${oid:=${edited_message_document_file_id[$i]}}			]] ||
+		[[ ${oid:=${channel_post_contact_phone_number[$i]}} 		]] ||
+		[[ ${oid:=${channel_post_sticker_file_id[$i]}}				]] ||
+		[[ ${oid:=${channel_post_animation_file_id[$i]}}			]] ||
+		[[ ${oid:=${channel_post_photo_file_id[$i]}}				]] ||
+		[[ ${oid:=${channel_post_audio_file_id[$i]}}				]] ||
+		[[ ${oid:=${channel_post_video_file_id[$i]}}				]] ||
+		[[ ${oid:=${channel_post_voice_file_id[$i]}}				]] ||
+		[[ ${oid:=${channel_post_document_file_id[$i]}}				]] ||
+		[[ ${oid:=${edited_channel_post_contact_phone_number[$i]}} 	]] ||
+		[[ ${oid:=${edited_channel_post_sticker_file_id[$i]}}		]] ||
+		[[ ${oid:=${edited_channel_post_animation_file_id[$i]}}		]] ||
+		[[ ${oid:=${edited_channel_post_photo_file_id[$i]}}			]] ||
+		[[ ${oid:=${edited_channel_post_audio_file_id[$i]}}			]] ||
+		[[ ${oid:=${edited_channel_post_video_file_id[$i]}}			]] ||
+		[[ ${oid:=${edited_channel_post_voice_file_id[$i]}}			]] ||
+		[[ ${oid:=${edited_channel_post_document_file_id[$i]}}		]] ||
+		[[ ${oid:=${message_message_id[$i]}}						]] ||
+		[[ ${oid:=${edited_message_message_id[$i]}}					]] ||
+		[[ ${oid:=${channel_post_message_id[$i]}}					]] ||
+		[[ ${oid:=${edited_channel_post_message_id[$i]}}			]] ||
+		[[ ${oid:=${callback_query_id[$i]}}							]] ||
+		[[ ${oid:=${inline_query_id[$i]}} 							]] ||
+		[[ ${oid:=${chosen_inline_result_result_id[$i]}}			]]
 
 		# Remetente (id)
 		[[ ${fid:=${message_from_id[$i]}}				]] ||
@@ -215,8 +252,8 @@ CreateLog()
 		[[ ${fname:=${callback_query_from_first_name[$i]}} 			]] ||
 		[[ ${fname:=${inline_query_from_first_name[$i]}}			]] ||
 		[[ ${fname:=${chosen_inline_result_from_first_name[$i]}}	]] ||
-		[[ ${fname:=${channel_post_author_signature[$i]}}			]]
-
+		[[ ${fname:=${channel_post_author_signature[$i]}}			]] ||
+		[[ ${fname:=${edited_channel_post_author_signature[$i]}}	]]
 
 		# Usuário (conta)
 		[[ ${fuser:=${message_from_username[$i]}}				]] ||
@@ -399,23 +436,17 @@ CheckArgType()
 	# de erro é retornada e o script/thread é finalizado com status '1'.
 	case $1 in
 		user)		id "$3" &>/dev/null						|| MessageError API "$_ERR_SERVICE_USER_NOT_FOUND_" "$2" "$3";;
-		func)		[[ $(type -t "$3") == function		]] 	|| MessageError API "$_ERR_FUNCTION_NOT_FOUND_" "$2" "$3";;
-		var)		[[ -v $3 							]] 	|| MessageError API "$_ERR_VAR_NAME_" "$2" "$3";;
-		int)		[[ $3 =~ ^-?[0-9]+$ 				]] 	|| MessageError API "$_ERR_TYPE_INT_" "$2" "$3";;
-		float)		[[ $3 =~ ^-?[0-9]+\.[0-9]+$ 		]] 	|| MessageError API "$_ERR_TYPE_FLOAT_" "$2" "$3";;
-		bool)		[[ $3 =~ ^(true|false)$ 			]] 	|| MessageError API "$_ERR_TYPE_BOOL_" "$2" "$3";;
-		token)		[[ $3 =~ ^[0-9]+:[a-zA-Z0-9_-]+$	]] 	|| MessageError API "$_ERR_TOKEN_INVALID_" "$2" "$3";;
-		file)		[[ $3 =~ ^@ && ! -f ${3#@} 			]] 	&& MessageError API "$_ERR_FILE_NOT_FOUND_" "$2" "$3";;
-		return)		[[ $3 == @(json|map|value) 			]] 	|| MessageError API "$_ERR_ARG_" "$2" "$3";;
-		cmd)		[[ $3 =~ ^/[a-zA-Z0-9_]+$ 			]] 	|| MessageError API "$_ERR_ARG_" "$2" "$3";;
-		flag)		[[ $3 =~ ^[a-zA-Z0-9_]+$ 			]] 	|| MessageError API "$_ERR_ARG_" "$2" "$3";;
-		itime)		[[ $3 =~ ^[0-9]{2}:[0-9]{2}-[0-9]{2}:[0-9]{2}([,|$'\n'][0-9]{2}:[0-9]{2}-[0-9]{2}:[0-9]{2})*$ 			]] ||
-					[[ $3 =~ ^[@!]\([0-9]{2}:[0-9]{2}-[0-9]{2}:[0-9]{2}([,|$'\n'][0-9]{2}:[0-9]{2}-[0-9]{2}:[0-9]{2})*\)$ 	]] \
-															|| MessageError API "$_ERR_ARG_" "$2" "${3//$'\n'/|}";;
-		idate)		[[ $3 =~ ^[0-9]{2}/[0-9]{2}/[0-9]{4,}-[0-9]{2}/[0-9]{2}/[0-9]{4,}([,|$'\n'][0-9]{2}/[0-9]{2}/[0-9]{4,}-[0-9]{2}/[0-9]{2}/[0-9]{4,})*$ ]] ||
-					[[ $3 =~ ^[@!]\([0-9]{2}/[0-9]{2}/[0-9]{4,}-[0-9]{2}/[0-9]{2}/[0-9]{4,}([,|$'\n'][0-9]{2}/[0-9]{2}/[0-9]{4,}-[0-9]{2}/[0-9]{2}/[0-9]{4,})*\)$ ]] \
-															|| MessageError API "$_ERR_ARG_" "$2" "${3//$'\n'/|}";;
-    esac
+		func)		[[ $(type -t "$3") == function			]] 	|| MessageError API "$_ERR_FUNCTION_NOT_FOUND_" "$2" "$3";;
+		var)		[[ -v $3 								]] 	|| MessageError API "$_ERR_VAR_NAME_" "$2" "$3";;
+		int)		[[ $3 =~ ^-?[0-9]+$ 					]] 	|| MessageError API "$_ERR_TYPE_INT_" "$2" "$3";;
+		float)		[[ $3 =~ ^-?[0-9]+\.[0-9]+$ 			]] 	|| MessageError API "$_ERR_TYPE_FLOAT_" "$2" "$3";;
+		bool)		[[ $3 =~ ^(true|false)$ 				]] 	|| MessageError API "$_ERR_TYPE_BOOL_" "$2" "$3";;
+		token)		[[ $3 =~ ^[0-9]+:[a-zA-Z0-9_-]+$		]] 	|| MessageError API "$_ERR_TOKEN_INVALID_" "$2" "$3";;
+		file)		[[ $3 =~ ^@ && ! -f ${3#@} 				]] 	&& MessageError API "$_ERR_FILE_NOT_FOUND_" "$2" "$3";;
+		return)		[[ $3 == @(json|map|value) 				]] 	|| MessageError API "$_ERR_ARG_" "$2" "$3";;
+		cmd)		[[ $3 =~ ^/[a-zA-Z0-9_]+$ 				]] 	|| MessageError API "$_ERR_ARG_" "$2" "$3";;
+		flag)		[[ $3 =~ ^[a-zA-Z0-9_]+$ 				]] 	|| MessageError API "$_ERR_ARG_" "$2" "$3";;
+	esac
 
 	return $?
 }
@@ -4886,93 +4917,91 @@ _EOF
 					;;
 				-c|--command)
 					CheckArgType cmd "$1" "$2"
-					command=${command:+$command,}$2
+					command=$2
 					shift 2
 					;;
 				-i|--user_id)
-					user_id=${user_id:+$user_id,}$2
+					user_id=${user_id:+$user_id|}${2//[,$'\n']/|}
 					shift 2
 					;;
 				-u|--username)
-					username=${username:+$username,}$2
+					username=${username:+$username|}${2//[,$'\n']/|}
 					shift 2
 					;;
 				-h|--chat_id)
-					chat_id=${chat_id:+$chat_id,}$2
+					chat_id=${chat_id:+$chat_id|}${2//[,$'\n']/|}
 					shift 2
 					;;
 				-v|--chat_name)
-					chat_name=${chat_name:+$chat_name,}$2
+					chat_name=${chat_name:+$chat_name|}${2//[,$'\n']/|}
 					shift 2
 					;;
 				-y|--chat_type)
-					chat_type=${chat_type:+$chat_type,}$2
+					chat_type=${chat_type:+$chat_type|}${2//[,$'\n']/|}
 					shift 2
 					;;
 				-e|--time)
-					CheckArgType itime "$1" "$2"
-					time=${time:+$time,}$2
+					time=${time:+$time|}${2//[,$'\n']/|}
 					shift 2
 					;;
 				-d|--date)
-					CheckArgType idate "$1" "$2"
-					date=${date:+$date,}$2
+					date=${date:+$date|}${2//[,$'\n']/|}
 					shift 2
 					;;
 				-l|--laguage_code)
-					language=${language:+$language,}$2
+					language=${language:+$language|}${2//[,$'\n']/|}
 					shift 2
 					;;
 				-m|--message_id)
-					message_id=${message_id:+$message_id,}$2
+					message_id=${message_id:+$message_id|}${2//[,$'\n']/|}
 					shift 2
 					;;
 				-b|--is_bot)
-					is_bot=${is_bot:+$is_bot,}$2
+					is_bot=${is_bot:+$is_bot|}${2//[,$'\n']/|}
 					shift 2
 					;;
 				-t|--text)
-					text=$2
+					text=${2//$'\n'/|}
 					shift 2
 					;;
 				-n|--entitie_type)
-					entities_type=${entities_type:+$entities_type,}$2
+					entities_type=${entities_type:+$entities_type|}${2//[,$'\n']/|}
 					shift 2
 					;;
 				-f|--file_type)
-					file_type=${file_type:+$file_type,}$2
+					file_type=${file_type:+$file_type|}${2//[,$'\n']/|}
 					shift 2
 					;;
 				-p|--mime_type)
-					mime_type=${mime_type:+$mime_type,}$2
+					mime_type=${mime_type:+$mime_type|}${2//[,$'\n']/|}
 					shift 2
 					;;
 				-q|--query_data)
-					query_data=${query_data:+$query_data,}$2
+					query_data=${query_data:+$query_data|}${2//[,$'\n']/|}
 					shift 2
 					;;
 				-r|--query_id)
-					query_id=${query_id:+$query_id,}$2
+					query_id=${query_id:+$query_id|}${2//[,$'\n']/|}
 					shift 2
 					;;
 				-g|--chat_member)
-					chat_member=${chat_member:+$chat_member,}$2
+					chat_member=${chat_member:+$chat_member|}${2//[,$'\n']/|}
 					shift 2
 					;;
 				-o|--num_args)
-					num_args=${num_args:+$num_args,}$2
+					num_args=${num_args:+$num_args|}${2//[,$'\n']/|}
 					shift 2
 					;;
 				-w|--weekday)
-					weekday=${weekday:+$weekday,}$2
+					weekday=${weekday:+$weekday|}${2//[,$'\n']/|}
 					shift 2
 					;;
 				-j|--user_status)
-					user_status=${user_status:+$user_status,}$2
+					user_status=${user_status:+$user_status|}${2//[,$'\n']/|}
 					shift 2
 					;;
 				-x|--message_status)
-					message_status=${message_status:+$message_status,}$2
+					message_status=${message_status:+$message_status|}${2//[,$'\n']/|}
 					shift 2
 					;;
 				-R|--bot_reply_message)
@@ -4984,7 +5013,7 @@ _EOF
 					shift 2
 					;;
 				-F|--bot_forward_message)
-					forward_message=${forward_message:+$forward_message,}$2
+					forward_message=${forward_message:+$forward_message|}${2//[,$'\n']/|}
 					shift 2
 					;;
 				-K|--bot_reply_markup)
@@ -5000,7 +5029,7 @@ _EOF
 					shift 2
 					;;
 				-A|--author_signature)
-					author_signature=${author_signature:+$author_signature,}$2
+					author_signature=${author_signature:+$author_signature|}${2//[,$'\n']/|}
 					shift 2
 					;;
 				-C|--continue)
@@ -5061,12 +5090,12 @@ _EOF
 
 		return $?
 	}
-
+	
 	ShellBot.manageRules()
 	{
 		local uid rule botcmd err tm stime etime ctime mime_type weekday
 		local dt sdate edate cdate mem ent type args status out fwid
-	   	local stdout buffer i re
+	   	local stdout buffer i re match
 
 		local u_message_text u_message_id u_message_from_is_bot 
 		local u_message_from_id u_message_from_username msgstatus argpos
@@ -5179,43 +5208,44 @@ _EOF
 		[[ ${u_message_author_signature:=${channel_post_author_signature[$uid]}} 		]] ||
 		[[ ${u_message_author_signature:=${edited_channel_post_author_signature[$uid]}} ]]
 
-		# Captura os grupos contidos no padrão, separando o operador de negação '!' (se presente)
-		# para determinar o tratamento de valição do intervalo date/time.
+		# Captura os grupos contidos no padrão date/time, separando o
+	   	# operador de negação '!' (se presente) para determinar o 
+		# tratamento de valição do intervalo.
 		#
 		# Exemplo:
 		#              
-		#       BASH_REMATCH[3]
+		#       BASH_REMATCH[4|5]
 		#    __________|__________
 		#   |                     |
 		# !(12:00-13:00,15:00-17:00)
 		# |
-		# |_ BASH_REMATCH[2]
+		# |_ BASH_REMATCH[3]
 		#
-		re='^(@|(!))?\(?([^)]+)\)?$'
+		re='^((@|(!))\(([^)]+)\)|(.+))$'
 
 		# Regras
 		for ((i=0; i < _BOT_RULES_INDEX_; i++)); do
 		
 			IFS=' ' read -ra args <<< $u_message_text
 			
-			[[ ! ${_BOT_RULES_[$i:num_args]}			||	${#args[@]}							== @(${_BOT_RULES_[$i:num_args]//[,$'\n']/|})						]]	&&
-			[[ ! ${_BOT_RULES_[$i:command]}				||	${u_message_text%% *}				== @(${_BOT_RULES_[$i:command]//[,$'\n']/|})?(@${_BOT_INFO_[3]}) 	]]	&&
-			[[ ! ${_BOT_RULES_[$i:message_id]} 			||	$u_message_id 						== @(${_BOT_RULES_[$i:message_id]//[,$'\n']/|})						]] 	&&
-			[[ ! ${_BOT_RULES_[$i:is_bot]} 				||	$u_message_from_is_bot				== @(${_BOT_RULES_[$i:is_bot]//[,$'\n']/|})							]]	&&
-			[[ ! ${_BOT_RULES_[$i:user_id]}				||	$u_message_from_id					== @(${_BOT_RULES_[$i:user_id]//[,$'\n']/|})						]]	&&
-			[[ ! ${_BOT_RULES_[$i:username]}			||	$u_message_from_username			== @(${_BOT_RULES_[$i:username]//[,$'\n']/|})						]]	&&
-			[[ ! ${_BOT_RULES_[$i:language]}			||	$u_message_from_language_code		== @(${_BOT_RULES_[$i:language]//[,$'\n']/|})						]]	&&
-			[[ ! ${_BOT_RULES_[$i:chat_id]}				||	$u_message_chat_id					== @(${_BOT_RULES_[$i:chat_id]//[,$'\n']/|})						]] 	&&
-			[[ ! ${_BOT_RULES_[$i:chat_name]}			||	$u_message_chat_username			== @(${_BOT_RULES_[$i:chat_name]//[,$'\n']/|})						]] 	&&
-			[[ ! ${_BOT_RULES_[$i:chat_type]}			||	$u_message_chat_type				== @(${_BOT_RULES_[$i:chat_type]//[,$'\n']/|})						]]	&&
-			[[ ! ${_BOT_RULES_[$i:author_signature]}	||	$u_message_author_signature			== @(${_BOT_RULES_[$i:author_signature]//[,$'\n']/|})				]]	&&
-			[[ ! ${_BOT_RULES_[$i:mime_type]}			||	$u_message_mime_type				== @(${_BOT_RULES_[$i:mime_type]//[,$'\n']/|})						]]	&&
-			[[ ! ${_BOT_RULES_[$i:query_id]}			||	${callback_query_id[$uid]}			== @(${_BOT_RULES_[$i:query_id]//[,$'\n']/|})						]]	&&
-			[[ ! ${_BOT_RULES_[$i:query_data]}			||	${callback_query_data[$uid]}		== @(${_BOT_RULES_[$i:query_data]//[,$'\n']/|})						]]	&&
-			[[ ! ${_BOT_RULES_[$i:weekday]}				|| 	$(printf '%(%u)T' $u_message_date) 	== @(${_BOT_RULES_[$i:weekday]//[,$'\n']/|})						]]	&&
-			[[ ! ${_BOT_RULES_[$i:text]}				||	$u_message_text						=~ ${_BOT_RULES_[$i:text]//$'\n'/|}									]]	|| continue
+			[[ ! ${_BOT_RULES_[$i:num_args]}			||	${#args[@]}							== @(${_BOT_RULES_[$i:num_args]})						]]	&&
+			[[ ! ${_BOT_RULES_[$i:command]}				||	${u_message_text%% *}				== @(${_BOT_RULES_[$i:command]})?(@${_BOT_INFO_[3]}) 	]]	&&
+			[[ ! ${_BOT_RULES_[$i:message_id]} 			||	$u_message_id 						== @(${_BOT_RULES_[$i:message_id]})						]] 	&&
+			[[ ! ${_BOT_RULES_[$i:is_bot]} 				||	$u_message_from_is_bot				== @(${_BOT_RULES_[$i:is_bot]})							]]	&&
+			[[ ! ${_BOT_RULES_[$i:user_id]}				||	$u_message_from_id					== @(${_BOT_RULES_[$i:user_id]})						]]	&&
+			[[ ! ${_BOT_RULES_[$i:username]}			||	$u_message_from_username			== @(${_BOT_RULES_[$i:username]})						]]	&&
+			[[ ! ${_BOT_RULES_[$i:language]}			||	$u_message_from_language_code		== @(${_BOT_RULES_[$i:language]})						]]	&&
+			[[ ! ${_BOT_RULES_[$i:chat_id]}				||	$u_message_chat_id					== @(${_BOT_RULES_[$i:chat_id]})						]] 	&&
+			[[ ! ${_BOT_RULES_[$i:chat_name]}			||	$u_message_chat_username			== @(${_BOT_RULES_[$i:chat_name]})						]] 	&&
+			[[ ! ${_BOT_RULES_[$i:chat_type]}			||	$u_message_chat_type				== @(${_BOT_RULES_[$i:chat_type]})						]]	&&
+			[[ ! ${_BOT_RULES_[$i:author_signature]}	||	$u_message_author_signature			== @(${_BOT_RULES_[$i:author_signature]})				]]	&&
+			[[ ! ${_BOT_RULES_[$i:mime_type]}			||	$u_message_mime_type				== @(${_BOT_RULES_[$i:mime_type]})						]]	&&
+			[[ ! ${_BOT_RULES_[$i:query_id]}			||	${callback_query_id[$uid]}			== @(${_BOT_RULES_[$i:query_id]})						]]	&&
+			[[ ! ${_BOT_RULES_[$i:query_data]}			||	${callback_query_data[$uid]}		== @(${_BOT_RULES_[$i:query_data]})						]]	&&
+			[[ ! ${_BOT_RULES_[$i:weekday]}				|| 	$(printf '%(%u)T' $u_message_date) 	== @(${_BOT_RULES_[$i:weekday]})						]]	&&
+			[[ ! ${_BOT_RULES_[$i:text]}				||	$u_message_text						=~ ${_BOT_RULES_[$i:text]}								]]	|| continue
 	
-			for msgstatus in ${_BOT_RULES_[$i:message_status]//[,|$'\n']/ }; do
+			for msgstatus in ${_BOT_RULES_[$i:message_status]//|/ }; do
 				[[ $msgstatus == pinned		&& ${message_pinned_message_message_id[$uid]:-${channel_post_pinned_message_message_id[$uid]}} 		]] 	||
 				[[ $msgstatus == edited 	&& ${edited_message_message_id[$uid]:-${edited_channel_post_message_id[$uid]}}						]] 	||
 				[[ $msgstatus == forwarded	&& ${message_forward_from_id[$uid]:-${channel_post_forward_from_chat_id[$uid]}}						]]	||
@@ -5227,20 +5257,20 @@ _EOF
 				
 			(($?)) && continue
 
-			for ent in ${_BOT_RULES_[$i:entities_type]//[,|$'\n']/ }; do
+			for ent in ${_BOT_RULES_[$i:entities_type]//|/ }; do
 				[[ $ent == @(${u_message_entities_type//$_BOT_DELM_/|})	]] 	&& break
 			done
 
 			(($?)) && continue
 	
-			for mem in ${_BOT_RULES_[$i:chat_member]//[,|$'\n']/ }; do
+			for mem in ${_BOT_RULES_[$i:chat_member]//|/ }; do
 				[[ $mem == new 	&& ${message_new_chat_member_id[$uid]} 	]] ||
 				[[ $mem == left	&& ${message_left_chat_member_id[$uid]} ]] && break
 			done
 			
 			(($?)) && continue
 
-			for type in ${_BOT_RULES_[$i:file_type]//[,|$'\n']/ }; do
+			for type in ${_BOT_RULES_[$i:file_type]//|/ }; do
 				[[ $type == document 	&& ${message_document_file_id[$uid]:-${channel_post_document_file_id[$uid]}} &&
 										 ! ${message_document_thumb_file_id[$uid]:-${channel_post_document_thumb_file_id[$uid]}}	]] 	||
 				[[ $type == gif 		&& ${message_document_file_id[$uid]:-${channel_post_document_file_id[$uid]}} &&
@@ -5253,11 +5283,13 @@ _EOF
 				[[ $type == contact		&& ${message_contact_user_id[$uid]:-${channel_post_contact_user_id[$uid]}}					]]	||
 				[[ $type == location	&& ${message_location_latitude[$uid]:-${channel_post_location_latitude[$uid]}}				]]	&& break
 			done
-					
+
 			(($?)) && continue
 			
-			[[ ${_BOT_RULES_[$i:time]//$'\n'/|} =~ $re ]]
-			for tm in ${BASH_REMATCH[3]//[,|]/ }; do
+			[[ ${_BOT_RULES_[$i:time]} =~ $re ]]
+			match=${BASH_REMATCH[4]:-${BASH_REMATCH[5]}}
+
+			for tm in ${match//|/ }; do
 				IFS='-' read stime etime <<< $tm
 				printf -v ctime '%(%H:%M)T' $u_message_date
 
@@ -5265,10 +5297,12 @@ _EOF
 				[[ $ctime > $stime && $ctime < $etime 	]]	&& break
 			done
 					
-			((${BASH_REMATCH[2]} $?)) && continue
+			((${BASH_REMATCH[3]} $?)) && continue
 
-			[[ ${_BOT_RULES_[$i:date]//$'\n'/|} =~ $re ]]
-			for dt in ${BASH_REMATCH[3]//[,|]/ }; do
+			[[ ${_BOT_RULES_[$i:date]} =~ $re ]]
+			match=${BASH_REMATCH[4]:-${BASH_REMATCH[5]}}
+
+			for dt in ${match//|/ }; do
 
 				IFS='-' read sdate edate <<< $dt
 				IFS='/' read -a sdate <<< $sdate
@@ -5283,7 +5317,7 @@ _EOF
 				[[ $cdate > $sdate && $cdate < $edate 	]]	&& break
 			done
 			
-			((${BASH_REMATCH[2]} $?)) && continue
+			((${BASH_REMATCH[3]} $?)) && continue
 
 			if [[ ${_BOT_RULES_[$i:user_status]} ]]; then
 				case $_BOT_TYPE_RETURN_ in
@@ -5308,7 +5342,7 @@ _EOF
 						status=${return[status]}
 						;;
 				esac
-				[[ $status == @(${_BOT_RULES_[$i:user_status]//[,$'\n']/|}) ]]	|| continue
+				[[ $status == @(${_BOT_RULES_[$i:user_status]}) ]] || continue
 			fi
 			
 			# Monitor
@@ -5346,7 +5380,7 @@ _EOF
 																				${_BOT_RULES_[$i:bot_reply_markup]:+--reply_markup "${_BOT_RULES_[$i:bot_reply_markup]}"}	\
 																				${_BOT_RULES_[$i:bot_parse_mode]:+--parse_mode ${_BOT_RULES_[$i:bot_parse_mode]}}			&>/dev/null
 				
-			for fwid in ${_BOT_RULES_[$i:bot_forward_message]//[,|$'\n']/ }; do
+			for fwid in ${_BOT_RULES_[$i:bot_forward_message]//|/ }; do
 				ShellBot.forwardMessage		--chat_id $fwid						\
 											--from_chat_id $u_message_chat_id 	\
 											--message_id $u_message_id			&>/dev/null
