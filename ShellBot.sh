@@ -5085,7 +5085,7 @@ _EOF
 		_BOT_RULES_[$i:continue]=${continue}
 		_BOT_RULES_[$name]=true
 
-		# Incrementa indice.
+		# Incrementa índice.
 		((_BOT_RULES_INDEX_++))
 
 		return $?
