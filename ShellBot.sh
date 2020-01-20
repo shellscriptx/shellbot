@@ -5394,7 +5394,7 @@ _EOF
 
 			while [[ $stdout ]]; do
 				# Salva em buffer os primeiros 4096 caracteres.
-				read -rN 4096 buffer <<< "$stdout"
+				buffer=${stdout:0:4096}
 					
 				# Envia o buffer.
 				ShellBot.sendMessage	--chat_id $u_message_chat_id 			\
@@ -5404,9 +5404,7 @@ _EOF
 				# Descarta os caracteres lidos.
 				stdout=${stdout:4096}
 			done 
-
 			${_BOT_RULES_[$i:continue]:-return 0}
-		
 		done
 
 		return 1
