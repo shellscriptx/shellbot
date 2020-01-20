@@ -4857,10 +4857,10 @@ _EOF
 		local action_args weekday user_status chat_name 
 		local message_status reply_message parse_mode
 		local forward_message reply_markup continue i
-		local author_signature
+		local author_signature bot_action
 
 		local param=$(getopt	--name "$FUNCNAME" \
-								--options 's:a:z:c:i:u:h:v:y:l:m:b:t:n:f:p:q:r:g:o:e:d:w:j:x:R:S:F:K:P:E:A:C' \
+								--options 's:a:z:c:i:u:h:v:y:l:m:b:t:n:f:p:q:r:g:o:e:d:w:j:x:R:S:F:K:P:E:A:C:B:' \
 								--longoptions	'name:,
 												action:,
 												action_args:,
@@ -4892,6 +4892,7 @@ _EOF
 												bot_forward_message:,
 												bot_reply_markup:,
 												bot_parse_mode:,
+												bot_action:,
 												author_signature:,
 												continue' \
 								-- "$@")
@@ -5024,6 +5025,10 @@ _EOF
 					parse_mode=$2
 					shift 2
 					;;
+				-B|--bot_action)
+					bot_action=$2
+					shift 2
+					;;
 				-E|--exec)
 					exec=$2
 					shift 2
@@ -5081,6 +5086,7 @@ _EOF
 		_BOT_RULES_[$i:bot_forward_message]=${forward_message}
 		_BOT_RULES_[$i:bot_reply_markup]=${reply_markup}
 		_BOT_RULES_[$i:bot_parse_mode]=${parse_mode}
+		_BOT_RULES_[$i:bot_action]=${bot_action}
 		_BOT_RULES_[$i:exec]=${exec}
 		_BOT_RULES_[$i:continue]=${continue}
 		_BOT_RULES_[$name]=true
@@ -5369,17 +5375,26 @@ _EOF
 										"${_BOT_RULES_[$i:action]:--}"			\
 										"${_BOT_RULES_[$i:exec]:--}"			>> "$_BOT_LOG_FILE_"
 
-			[[ ${_BOT_RULES_[$i:bot_reply_message]} ]] && ShellBot.sendMessage	--chat_id $u_message_chat_id																\
-																				--reply_to_message_id $u_message_id 														\
-																				--text "$(FlagConv $uid "${_BOT_RULES_[$i:bot_reply_message]}")"							\
-																				${_BOT_RULES_[$i:bot_reply_markup]:+--reply_markup "${_BOT_RULES_[$i:bot_reply_markup]}"}	\
-																				${_BOT_RULES_[$i:bot_parse_mode]:+--parse_mode ${_BOT_RULES_[$i:bot_parse_mode]}}			&>/dev/null
+			# Anexa tipo da ação. (se presente)
+			if [[ ${_BOT_RULES_[$i:bot_action]} ]]; then
+				ShellBot.sendChatAction --chat_id $u_message_chat_id --action ${_BOT_RULES_[$i:bot_action]} &>/dev/null
+			fi
+
+			if [[ ${_BOT_RULES_[$i:bot_reply_message]} ]]; then
+				ShellBot.sendMessage	--chat_id $u_message_chat_id 																\
+										--reply_to_message_id $u_message_id															\
+										--text "$(FlagConv $uid "${_BOT_RULES_[$i:bot_reply_message]}")" 							\
+										${_BOT_RULES_[$i:bot_reply_markup]:+--reply_markup "${_BOT_RULES_[$i:bot_reply_markup]}"} 	\
+										${_BOT_RULES_[$i:bot_parse_mode]:+--parse_mode ${_BOT_RULES_[$i:bot_parse_mode]}} 			&>/dev/null
+			fi
 				
-			[[ ${_BOT_RULES_[$i:bot_send_message]} ]] && ShellBot.sendMessage	--chat_id $u_message_chat_id																\
-																				--text "$(FlagConv $uid "${_BOT_RULES_[$i:bot_send_message]}")" 							\
-																				${_BOT_RULES_[$i:bot_reply_markup]:+--reply_markup "${_BOT_RULES_[$i:bot_reply_markup]}"}	\
-																				${_BOT_RULES_[$i:bot_parse_mode]:+--parse_mode ${_BOT_RULES_[$i:bot_parse_mode]}}			&>/dev/null
-				
+			if [[ ${_BOT_RULES_[$i:bot_send_message]} ]]; then
+				ShellBot.sendMessage	--chat_id $u_message_chat_id 																\
+										--text "$(FlagConv $uid "${_BOT_RULES_[$i:bot_send_message]}")"								\
+										${_BOT_RULES_[$i:bot_reply_markup]:+--reply_markup "${_BOT_RULES_[$i:bot_reply_markup]}"} 	\
+										${_BOT_RULES_[$i:bot_parse_mode]:+--parse_mode ${_BOT_RULES_[$i:bot_parse_mode]}} 			&>/dev/null
+			fi
+
 			for fwid in ${_BOT_RULES_[$i:bot_forward_message]//|/ }; do
 				ShellBot.forwardMessage		--chat_id $fwid						\
 											--from_chat_id $u_message_chat_id 	\
@@ -5395,7 +5410,7 @@ _EOF
 			while [[ $stdout ]]; do
 				# Salva em buffer os primeiros 4096 caracteres.
 				buffer=${stdout:0:4096}
-					
+
 				# Envia o buffer.
 				ShellBot.sendMessage	--chat_id $u_message_chat_id 			\
 										--reply_to_message_id $u_message_id		\
@@ -5403,6 +5418,11 @@ _EOF
 
 				# Descarta os caracteres lidos.
 				stdout=${stdout:4096}
+			
+				# Reenvia ação se ainda houver dados.	
+				if [[ ${_BOT_RULES_[$i:bot_action]} && $stdout ]]; then
+					ShellBot.sendChatAction --chat_id $u_message_chat_id --action ${_BOT_RULES_[$i:bot_action]} &>/dev/null
+				fi
 			done 
 			${_BOT_RULES_[$i:continue]:-return 0}
 		done
