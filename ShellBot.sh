@@ -3,7 +3,7 @@
 #-----------------------------------------------------------------------------------------------------------
 #	DATA:				07 de Março de 2017
 #	SCRIPT:				ShellBot.sh
-#	VERSÃO:				6.2
+#	VERSÃO:				6.2.1
 #	DESENVOLVIDO POR:	Juliano Santos [SHAMAN]
 #	PÁGINA:				http://www.shellscriptx.blogspot.com.br
 #	FANPAGE:			https://www.facebook.com/shellscriptx
@@ -5101,7 +5101,7 @@ _EOF
 	{
 		local uid rule botcmd err tm stime etime ctime mime_type weekday
 		local dt sdate edate cdate mem ent type args status out fwid
-	   	local stdout buffer i re match
+	   	local stdout i re match
 
 		local u_message_text u_message_id u_message_from_is_bot 
 		local u_message_from_id u_message_from_username msgstatus argpos
@@ -5408,15 +5408,11 @@ _EOF
 			stdout=${_BOT_RULES_[$i:exec]:+$(set -- ${args[*]}; eval $(FlagConv $uid "${_BOT_RULES_[$i:exec]}") 2>&1)}
 
 			while [[ $stdout ]]; do
-				# Salva em buffer os primeiros 4096 caracteres.
-				buffer=${stdout:0:4096}
-
-				# Envia o buffer.
 				ShellBot.sendMessage	--chat_id $u_message_chat_id 			\
 										--reply_to_message_id $u_message_id		\
-										--text "$buffer"						&>/dev/null
+										--text "${stdout:0:4096}"				&>/dev/null
 
-				# Descarta os caracteres lidos.
+				# Atualiza o buffer de saída.
 				stdout=${stdout:4096}
 			
 				# Reenvia ação se ainda houver dados.	
