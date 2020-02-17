@@ -4857,10 +4857,10 @@ _EOF
 		local action_args weekday user_status chat_name 
 		local message_status reply_message parse_mode
 		local forward_message reply_markup continue i
-		local author_signature bot_action
+		local author_signature bot_action auth_users
 
 		local param=$(getopt	--name "$FUNCNAME" \
-								--options 's:a:z:c:i:u:h:v:y:l:m:b:t:n:f:p:q:r:g:o:e:d:w:j:x:R:S:F:K:P:E:A:C:B:' \
+								--options 's:a:z:c:i:u:h:v:y:l:m:b:t:n:f:p:q:r:g:o:e:d:w:j:x:R:S:F:K:P:E:A:C:B:T:' \
 								--longoptions	'name:,
 												action:,
 												action_args:,
@@ -4887,6 +4887,7 @@ _EOF
 												user_status:,
 												message_status:,
 												exec:,
+												auth_users:,
 												bot_reply_message:,
 												bot_send_message:,
 												bot_forward_message:,
@@ -5005,6 +5006,10 @@ _EOF
 					message_status=${message_status:+$message_status|}${2//[,$'\n']/|}
 					shift 2
 					;;
+				-T|--auth_users)
+					auth_users=${auth_users:+$auth_users|}${2//[,$'\n']/|}
+					shift 2
+					;;
 				-R|--bot_reply_message)
 					reply_message=$2
 					shift 2
@@ -5081,6 +5086,7 @@ _EOF
 		_BOT_RULES_[$i:user_status]=${user_status}
 		_BOT_RULES_[$i:message_status]=${message_status}
 		_BOT_RULES_[$i:author_signature]=${author_signature}
+		_BOT_RULES_[$i:auth_users]=${auth_users}
 		_BOT_RULES_[$i:bot_reply_message]=${reply_message}
 		_BOT_RULES_[$i:bot_send_message]=${send_message}
 		_BOT_RULES_[$i:bot_forward_message]=${forward_message}
@@ -5101,7 +5107,7 @@ _EOF
 	{
 		local uid rule botcmd err tm stime etime ctime mime_type weekday
 		local dt sdate edate cdate mem ent type args status out fwid
-	   	local stdout i re match
+	   	local stdout i re match auth users
 
 		local u_message_text u_message_id u_message_from_is_bot 
 		local u_message_from_id u_message_from_username msgstatus argpos
@@ -5214,21 +5220,6 @@ _EOF
 		[[ ${u_message_author_signature:=${channel_post_author_signature[$uid]}} 		]] ||
 		[[ ${u_message_author_signature:=${edited_channel_post_author_signature[$uid]}} ]]
 
-		# Captura os grupos contidos no padrão date/time, separando o
-	   	# operador de negação '!' (se presente) para determinar o 
-		# tratamento de valição do intervalo.
-		#
-		# Exemplo:
-		#              
-		#       BASH_REMATCH[4|5]
-		#    __________|__________
-		#   |                     |
-		# !(12:00-13:00,15:00-17:00)
-		# |
-		# |_ BASH_REMATCH[3]
-		#
-		re='^((@|(!))\(([^)]+)\)|(.+))$'
-
 		# Regras
 		for ((i=0; i < _BOT_RULES_INDEX_; i++)); do
 		
@@ -5250,6 +5241,44 @@ _EOF
 			[[ ! ${_BOT_RULES_[$i:query_data]}			||	${callback_query_data[$uid]}		== @(${_BOT_RULES_[$i:query_data]})						]]	&&
 			[[ ! ${_BOT_RULES_[$i:weekday]}				|| 	$(printf '%(%u)T' $u_message_date) 	== @(${_BOT_RULES_[$i:weekday]})						]]	&&
 			[[ ! ${_BOT_RULES_[$i:text]}				||	$u_message_text						=~ ${_BOT_RULES_[$i:text]}								]]	|| continue
+
+			# Extrai os arquivos do conjunto negado. Caso esteja ausente
+			# define a expressão padrão.
+			# Captura os grupos contidos no padrão, separando o
+	   		# operador de negação '!' (se presente) para determinar o 
+			# tratamento de valição do intervalo.
+			#
+			# Exemplo 1:
+			#              
+			#       BASH_REMATCH[2]
+			#    __________|__________
+			#   |                     |
+			# !(12:00-13:00,15:00-17:00)
+			# |
+			# |_ BASH_REMATCH[1]
+			#
+			# FIXME
+			# re='^((@|(!))\(([^)]+)\)|(.+))$'
+			# match=${BASH_REMATCH[4]:-${BASH_REMATCH[5]}}
+			re='^(!)\(([^)]+)\)$'
+
+			[[ ${_BOT_RULES_[$i:auth_users]} =~ $re ]]
+			match=${BASH_REMATCH[2]:-${_BOT_RULES_[$i:auth_users]}}
+			
+			for auth in ${match//|/ }; do
+				# Testa o acesso ao arquivo.
+				if ! [[ -f "$auth" && -r "$auth" ]]; then
+					MessageError API "'$auth' não foi possível ler o arquivo" "${_BOT_RULES_[$i:name]}" '[-T, --auth_users]'
+				fi
+				# Atualiza lista de usuários.
+				users=$(< "$auth")
+			
+				# Verifica se a base contém o ID ou USERNAME da requisição.
+				[[ $u_message_from_id		== @(${users//[,$'\n']/|}) 	]] ||
+				[[ $u_message_from_username	== @(${users//[,$'\n']/|}) 	]] && break
+			done
+
+			((${BASH_REMATCH[1]} $?)) && continue
 	
 			for msgstatus in ${_BOT_RULES_[$i:message_status]//|/ }; do
 				[[ $msgstatus == pinned		&& ${message_pinned_message_message_id[$uid]:-${channel_post_pinned_message_message_id[$uid]}} 		]] 	||
@@ -5293,7 +5322,7 @@ _EOF
 			(($?)) && continue
 			
 			[[ ${_BOT_RULES_[$i:time]} =~ $re ]]
-			match=${BASH_REMATCH[4]:-${BASH_REMATCH[5]}}
+			match=${BASH_REMATCH[2]:-${_BOT_RULES_[$i:time]}}
 
 			for tm in ${match//|/ }; do
 				IFS='-' read stime etime <<< $tm
@@ -5303,10 +5332,10 @@ _EOF
 				[[ $ctime > $stime && $ctime < $etime 	]]	&& break
 			done
 					
-			((${BASH_REMATCH[3]} $?)) && continue
+			((${BASH_REMATCH[1]} $?)) && continue
 
 			[[ ${_BOT_RULES_[$i:date]} =~ $re ]]
-			match=${BASH_REMATCH[4]:-${BASH_REMATCH[5]}}
+			match=${BASH_REMATCH[2]:-${_BOT_RULES_[$i:date]}}
 
 			for dt in ${match//|/ }; do
 
@@ -5323,7 +5352,7 @@ _EOF
 				[[ $cdate > $sdate && $cdate < $edate 	]]	&& break
 			done
 			
-			((${BASH_REMATCH[3]} $?)) && continue
+			((${BASH_REMATCH[1]} $?)) && continue
 
 			if [[ ${_BOT_RULES_[$i:user_status]} ]]; then
 				case $_BOT_TYPE_RETURN_ in
