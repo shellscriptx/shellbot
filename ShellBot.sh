@@ -5107,7 +5107,7 @@ _EOF
 	{
 		local uid rule botcmd err tm stime etime ctime mime_type weekday
 		local dt sdate edate cdate mem ent type args status out fwid
-	   	local stdout i re match auth users
+	   	local stdout i re match auth users buff
 
 		local u_message_text u_message_id u_message_from_is_bot 
 		local u_message_from_id u_message_from_username msgstatus argpos
@@ -5257,9 +5257,6 @@ _EOF
 			# |
 			# |_ BASH_REMATCH[1]
 			#
-			# FIXME
-			# re='^((@|(!))\(([^)]+)\)|(.+))$'
-			# match=${BASH_REMATCH[4]:-${BASH_REMATCH[5]}}
 			re='^(!)\(([^)]+)\)$'
 
 			[[ ${_BOT_RULES_[$i:auth_users]} =~ $re ]]
@@ -5270,12 +5267,17 @@ _EOF
 				if ! [[ -f "$auth" && -r "$auth" ]]; then
 					MessageError API "'$auth' não foi possível ler o arquivo" "${_BOT_RULES_[$i:name]}" '[-T, --auth_users]'
 				fi
-				# Atualiza lista de usuários.
-				users=$(< "$auth")
-			
+				
+				# Salva em 'buff' o contéudo do arquivo.
+				mapfile -td$'\n' buff <<< $(< "$auth")
+
+				# Extrai somente os usuários do buffer.
+				users=${buff[@]%%*( )#*([^\n])}
+				buff=
+
 				# Verifica se a base contém o ID ou USERNAME da requisição.
-				[[ $u_message_from_id		== @(${users//[,$'\n']/|}) 	]] ||
-				[[ $u_message_from_username	== @(${users//[,$'\n']/|}) 	]] && break
+				[[ $u_message_from_id		== @(${users// /|}) 	]] ||
+				[[ $u_message_from_username	== @(${users// /|}) 	]] && break
 			done
 
 			((${BASH_REMATCH[1]} $?)) && continue
