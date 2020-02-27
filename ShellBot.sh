@@ -2012,14 +2012,16 @@ ShellBot.init()
     ShellBot.sendPhoto()
     {
     	# Variáveis locais
-    	local chat_id photo caption disable_notification reply_to_message_id reply_markup jq_obj
-    
+    	local chat_id photo caption disable_notification 
+		local parse_mode reply_to_message_id reply_markup jq_obj
+
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
-							 --options 'c:p:t:n:r:k:' \
+							 --options 'c:p:t:m:n:r:k:' \
     						 --longoptions 'chat_id:, 
     										photo:,
     										caption:,
+											parse_mode:,
     										disable_notification:,
     										reply_to_message_id:,
     										reply_markup:' \
@@ -2046,6 +2048,10 @@ ShellBot.init()
 					caption=$(echo -e "$2")
     				shift 2
     				;;
+				-m|--parse_mode)
+					parse_mode=$2
+					shift 2
+					;;
     			-n|--disable_notification)
     				# Tipo: boolean
     				CheckArgType bool "$1" "$2"
@@ -2078,6 +2084,7 @@ ShellBot.init()
 									${chat_id:+-F chat_id="$chat_id"} \
 									${photo:+-F photo="$photo"} \
 									${caption:+-F caption="$caption"} \
+									${parse_mode:+-F parse_mode="$parse_mode"} \
 									${disable_notification:+-F disable_notification="$disable_notification"} \
 									${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
 									${reply_markup:+-F reply_markup="$reply_markup"})
@@ -2093,14 +2100,16 @@ ShellBot.init()
     ShellBot.sendAudio()
     {
     	# Variáveis locais
-    	local chat_id audio caption duration performer title disable_notification reply_to_message_id reply_markup jq_obj
+    	local chat_id audio caption duration performer title 
+		local parse_mode disable_notification reply_to_message_id reply_markup jq_obj
     	
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
-							 --options 'c:a:t:d:e:i:n:r:k' \
+							 --options 'c:a:t:m:d:e:i:n:r:k' \
     						 --longoptions 'chat_id:,
     										audio:,
     										caption:,
+											parse_mode:,
     										duration:,
     										performer:,
     										title:,
@@ -2128,6 +2137,10 @@ ShellBot.init()
 					caption=$(echo -e "$2")
     				shift 2
     				;;
+				-m|--parse_mode)
+					parse_mode=$2
+					shift 2
+					;;
     			-d|--duration)
     				# Tipo: inteiro
     				CheckArgType int "$1" "$2"
@@ -2174,6 +2187,7 @@ ShellBot.init()
 									${chat_id:+-F chat_id="$chat_id"} \
 									${audio:+-F audio="$audio"} \
 									${caption:+-F caption="$caption"} \
+									${parse_mode:+-F parse_mode="$parse_mode"} \
 									${duration:+-F duration="$duration"} \
 									${performer:+-F performer="$performer"} \
 									${title:+-F title="$title"} \
@@ -2193,14 +2207,16 @@ ShellBot.init()
     ShellBot.sendDocument()
     {
     	# Variáveis locais
-    	local chat_id document caption disable_notification reply_to_message_id reply_markup jq_obj
+    	local chat_id document caption disable_notification 
+		local parse_mode reply_to_message_id reply_markup jq_obj
     	
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
-							 --options 'c:d:t:n:r:k:' \
+							 --options 'c:d:t:m:n:r:k:' \
     						 --longoptions 'chat_id:,
 											document:,
     										caption:,
+											parse_mode:,
     										disable_notification:,
     										reply_to_message_id:,
     										reply_markup:' \
@@ -2226,6 +2242,10 @@ ShellBot.init()
 					caption=$(echo -e "$2")
     				shift 2
     				;;
+				-m|--parse_mode)
+					parse_mode=$2
+					shift 2
+					;;
     			-n|--disable_notification)
     				CheckArgType bool "$1" "$2"
     				disable_notification=$2
@@ -2256,6 +2276,7 @@ ShellBot.init()
 									${chat_id:+-F chat_id="$chat_id"} \
 									${document:+-F document="$document"} \
 									${caption:+-F caption="$caption"} \
+									${parse_mode:+-F parse_mode="$parse_mode"} \
 									${disable_notification:+-F disable_notification="$disable_notification"} \
 									${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
 									${reply_markup:+-F reply_markup="$reply_markup"})
@@ -2724,18 +2745,19 @@ _EOF
     ShellBot.sendVideo()
     {
     	# Variáveis locais
-    	local chat_id video duration width height caption disable_notification \
-				reply_to_message_id reply_markup jq_obj supports_streaming
+    	local chat_id video duration width height caption disable_notification
+		local parse_mode reply_to_message_id reply_markup jq_obj supports_streaming
     
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
-							 --options 'c:v:d:w:h:t:n:r:k:s:' \
+							 --options 'c:v:d:w:h:t:m:n:r:k:s:' \
 							 --longoptions 'chat_id:,
     										video:,
     										duration:,
     										width:,
     										height:,
     										caption:,
+											parse_mode:,
     										disable_notification:,
     										reply_to_message_id:,
     										reply_markup:,
@@ -2780,6 +2802,10 @@ _EOF
 					caption=$(echo -e "$2")
     				shift 2
     				;;
+				-m|--parse_mode)
+					parse_mode=$2
+					shift 2
+					;;
     			-n|--disable_notification)
     				# Tipo: boolean
     				CheckArgType bool "$1" "$2"
@@ -2819,6 +2845,7 @@ _EOF
 									${width:+-F width="$width"} \
 									${height:+-F height="$height"} \
 									${caption:+-F caption="$caption"} \
+									${parse_mode:+-F parse_mode="$parse_mode"} \
 									${disable_notification:+-F disable_notification="$disable_notification"} \
     								${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
     								${reply_markup:+-F reply_markup="$reply_markup"} \
@@ -2836,14 +2863,16 @@ _EOF
     ShellBot.sendVoice()
     {
     	# Variáveis locais
-    	local chat_id voice caption duration disable_notification reply_to_message_id reply_markup jq_obj
+    	local chat_id voice caption duration disable_notification 
+		local parse_mode reply_to_message_id reply_markup jq_obj
     
     	# Lê os parâmetros da função
     	local param=$(getopt --name "$FUNCNAME" \
-							 --options 'c:v:t:d:n:r:k:' \
+							 --options 'c:v:t:m:d:n:r:k:' \
     						 --longoptions 'chat_id:,
     										voice:,
     										caption:,
+											parse_mode:,
     										duration:,
     										disable_notification:,
     										reply_to_message_id:,
@@ -2870,6 +2899,10 @@ _EOF
 					caption=$(echo -e "$2")
     				shift 2
     				;;
+				-m|--parse_mode)
+					parse_mode=$2
+					shift 2
+					;;
     			-d|--duration)
     				# Tipo: inteiro
     				CheckArgType int "$1" "$2"
@@ -2908,6 +2941,7 @@ _EOF
 									${chat_id:+-F chat_id="$chat_id"} \
     								${voice:+-F voice="$voice"} \
     								${caption:+-F caption="$caption"} \
+									${parse_mode:+-F parse_mode="$parse_mode"} \
     								${duration:+-F duration="$duration"} \
     								${disable_notification:+-F disable_notification="$disable_notification"} \
     								${reply_to_message_id:+-F reply_to_message_id="$reply_to_message_id"} \
@@ -3749,14 +3783,16 @@ _EOF
     
     ShellBot.editMessageCaption()
     {
-    	local chat_id message_id inline_message_id caption reply_markup jq_obj
+    	local chat_id message_id inline_message_id 
+		local parse_mode caption reply_markup jq_obj
     	
     	local param=$(getopt --name "$FUNCNAME" \
-							 --options 'c:m:i:t:r:' \
+							 --options 'c:m:i:t:p:r:' \
     						 --longoptions 'chat_id:,
     										message_id:,
     										inline_message_id:,
     										caption:,
+											parse_mode:,
     										reply_markup:' \
     						 -- "$@")
     	
@@ -3783,6 +3819,10 @@ _EOF
 						caption=$(echo -e "$2")
     					shift 2
     					;;
+					-p|--parse_mode)
+						parse_mode=$2
+						shift 2
+						;;
     				-r|--reply_markup)
     					reply_markup=$2
     					shift 2
@@ -3802,6 +3842,7 @@ _EOF
     								${message_id:+-d message_id="$message_id"} \
     								${inline_message_id:+-d inline_message_id="$inline_message_id"} \
     								${caption:+-d caption="$caption"} \
+									${parse_mode:+-d parse_mode="$parse_mode"} \
     								${reply_markup:+-d reply_markup="$reply_markup"})
     
     	# Verifica se ocorreu erros durante a chamada do método	
@@ -4857,7 +4898,7 @@ _EOF
 		local action_args weekday user_status chat_name 
 		local message_status reply_message parse_mode
 		local forward_message reply_markup continue i
-		local author_signature bot_action auth_users
+		local author_signature bot_action auth_file
 
 		local param=$(getopt	--name "$FUNCNAME" \
 								--options 's:a:z:c:i:u:h:v:y:l:m:b:t:n:f:p:q:r:g:o:e:d:w:j:x:R:S:F:K:P:E:A:C:B:T:' \
@@ -4887,7 +4928,7 @@ _EOF
 												user_status:,
 												message_status:,
 												exec:,
-												auth_users:,
+												auth_file:,
 												bot_reply_message:,
 												bot_send_message:,
 												bot_forward_message:,
@@ -5006,8 +5047,8 @@ _EOF
 					message_status=${message_status:+$message_status|}${2//[,$'\n']/|}
 					shift 2
 					;;
-				-T|--auth_users)
-					auth_users=${auth_users:+$auth_users|}${2//[,$'\n']/|}
+				-T|--auth_file)
+					auth_file=${auth_file:+$auth_file|}${2//[,$'\n']/|}
 					shift 2
 					;;
 				-R|--bot_reply_message)
@@ -5086,7 +5127,7 @@ _EOF
 		_BOT_RULES_[$i:user_status]=${user_status}
 		_BOT_RULES_[$i:message_status]=${message_status}
 		_BOT_RULES_[$i:author_signature]=${author_signature}
-		_BOT_RULES_[$i:auth_users]=${auth_users}
+		_BOT_RULES_[$i:auth_file]=${auth_file}
 		_BOT_RULES_[$i:bot_reply_message]=${reply_message}
 		_BOT_RULES_[$i:bot_send_message]=${send_message}
 		_BOT_RULES_[$i:bot_forward_message]=${forward_message}
@@ -5107,7 +5148,7 @@ _EOF
 	{
 		local uid rule botcmd err tm stime etime ctime mime_type weekday
 		local dt sdate edate cdate mem ent type args status out fwid
-	   	local stdout i re match auth users buff
+	   	local stdout i re match file users arr
 
 		local u_message_text u_message_id u_message_from_is_bot 
 		local u_message_from_id u_message_from_username msgstatus argpos
@@ -5259,21 +5300,21 @@ _EOF
 			#
 			re='^(!)\(([^)]+)\)$'
 
-			[[ ${_BOT_RULES_[$i:auth_users]} =~ $re ]]
-			match=${BASH_REMATCH[2]:-${_BOT_RULES_[$i:auth_users]}}
+			[[ ${_BOT_RULES_[$i:auth_file]} =~ $re ]]
+			match=${BASH_REMATCH[2]:-${_BOT_RULES_[$i:auth_file]}}
 			
-			for auth in ${match//|/ }; do
+			for file in ${match//|/ }; do
 				# Testa o acesso ao arquivo.
-				if ! [[ -f "$auth" && -r "$auth" ]]; then
-					MessageError API "'$auth' não foi possível ler o arquivo" "${_BOT_RULES_[$i:name]}" '[-T, --auth_users]'
+				if [[ -d "$file" ]]; then
+					MessageError API "'$file' é um diretório" "${_BOT_RULES_[$i:name]}" '[-T, --auth_file]'
+				elif [[ ! -r "$file" ]]; then
+					MessageError API "'$file' não foi possível ler o arquivo" "${_BOT_RULES_[$i:name]}" '[-T, --auth_file]'
 				fi
 				
-				# Salva em 'buff' o contéudo do arquivo.
-				mapfile -td$'\n' buff <<< $(< "$auth")
-
-				# Extrai somente os usuários do buffer.
-				users=${buff[@]%%*( )#*([^\n])}
-				buff=
+				# Extrai do arquivo os usuários.
+				mapfile -td$'\n' arr <<< $(< "$file")
+				users=${arr[@]%%*( )#*(*)}
+				arr=
 
 				# Verifica se a base contém o ID ou USERNAME da requisição.
 				[[ $u_message_from_id		== @(${users// /|}) 	]] ||
