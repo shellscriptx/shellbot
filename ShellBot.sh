@@ -1149,20 +1149,15 @@ ShellBot.init()
     
     ShellBot.restrictChatMember()
     {
-    	local	chat_id user_id until_date can_send_messages \
-    			can_send_media_messages can_send_other_messages \
-    			can_add_web_page_previews jq_obj
+    	local chat_id user_id until_date permissions jq_obj
     
-    	local param=$(getopt --name "$FUNCNAME" \
-							 --options 'c:u:d:s:m:o:w:' \
-    						 --longoptions 'chat_id:,
-    										user_id:,
-    										until_date:,
-    										can_send_messages:,
-    										can_send_media_messages:,
-    										can_send_other_messages:,
-    										can_add_web_page_previews:' \
-							 -- "$@")
+    	local param=$(getopt	--name "$FUNCNAME" \
+								--options 'c:u:d:p:' \
+								--longoptions 'chat_id:,
+												user_id:,
+												until_date:,
+												permissions:' \
+								-- "$@")
     	
     	eval set -- "$param"
     	
@@ -1183,26 +1178,10 @@ ShellBot.init()
     				until_date=$2
     				shift 2
     				;;
-    			-s|--can_send_messages)
-    				CheckArgType bool "$1" "$2"
-    				can_send_messages=$2
-    				shift 2
-    				;;
-    			-m|--can_send_media_messages)
-    				CheckArgType bool "$1" "$2"
-    				can_send_media_messages=$2
-    				shift 2
-    				;;
-    			-o|--can_send_other_messages)
-    				CheckArgType bool "$1" "$2"
-    				can_send_other_messages=$2
-    				shift 2
-    				;;
-    			-w|--can_add_web_page_previews)
-    				CheckArgType bool "$1" "$2"
-    				can_add_web_page_previews=$2
-    				shift 2
-    				;;				
+				-p|--permissions)
+					permissions=$2
+					shift 2
+					;;
     			--)
     				shift
     				break
@@ -1211,16 +1190,14 @@ ShellBot.init()
     	done
     	
     	[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
-    	[[ $user_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --user_id]"
+    	[[ $user_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
+    	[[ $permissions ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-p, --permissions]"
     	
     	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
 									${chat_id:+-d chat_id="$chat_id"} \
 									${user_id:+-d user_id="$user_id"} \
-									${until_date_:+-d until_date="$until_date"} \
-									${can_send_messages:+-d can_send_messages="$can_send_messages"} \
-									${can_send_media_messages:+-d can_send_media_messages="$can_send_media_messages"} \
-									${can_send_other_messages:+-d can_send_other_messages="$can_send_other_messages"} \
-									${can_add_web_page_previews:+-d can_add_web_page_previews="$can_add_web_page_previews"})
+									${until_date:+-d until_date="$until_date"} \
+									${permissions:+-d permissions="$permissions"})
     
 		MethodReturn $jq_obj || MessageError TG $jq_obj
     		
@@ -4888,6 +4865,93 @@ _EOF
 		return $?
 	}
 
+	ShellBot.ChatPermissions()
+	{
+		local can_send_messages can_send_media_messages can_send_polls
+		local can_send_other_messages can_add_web_page_previews json
+		local can_change_info can_invite_users can_pin_messages
+
+		local param=$(getopt	--name "$FUNCNAME" \
+								--options 'mdlowcip' \
+								--longoptions 'can_send_messages,
+												can_send_media_messages,
+												can_send_polls,
+												can_send_other_messages,
+												can_add_web_page_previews,
+												can_change_info,
+												can_invite_users,
+												can_pin_messages' \
+								-- "$@")
+
+		eval set -- "$param"
+
+		while :
+		do
+			case $1 in
+				-m|--can_send_messages) 		can_send_messages=true;;
+				-d|--can_send_media_messages) 	can_send_media_messages=true;;
+				-l|--can_send_polls)			can_send_polls=true;;
+				-o|--can_send_other_messages)	can_send_other_messages=true;;
+				-w|--can_add_web_page_previews) can_add_web_page_previews=true;;
+				-c|--can_change_info)			can_change_info=true;;
+				-i|--can_invite_users)			can_invite_users=true;;
+				-p|--can_pin_messages)			can_pin_messages=true;;
+				--) break;;
+			esac
+			shift
+		done
+		
+		json=${can_send_messages:+\"can_send_messages\":$can_send_messages,}
+		json+=${can_send_media_messages:+\"can_send_media_messages\":$can_send_media_messages,}
+		json+=${can_send_polls:+\"can_send_polls\":$can_send_polls,}
+		json+=${can_send_other_messages:+\"can_send_other_messages\":$can_send_other_messages,}
+		json+=${can_add_web_page_previews:+\"can_add_web_page_previews\":$can_add_web_page_previews,}
+		json+=${can_change_info:+\"can_change_info\":$can_change_info,}
+		json+=${can_invite_users:+\"can_invite_users\":$can_invite_users,}
+		json+=${can_pin_messages:+\"can_pin_messages\":$can_pin_messages,}
+	
+		# Retorna o objeto de permissões.
+		echo "{${json%,}}"
+
+    	# Status
+    	return $?
+	}
+
+	ShellBot.setChatPermissions()
+	{
+		local chat_id permissions jq_obj
+
+		local param=$(getopt	--name "$FUNCNAME" \
+								--options 'c:p:' \
+								--longoptions 'chat_id:,permissions:' \
+								-- "$@")
+
+		eval set -- "$param"
+
+		while :
+		do
+			case $1 in
+				-c|--chat_id) 		chat_id=$2; 	shift 2;;
+				-p|--permissions)	permissions=$2; shift 2;;
+				--) shift; break;;
+			esac
+		done
+		
+		[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+		[[ $permissions ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-p, --permissions]"
+
+		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-d chat_id="$chat_id"} \
+									${permissions:+-d permissions="$permissions"})
+		
+		# Retorno do método
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
+    
+    	# Status
+    	return $?
+
+	}
+
 	ShellBot.setMessageRules()
 	{
 		local action command user_id username chat_id 
@@ -5684,6 +5748,8 @@ _EOF
 				ShellBot.answerInlineQuery			\
 				ShellBot.InlineQueryResult			\
 				ShellBot.InputMessageContent		\
+				ShellBot.ChatPermissions			\
+				ShellBot.setChatPermissions			\
 				ShellBot.setMessageRules 			\
 				ShellBot.manageRules 				\
 				ShellBot.getUpdates
