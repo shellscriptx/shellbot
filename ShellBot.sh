@@ -4951,6 +4951,45 @@ _EOF
     	return $?
 
 	}
+	
+	ShellBot.setChatAdministratorCustomTitle()
+	{
+		local chat_id user_id custom_title jq_obj
+
+		local param=$(getopt	--name "$FUNCNAME" \
+								--options 'c:u:t:' \
+								--longoptions 'chat_id:,
+												user_id:,
+												custom_title:' \
+								-- "$@")
+
+		eval set -- "$param"
+
+		while :
+		do
+			case $1 in
+				-c|--chat_id) 		chat_id=$2; 		shift 2;;
+				-u|--user_id) 		user_id=$2; 		shift 2;;
+				-t|--custom_title) 	custom_title=$2; 	shift 2;;
+				--) shift; break;;
+			esac
+		done
+		
+		[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+		[[ $user_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-u, --user_id]"
+		[[ $custom_title ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-t, --custom_title]"
+
+		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-d chat_id="$chat_id"} \
+									${user_id:+-d user_id="$user_id"} \
+									${custom_tilte:+-d custom_title="$custom_title"})
+		
+		# Retorno do método
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
+    
+    	# Status
+    	return $?
+	}
 
 	ShellBot.setMessageRules()
 	{
@@ -5666,88 +5705,89 @@ _EOF
 	}
    
 	# Bot métodos (somente leitura)
-	readonly -f ShellBot.token 						\
-				ShellBot.id 						\
-				ShellBot.username 					\
-				ShellBot.first_name 				\
-				ShellBot.getConfig					\
-				ShellBot.regHandleFunction 			\
-				ShellBot.regHandleExec				\
-				ShellBot.watchHandle 				\
-				ShellBot.ListUpdates 				\
-				ShellBot.TotalUpdates 				\
-				ShellBot.OffsetEnd 					\
-				ShellBot.OffsetNext 				\
-				ShellBot.getMe 						\
-				ShellBot.getWebhookInfo 			\
-				ShellBot.deleteWebhook 				\
-				ShellBot.setWebhook 				\
-				ShellBot.init 						\
-				ShellBot.ReplyKeyboardMarkup 		\
-				ShellBot.ForceReply					\
-				ShellBot.ReplyKeyboardRemove		\
-				ShellBot.KeyboardButton				\
-				ShellBot.sendMessage 				\
-				ShellBot.forwardMessage 			\
-				ShellBot.sendPhoto 					\
-				ShellBot.sendAudio 					\
-				ShellBot.sendDocument 				\
-				ShellBot.sendSticker 				\
-				ShellBot.sendVideo 					\
-				ShellBot.sendVideoNote 				\
-				ShellBot.sendVoice 					\
-				ShellBot.sendLocation 				\
-				ShellBot.sendVenue 					\
-				ShellBot.sendContact 				\
-				ShellBot.sendChatAction 			\
-				ShellBot.getUserProfilePhotos 		\
-				ShellBot.getFile 					\
-				ShellBot.kickChatMember 			\
-				ShellBot.leaveChat 					\
-				ShellBot.unbanChatMember 			\
-				ShellBot.getChat 					\
-				ShellBot.getChatAdministrators 		\
-				ShellBot.getChatMembersCount 		\
-				ShellBot.getChatMember 				\
-				ShellBot.editMessageText 			\
-				ShellBot.editMessageCaption 		\
-				ShellBot.editMessageReplyMarkup 	\
-				ShellBot.InlineKeyboardMarkup 		\
-				ShellBot.InlineKeyboardButton 		\
-				ShellBot.answerCallbackQuery 		\
-				ShellBot.deleteMessage 				\
-				ShellBot.exportChatInviteLink 		\
-				ShellBot.setChatPhoto 				\
-				ShellBot.deleteChatPhoto 			\
-				ShellBot.setChatTitle 				\
-				ShellBot.setChatDescription 		\
-				ShellBot.pinChatMessage 			\
-				ShellBot.unpinChatMessage 			\
-				ShellBot.promoteChatMember 			\
-				ShellBot.restrictChatMember 		\
-				ShellBot.getStickerSet 				\
-				ShellBot.uploadStickerFile 			\
-				ShellBot.createNewStickerSet 		\
-				ShellBot.addStickerToSet 			\
-				ShellBot.setStickerPositionInSet 	\
-				ShellBot.deleteStickerFromSet 		\
-				ShellBot.stickerMaskPosition 		\
-				ShellBot.downloadFile 				\
-				ShellBot.editMessageLiveLocation 	\
-				ShellBot.stopMessageLiveLocation 	\
-				ShellBot.setChatStickerSet 			\
-				ShellBot.deleteChatStickerSet 		\
-				ShellBot.sendMediaGroup 			\
-				ShellBot.editMessageMedia 			\
-				ShellBot.inputMedia 				\
-				ShellBot.sendAnimation 				\
-				ShellBot.answerInlineQuery			\
-				ShellBot.InlineQueryResult			\
-				ShellBot.InputMessageContent		\
-				ShellBot.ChatPermissions			\
-				ShellBot.setChatPermissions			\
-				ShellBot.setMessageRules 			\
-				ShellBot.manageRules 				\
+	readonly -f ShellBot.token 								\
+				ShellBot.id 								\
+				ShellBot.username 							\
+				ShellBot.first_name 						\
+				ShellBot.getConfig							\
+				ShellBot.regHandleFunction 					\
+				ShellBot.regHandleExec						\
+				ShellBot.watchHandle 						\
+				ShellBot.ListUpdates 						\
+				ShellBot.TotalUpdates 						\
+				ShellBot.OffsetEnd 							\
+				ShellBot.OffsetNext 						\
+				ShellBot.getMe 								\
+				ShellBot.getWebhookInfo 					\
+				ShellBot.deleteWebhook 						\
+				ShellBot.setWebhook 						\
+				ShellBot.init 								\
+				ShellBot.ReplyKeyboardMarkup 				\
+				ShellBot.ForceReply							\
+				ShellBot.ReplyKeyboardRemove				\
+				ShellBot.KeyboardButton						\
+				ShellBot.sendMessage 						\
+				ShellBot.forwardMessage 					\
+				ShellBot.sendPhoto 							\
+				ShellBot.sendAudio 							\
+				ShellBot.sendDocument 						\
+				ShellBot.sendSticker 						\
+				ShellBot.sendVideo 							\
+				ShellBot.sendVideoNote 						\
+				ShellBot.sendVoice 							\
+				ShellBot.sendLocation 						\
+				ShellBot.sendVenue 							\
+				ShellBot.sendContact 						\
+				ShellBot.sendChatAction 					\
+				ShellBot.getUserProfilePhotos 				\
+				ShellBot.getFile 							\
+				ShellBot.kickChatMember 					\
+				ShellBot.leaveChat 							\
+				ShellBot.unbanChatMember 					\
+				ShellBot.getChat 							\
+				ShellBot.getChatAdministrators 				\
+				ShellBot.getChatMembersCount 				\
+				ShellBot.getChatMember 						\
+				ShellBot.editMessageText 					\
+				ShellBot.editMessageCaption 				\
+				ShellBot.editMessageReplyMarkup 			\
+				ShellBot.InlineKeyboardMarkup 				\
+				ShellBot.InlineKeyboardButton 				\
+				ShellBot.answerCallbackQuery 				\
+				ShellBot.deleteMessage 						\
+				ShellBot.exportChatInviteLink 				\
+				ShellBot.setChatPhoto 						\
+				ShellBot.deleteChatPhoto 					\
+				ShellBot.setChatTitle 						\
+				ShellBot.setChatDescription 				\
+				ShellBot.pinChatMessage 					\
+				ShellBot.unpinChatMessage 					\
+				ShellBot.promoteChatMember 					\
+				ShellBot.restrictChatMember 				\
+				ShellBot.getStickerSet 						\
+				ShellBot.uploadStickerFile 					\
+				ShellBot.createNewStickerSet 				\
+				ShellBot.addStickerToSet 					\
+				ShellBot.setStickerPositionInSet 			\
+				ShellBot.deleteStickerFromSet 				\
+				ShellBot.stickerMaskPosition 				\
+				ShellBot.downloadFile 						\
+				ShellBot.editMessageLiveLocation 			\
+				ShellBot.stopMessageLiveLocation 			\
+				ShellBot.setChatStickerSet 					\
+				ShellBot.deleteChatStickerSet 				\
+				ShellBot.sendMediaGroup 					\
+				ShellBot.editMessageMedia 					\
+				ShellBot.inputMedia 						\
+				ShellBot.sendAnimation 						\
+				ShellBot.answerInlineQuery					\
+				ShellBot.InlineQueryResult					\
+				ShellBot.InputMessageContent				\
+				ShellBot.ChatPermissions 					\
+				ShellBot.setChatPermissions 				\
+				ShellBot.setChatAdministratorCustomTitle 	\
+				ShellBot.setMessageRules 					\
+				ShellBot.manageRules 						\
 				ShellBot.getUpdates
 
 	offset=${_BOT_FLUSH_:+$(FlushOffset)}	# flush
