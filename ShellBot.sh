@@ -102,7 +102,7 @@ readonly _ERR_PARAM_REQUIRED_='opção requerida: verique se o(s) parâmetro(s) 
 readonly _ERR_TOKEN_UNAUTHORIZED_='não autorizado: verifique se possui permissões para utilizar o token.'
 readonly _ERR_TOKEN_INVALID_='token inválido: verique o número do token e tente novamente.'
 readonly _ERR_BOT_ALREADY_INIT_='ação não permitida: o bot já foi inicializado.'
-readonly _ERR_FILE_NOT_FOUND_='arquivo não encontrado: não foi possível ler o arquivo especificado.'
+readonly _ERR_FILE_NOT_FOUND_='arquivo não encontrado: não foi possível ler o arquivo.'
 readonly _ERR_DIR_WRITE_DENIED_='permissão negada: não é possível gravar no diretório.'
 readonly _ERR_DIR_NOT_FOUND_='Não foi possível acessar: diretório não encontrado.'
 readonly _ERR_FILE_INVALID_ID_='id inválido: arquivo não encontrado.'
@@ -5369,11 +5369,7 @@ _EOF
 			
 			for file in ${match//|/ }; do
 				# Testa o acesso ao arquivo.
-				if [[ -d "$file" ]]; then
-					MessageError API "'$file' é um diretório" "${_BOT_RULES_[$i:name]}" '[-T, --auth_file]'
-				elif [[ ! -r "$file" ]]; then
-					MessageError API "'$file' não foi possível ler o arquivo" "${_BOT_RULES_[$i:name]}" '[-T, --auth_file]'
-				fi
+				[[ -f "$file" && -r "$file" ]] || MessageError API "'$file' $_ERR_FILE_NOT_FOUND_" "${_BOT_RULES_[$i:name]}" '[-T, --auth_file]'
 				
 				# Extrai do arquivo os usuários.
 				mapfile -td$'\n' arr <<< $(< "$file")
