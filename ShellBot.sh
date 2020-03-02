@@ -4872,15 +4872,15 @@ _EOF
 		local can_change_info can_invite_users can_pin_messages
 
 		local param=$(getopt	--name "$FUNCNAME" \
-								--options 'mdlowcip' \
-								--longoptions 'can_send_messages,
-												can_send_media_messages,
-												can_send_polls,
-												can_send_other_messages,
-												can_add_web_page_previews,
-												can_change_info,
-												can_invite_users,
-												can_pin_messages' \
+								--options 'm:d:l:o:w:c:i:p:' \
+								--longoptions 'can_send_messages:,
+												can_send_media_messages:,
+												can_send_polls:,
+												can_send_other_messages:,
+												can_add_web_page_previews:,
+												can_change_info:,
+												can_invite_users:,
+												can_pin_messages:' \
 								-- "$@")
 
 		eval set -- "$param"
@@ -4888,17 +4888,17 @@ _EOF
 		while :
 		do
 			case $1 in
-				-m|--can_send_messages) 		can_send_messages=true;;
-				-d|--can_send_media_messages) 	can_send_media_messages=true;;
-				-l|--can_send_polls)			can_send_polls=true;;
-				-o|--can_send_other_messages)	can_send_other_messages=true;;
-				-w|--can_add_web_page_previews) can_add_web_page_previews=true;;
-				-c|--can_change_info)			can_change_info=true;;
-				-i|--can_invite_users)			can_invite_users=true;;
-				-p|--can_pin_messages)			can_pin_messages=true;;
-				--) break;;
+				-m|--can_send_messages) 		can_send_messages=$2;;
+				-d|--can_send_media_messages) 	can_send_media_messages=$2;;
+				-l|--can_send_polls)			can_send_polls=$2;;
+				-o|--can_send_other_messages)	can_send_other_messages=$2;;
+				-w|--can_add_web_page_previews) can_add_web_page_previews=$2;;
+				-c|--can_change_info)			can_change_info=$2;;
+				-i|--can_invite_users)			can_invite_users=$2;;
+				-p|--can_pin_messages)			can_pin_messages=$2;;
+				--) shift; break;;
 			esac
-			shift
+			shift 2
 		done
 		
 		json=${can_send_messages:+\"can_send_messages\":$can_send_messages,}
@@ -4931,10 +4931,11 @@ _EOF
 		while :
 		do
 			case $1 in
-				-c|--chat_id) 		chat_id=$2; 	shift 2;;
-				-p|--permissions)	permissions=$2; shift 2;;
+				-c|--chat_id) 		chat_id=$2;;
+				-p|--permissions)	permissions=$2;;
 				--) shift; break;;
 			esac
+			shift 2
 		done
 		
 		[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
@@ -4968,11 +4969,12 @@ _EOF
 		while :
 		do
 			case $1 in
-				-c|--chat_id) 		chat_id=$2; 		shift 2;;
-				-u|--user_id) 		user_id=$2; 		shift 2;;
-				-t|--custom_title) 	custom_title=$2; 	shift 2;;
+				-c|--chat_id) 		chat_id=$2;;
+				-u|--user_id) 		user_id=$2;;
+				-t|--custom_title) 	custom_title=$2;;
 				--) shift; break;;
 			esac
+			shift 2
 		done
 		
 		[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
@@ -4989,6 +4991,73 @@ _EOF
     
     	# Status
     	return $?
+	}
+
+	ShellBot.sendPoll()
+	{
+		local chat_id question options is_anonymous reply_markup
+		local type allows_multiple_answers correct_option_id jq_obj
+		local is_closed disable_notification reply_to_message_id
+
+		local param=$(getopt	--name "$FUNCNAME" \
+								--options 'c:q:o:a:k:t:m:i:l:n:r:' \
+								--longoptions 'chat_id:,
+												question:,
+												options:,
+												is_anonymous:,
+												reply_markup:,
+												type:,
+												allows_multiple_answers:,
+												correct_option_id:,
+												is_closed:,
+												disable_notification:,
+												reply_to_message_id:' \
+								-- "$@")
+
+		eval set -- "$param"
+
+		while :
+		do
+			case $1 in
+				-c|--chat_id) chat_id=$2;;
+				-q|--question) question=$2;;
+				-o|--options) options=$2;;
+				-a|--is_anonymous) is_anonymous=$2;;
+				-k|--reply_markup) reply_markup=$2;;
+				-t|--type) type=$2;;
+				-m|--allows_multiple_answers) allows_multiple_answers=$2;;
+				-i|--correct_option_id) correct_option_id=$2;;
+				-l|--is_closed) is_closed=$2;;
+				-n|--disable_notification) disable_notification=$2;;
+				-r|--reply_to_message_id) reply_to_message_id=$2;;
+				--) shift; break;;
+			esac
+			shift 2
+		done
+		
+		[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+		[[ $question ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-q, --question]"
+		[[ $options ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-o, --options]"
+
+		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-d chat_id="$chat_id"} \
+									${question:+-d question="$question"} \
+									${options:+-d options="$options"} \
+									${is_anonymous:+-d is_anonymous="$is_anonymous"} \
+									${reply_markup:+-d reply_markup="$reply_markup"} \
+									${type:+-d type="$type"} \
+									${allows_multiple_answers:+-d allows_multiple_answers="$allows_multiple_answers"} \
+									${correct_option_id:+-d correct_option_id="$correct_option_id"} \
+									${is_closed:+-d is_closed="$is_closed"} \
+									${disable_notification:+-d disable_notification="$disable_notification"} \
+									${reply_to_message_id:+-d reply_to_message_id="$reply_to_message_id"})
+		
+		# Retorno do método
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
+    
+    	# Status
+    	return $?
+
 	}
 
 	ShellBot.setMessageRules()
@@ -5786,6 +5855,7 @@ _EOF
 				ShellBot.ChatPermissions 					\
 				ShellBot.setChatPermissions 				\
 				ShellBot.setChatAdministratorCustomTitle 	\
+				ShellBot.sendPoll							\
 				ShellBot.setMessageRules 					\
 				ShellBot.manageRules 						\
 				ShellBot.getUpdates
