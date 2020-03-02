@@ -1698,15 +1698,16 @@ ShellBot.init()
 
 	ShellBot.KeyboardButton()
 	{
-		local __text __contact __location __button __line
+		local __text __contact __location __button __line __request_poll
 
 		local __param=$(getopt	--name "$FUNCNAME"	\
-								--options 'b:l:t:c:o:'	\
+								--options 'b:l:t:c:o:r:'	\
 								--longoptions 'button:,
 												line:,
 												text:,
 												request_contact:,
-												request_location:' \
+												request_location:,
+												request_poll:' \
 								-- "$@")
 	
 		eval set -- "$__param"
@@ -1738,6 +1739,10 @@ ShellBot.init()
 					__location=$2
 					shift 2
 					;;
+				-r|--request_poll)
+					__request_poll=$2
+					shift 2
+					;;
 				--)
 					shift
 					break
@@ -1754,11 +1759,12 @@ ShellBot.init()
 		printf -v $__button "${!__button#[}"
 		printf -v $__button "${!__button%]}"
 		
-		printf -v $__button '%s {"text": "%s", "request_contact": %s, "request_location": %s}' 	\
-							"${!__button:+${!__button},}"										\
-							"${__text}"															\
-							"${__contact:-false}"												\
-							"${__location:-false}"
+		printf -v $__button '%s {"text": "%s", "request_contact": %s, "request_location": %s, "request_poll": %s}' 	\
+							"${!__button:+${!__button},}"															\
+							"${__text}"																				\
+							"${__contact:-false}"																	\
+							"${__location:-false}"																	\
+							"${__request_poll:-\"\"}"
 
 		printf -v $__button "[${!__button}]"
 
@@ -5060,6 +5066,30 @@ _EOF
 
 	}
 
+	ShellBot.KeyboardButtonPollType()
+	{
+		local type
+
+		local param=$(getopt --name "$FUNCNAME" --options 't:' --longoptions 'type:' -- "$@")
+
+		eval set -- "$param"
+
+		while :
+		do
+			case $1 in
+				-t|--type) type=$2;;
+				--) shift; break;;
+			esac
+			shift 2
+		done
+
+		[[ $type ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-t, --type]"
+
+		printf '{"type": "%s"}' "$type"
+
+		return 0
+	}
+
 	ShellBot.setMessageRules()
 	{
 		local action command user_id username chat_id 
@@ -5856,6 +5886,7 @@ _EOF
 				ShellBot.setChatPermissions 				\
 				ShellBot.setChatAdministratorCustomTitle 	\
 				ShellBot.sendPoll							\
+				ShellBot.KeyboardButtonPollType				\
 				ShellBot.setMessageRules 					\
 				ShellBot.manageRules 						\
 				ShellBot.getUpdates
