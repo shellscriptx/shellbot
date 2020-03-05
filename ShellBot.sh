@@ -34,7 +34,7 @@
 
 [[ $_SHELLBOT_SH_ ]] && return 1
 
-if ! awk 'BEGIN { exit ARGV[1] < 4.3 }' ${BASH_VERSINFO[0]}.${BASH_VERSINFO[1]}; then
+if (($(bc <<< "${BASH_VERSINFO[0]}.${BASH_VERSINFO[1]} < 4.3))); then
 	echo "${BASH_SOURCE:-${0##*/}}: erro: requer o interpretador de comandos 'bash 4.3' ou superior." 1>&2
 	exit 1
 fi
