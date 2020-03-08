@@ -133,8 +133,7 @@ GetAllValues(){
 }
 
 GetAllKeys(){
-	local key; jq -r 'path(..|select(type == "string" or type == "number" or type == "boolean"))|map(if type == "number" then .|tostring|"["+.+"]" else . end)|join(".")' <<< $* | \
-	while read key; do echo "${key//.\[/\[}"; done
+	jq -r 'path(..|select(type == "string" or type == "number" or type == "boolean"))|map(if type == "number" then .|tostring|"["+.+"]" else . end)|join(".")|gsub("\\.\\[";"[")' <<< $*
 }
 
 FlagConv()
