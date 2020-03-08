@@ -5400,25 +5400,29 @@ _EOF
 		[[ ${u_message_id:=${inline_query_id[$uid]}} 					]] ||
 		[[ ${u_message_id:=${chosen_inline_result_result_id[$uid]}}		]] ||
 		[[ ${u_message_id:=${channel_post_message_id[$uid]}}			]] ||
-		[[ ${u_message_id:=${edited_channel_post_message_id[$uid]}}		]]
+		[[ ${u_message_id:=${edited_channel_post_message_id[$uid]}}		]] ||
+		[[ ${u_message_id:=${poll_answer_poll_id[$uid]}}				]]
 
 		[[ ${u_message_from_is_bot:=${message_from_is_bot[$uid]}} 				]] ||
 		[[ ${u_message_from_is_bot:=${edited_message_from_is_bot[$uid]}} 		]] ||
 		[[ ${u_message_from_is_bot:=${callback_query_from_is_bot[$uid]}} 		]] ||
 		[[ ${u_message_from_is_bot:=${inline_query_from_is_bot[$uid]}} 			]] ||
-		[[ ${u_message_from_is_bot:=${chosen_inline_result_from_is_bot[$uid]}}	]]
+		[[ ${u_message_from_is_bot:=${chosen_inline_result_from_is_bot[$uid]}}	]] ||
+		[[ ${u_message_from_is_bot:=${poll_answer_user_is_bot[$uid]}}			]]
 
 		[[ ${u_message_from_id:=${message_from_id[$uid]}} 				]] ||
 		[[ ${u_message_from_id:=${edited_message_from_id[$uid]}} 		]] ||
 		[[ ${u_message_from_id:=${callback_query_from_id[$uid]}} 		]] ||
 		[[ ${u_message_from_id:=${inline_query_from_id[$uid]}} 			]] ||
-		[[ ${u_message_from_id:=${chosen_inline_result_from_id[$uid]}}	]]
+		[[ ${u_message_from_id:=${chosen_inline_result_from_id[$uid]}}	]] ||
+		[[ ${u_message_from_id:=${poll_answer_user_id[$uid]}}			]]
 
 		[[ ${u_message_from_username:=${message_from_username[$uid]}} 				]] ||
 		[[ ${u_message_from_username:=${edited_message_from_username[$uid]}} 		]] ||
 		[[ ${u_message_from_username:=${callback_query_from_username[$uid]}} 		]] ||
 		[[ ${u_message_from_username:=${inline_query_from_username[$uid]}} 			]] ||
-		[[ ${u_message_from_username:=${chosen_inline_result_from_username[$uid]}}	]]
+		[[ ${u_message_from_username:=${chosen_inline_result_from_username[$uid]}}	]] ||
+		[[ ${u_message_from_username:=${poll_answer_user_username[$uid]}}			]]
 
 		[[ ${u_message_from_language_code:=${message_from_language_code[$uid]}} 				]] ||
 		[[ ${u_message_from_language_code:=${edited_message_from_language_code[$uid]}} 			]] ||
@@ -5528,7 +5532,8 @@ _EOF
 				[[ $msgstatus == reply		&& ${message_reply_to_message_message_id[$uid]:-${channel_post_reply_to_message_message_id[$uid]}}	]] 	||
 				[[ $msgstatus == callback	&& ${callback_query_message_message_id[$uid]}														]]	||
 				[[ $msgstatus == inline		&& ${inline_query_id[$uid]}																			]]	||
-				[[ $msgstatus == chosen		&& ${chosen_inline_result_result_id[$uid]}															]]	&& break
+				[[ $msgstatus == chosen		&& ${chosen_inline_result_result_id[$uid]}															]]	||
+				[[ $msgstatus == poll		&& ${poll_answer_poll_id[$uid]}																		]]	&& break
 			done
 				
 			(($?)) && continue
