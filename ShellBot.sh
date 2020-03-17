@@ -5025,8 +5025,8 @@ _EOF
 		do
 			case $1 in
 				-c|--chat_id) chat_id=$2;;
-				-q|--question) question=$2;;
-				-o|--options) options=$2;;
+				-q|--question) question=$(echo -e "$2");;
+				-o|--options) options=$(echo -e "$2");;
 				-a|--is_anonymous) is_anonymous=$2;;
 				-k|--reply_markup) reply_markup=$2;;
 				-t|--type) type=$2;;
@@ -5349,7 +5349,7 @@ _EOF
 	{
 		local uid rule botcmd err tm stime etime ctime mime_type weekday
 		local dt sdate edate cdate mem ent type args status out fwid
-	   	local stdout i re match file users arr
+	   	local stdout i re match file user line
 
 		local u_message_text u_message_id u_message_from_is_bot 
 		local u_message_from_id u_message_from_username msgstatus argpos
@@ -5509,17 +5509,16 @@ _EOF
 			match=${BASH_REMATCH[2]:-${_BOT_RULES_[$i:auth_file]}}
 			
 			for file in ${match//|/ }; do
-				# Testa o acesso ao arquivo.
+				# Testa acesso ao arquivo.
 				[[ -f "$file" && -r "$file" ]] || MessageError API "'$file' $_ERR_FILE_NOT_FOUND_" "${_BOT_RULES_[$i:name]}" '[-T, --auth_file]'
-				
-				# Extrai do arquivo os usuários.
-				mapfile -td$'\n' arr <<< $(< "$file")
-				users=${arr[@]%%*( )#*(*)}
-				arr=
+		
+				while read -r line; do
+					user=${line%%*( )#*}	# Remove os comentários e salva o usuário.
+					[[ $user ]] || continue	# Ignora linha comentada.
 
-				# Verifica se a base contém o ID ou USERNAME da requisição.
-				[[ $u_message_from_id		== @(${users// /|}) 	]] ||
-				[[ $u_message_from_username	== @(${users// /|}) 	]] && break
+					[[ $user == $u_message_from_id			]] ||
+					[[ $user == $u_message_from_username	]] && break 2	# Finaliza verificação.
+				done < "$file"	# Lê o arquivo.
 			done
 
 			((${BASH_REMATCH[1]} $?)) && continue
