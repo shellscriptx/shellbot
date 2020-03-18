@@ -20,14 +20,11 @@ ShellBot.username
 # argumentos posicionais é possível criar comandos/argumentos para adequação 
 # da sintaxe, podendo ser distribuida em regras e tratamentos distintos.
 #
-# Comandos: /who, /date, /df e /du
+# Comandos: /who, /date, /df e /du (regex)
 ShellBot.setMessageRules 	--name 'terminal_comandos' 	\
 							--chat_type	private			\
 							--entitie_type bot_command	\
-							--command '/who'			\
-							--command '/date'			\
-							--command '/df'				\
-							--command '/du'				\
+							--text '^/(who|date|df|du)[ ]+' \
 							--exec '${1#/} ${*:2}'	# Remove a barra inicial do argumento posicional '$1' (bot comando) transformando-o
 													# em um comando de shell válido e passa os argumentos posicionais subsequentes.
 													#
