@@ -80,13 +80,8 @@ ShellBot.setMessageRules	--name 'bot_horario_operacao1' \
 
 # Dias da semana fora do horário operacional.
 ShellBot.setMessageRules	--name 'bot_horario_operacao2' \
-							--time '00:00-08:00' \
-							--time '18:00-23:59' \
-							--weekday 1 \
-							--weekday 2 \
-							--weekday 3	\
-							--weekday 4 \
-							--weekday 5 \
+							--time '00:00-08:00,18:00-23:59' \
+							--weekday '1,2,3,4,5' \
 							--bot_reply_message "$msg_info"
 
 # Define o comando e a quantidade de argumentos aceitos na mensagem.
@@ -105,38 +100,32 @@ ShellBot.setMessageRules	--name 'obter_informacoes_do_usuario' \
 ShellBot.setMessageRules	--name 'pingar_host' \
 							--action ping_host \
 							--command '/ping' \
-							--username 'x_SHAMAN_x' \
-							--username 'x_admin1' \
-							--username 'x_admin2' \
+							--username 'x_SHAMAN_x,admin1,admin2' \
 							--time '12:00-14:30'
 							
 # Apagar as mensagens de divulgação em um grupo/super-grupo.
 ShellBot.setMessageRules	--name 'apagar_postagem_de_grupos' \
 							--action apagar_grupo_url \
 							--entitie_type url \
-							--chat_type supergroup \
-							--chat_type group \
+							--chat_type 'supergroup,group' \
 							--text 't.me/[a-zA-Z0-9_]+'
 
 # Envia mensagem de boas-vindas ao usuário no momento que ingressar ao grupo.
 ShellBot.setMessageRules	--name 'mensagem_boas_vindas' \
 							--action msg_bem_vindo \
-							--chat_type supergroup \
-							--chat_type group \
+							--chat_type 'supergroup,group' \
 							--chat_member new
 
 # Envia mensagem de despedida quando o usuário deixar o grupo.
 ShellBot.setMessageRules	--name 'mensagem_despedida' \
 							--action msg_despedida \
-							--chat_type supergroup \
-							--chat_type group \
+							--chat_type 'supergroup,group' \
 							--chat_member left
 
 # Apagar todos os arquivos executaveis enviados entre 01:00 e 06:00 da manhã no mês de dezembro.
 ShellBot.setMessageRules	--name 'apagar_executaveis' \
 							--action apagar_msg	\
-							--chat_type supergroup \
-							--chat_type group \
+							--chat_type 'supergroup,group' \
 							--date '01/12/2018-31/12/2018' \
 							--time '01:00-06:00' \
 							--mime_type 'application/x-executable'
@@ -144,17 +133,14 @@ ShellBot.setMessageRules	--name 'apagar_executaveis' \
 # Apagar todas as fotos postadas no final de semana.
 ShellBot.setMessageRules	--name 'apagar_fotos_final_de_semana' \
 							--action apagar_msg \
-							--chat_type supergroup \
-							--chat_type group \
+							--chat_type 'supergroup,group' \
 							--file_type photo \
-							--weekday 6 \
-							--weekday 7
+							--weekday '6,7'
 
 # Notifica o usuário sempre que o mesmo postar uma foto no grupo ou super-grupo.
 ShellBot.setMessageRules	--name 'postagem_fotos' \
 							--mime_type 'image/jpeg' \
-							--chat_type supergroup \
-							--chat_type group \
+							--chat_type 'supergroup,group' \
 							--bot_reply_message 'Evite postar fotos no grupo, obrigado.'
 
 while :
