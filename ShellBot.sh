@@ -616,6 +616,9 @@ ShellBot.init()
 	declare -gr _TOKEN_=$token											# TOKEN
 	declare -gr _API_TELEGRAM_="https://api.telegram.org/bot$_TOKEN_"	# API
 
+	# Testa conexão.
+	curl -s "$_API_TELEGRAM_" &>- || MessageError API 'não foi possível estabelecer conexão com o Telegram.'
+
     # Um método simples para testar o token de autenticação do seu bot. 
     # Não requer parâmetros. Retorna informações básicas sobre o bot em forma de um objeto Usuário.
     ShellBot.getMe()
@@ -629,7 +632,7 @@ ShellBot.init()
     	return $?
     }
 
-	ShellBot.getMe &>/dev/null || MessageError API "$_ERR_TOKEN_UNAUTHORIZED_" '[-t, --token]'
+	ShellBot.getMe &>- || MessageError API "$_ERR_TOKEN_UNAUTHORIZED_" '[-t, --token]'
 	
 	# Salva as informações do bot.
 	declare -gr _BOT_INFO_=(
@@ -5693,7 +5696,7 @@ _EOF
 					ShellBot.sendChatAction --chat_id $u_message_chat_id --action ${_BOT_RULES_[$i:bot_action]} &>/dev/null
 				fi
 			done 
-			${_BOT_RULES_[$i:continue]:-return 0}
+			[[ ${_BOT_RULES_[$i:continue]} ]] || return 0
 		done
 
 		return 1
