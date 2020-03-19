@@ -102,7 +102,7 @@ readonly _ERR_PARAM_REQUIRED_='opção requerida: verique se o(s) parâmetro(s) 
 readonly _ERR_TOKEN_UNAUTHORIZED_='não autorizado: verifique se possui permissões para utilizar o token.'
 readonly _ERR_TOKEN_INVALID_='token inválido: verique o número do token e tente novamente.'
 readonly _ERR_BOT_ALREADY_INIT_='ação não permitida: o bot já foi inicializado.'
-readonly _ERR_FILE_NOT_FOUND_='arquivo não encontrado: não foi possível ler o arquivo.'
+readonly _ERR_FILE_NOT_FOUND_='falha ao acessar: não foi possível ler o arquivo.'
 readonly _ERR_DIR_WRITE_DENIED_='permissão negada: não é possível gravar no diretório.'
 readonly _ERR_DIR_NOT_FOUND_='Não foi possível acessar: diretório não encontrado.'
 readonly _ERR_FILE_INVALID_ID_='id inválido: arquivo não encontrado.'
@@ -116,6 +116,7 @@ readonly _ERR_FUNCTION_NOT_FOUND_='função não encontrada: o identificador esp
 readonly _ERR_ARG_='argumento inválido: o argumento não é suportado pelo parâmetro especificado.'
 readonly _ERR_RULE_ALREADY_EXISTS_='falha ao definir: o nome da regra já existe.'
 readonly _ERR_HANDLE_EXISTS_='erro ao registar: já existe um handle vinculado ao callback'
+readonly _ERR_CONNECTION_='falha de conexão: não foi possível estabelecer conexão com o Telegram.'
 
 # Maps
 declare -A _BOT_HANDLE_
@@ -617,7 +618,7 @@ ShellBot.init()
 	declare -gr _API_TELEGRAM_="https://api.telegram.org/bot$_TOKEN_"	# API
 
 	# Testa conexão.
-	curl -s "$_API_TELEGRAM_" &>- || MessageError API 'não foi possível estabelecer conexão com o Telegram.'
+	curl -s "$_API_TELEGRAM_" &>- || MessageError API "$_ERR_CONNECTION_"
 
     # Um método simples para testar o token de autenticação do seu bot. 
     # Não requer parâmetros. Retorna informações básicas sobre o bot em forma de um objeto Usuário.
@@ -5513,15 +5514,17 @@ _EOF
 			
 			for file in ${match//|/ }; do
 				# Testa acesso ao arquivo.
-				[[ -f "$file" && -r "$file" ]] || MessageError API "'$file' $_ERR_FILE_NOT_FOUND_" "${_BOT_RULES_[$i:name]}" '[-T, --auth_file]'
-		
-				while read -r line; do
-					user=${line%%*( )#*}	# Remove os comentários e salva o usuário.
-					[[ $user ]] || continue	# Ignora linha comentada.
+				if ! [[ -f "$file" && -r "$file" ]]; then
+					MessageError API "'$file' $_ERR_FILE_NOT_FOUND_" "${_BOT_RULES_[$i:name]}" '[-T, --auth_file]'
+				fi
 
-					[[ $user == $u_message_from_id			]] ||
-					[[ $user == $u_message_from_username	]] && break 2	# Finaliza verificação.
-				done < "$file"	# Lê o arquivo.
+				# Lê os usuários removendo os comentários complementares
+				# e ignora a linha prefixada com hashtag '#'.	
+				while read -r line; do
+					user=${line%%*( )#*}
+					[[ $user != *( )#* ]] 													&&
+					[[ $user == $u_message_from_id || $user == $u_message_from_username	]] 	&& break 2
+				done < "$file"
 			done
 
 			((${BASH_REMATCH[1]} $?)) && continue
