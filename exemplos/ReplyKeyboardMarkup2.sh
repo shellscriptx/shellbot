@@ -40,7 +40,7 @@ do
 				# Inicia a conversa com o bot.
 				ShellBot.sendMessage	--chat_id ${message_from_id[$id]} \
 										--text "Olá *${message_from_first_name[$id]}* !! em que posso ajudar?" \
-										--reply_markup "$(ShellBot.ReplyKeyboardMarkup --button 'btn_ajuda')" \
+										--reply_markup "$(ShellBot.ReplyKeyboardMarkup --button 'btn_ajuda' -o true)" \
 										--parse_mode markdown
 				;;
 			'/ajuda'|'❓Ajuda ❓')
