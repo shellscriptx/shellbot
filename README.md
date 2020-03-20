@@ -1,4 +1,4 @@
-# ShellBot API v6.2.1
+# ShellBot API v6.3.0
 ![ShellBot](https://github.com/shellscriptx/ShellBot/blob/master/ShellBot.png)
 
 ## Sobre
@@ -15,6 +15,8 @@ Linguagem: **shell script**
 ## Contato
 
 Para informações, sugestões ou reporte de falhas, envie e-mail para <shellscriptx@gmail.com>
+
+Telegram (suporte): https://t.me/shellbot_api
 
 Blog: http://www.shellscriptx.blogspot.com.br
 
@@ -57,3 +59,14 @@ $ cp ShellBot.sh /projeto/meu_bot/
 ## Documentação
 
 Para mais informações consulte a documentação do projeto na página [wiki](https://github.com/shellscriptx/ShellBot/wiki).
+
+## Ajude o projeto
+
+O projeto nasceu com o objetivo de ajudar a comunidade, permitindo o acesso gratuito aos recursos e atualizações. Todo trabalho é realizado com tecnicidade em um movimento totalmente voluntário por parte do desenvolvedor.
+
+O **ShellBot** é útil? 
+
+Se _"Sim"_, nos ajude a mantê-lo "vivo" realizando uma doação simbólica. "Um programador não vive sem café!!"
+
+[![Doar](https://www.paypalobjects.com/pt_BR/BR/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=7PMTW487XF68Y&source=url)
+
