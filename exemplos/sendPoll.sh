@@ -80,12 +80,12 @@ _eof
 
 function tabuada()
 {
-	local n ra var num1 num2 opts arr msg
+	local n ra op num1 num2 opts arr msg
 
 	num1=$((RANDOM%9+1))	# Operando 1
 	num2=$((RANDOM%9+1))	# Operando 2
 	ra=$((RANDOM%3+1))		# Posição da resposta correta.
-	var=('+' '-')			# Operador de variação.
+	op=('+' '-')			# Operador de variação.
 
 	# Gera os resultados.
 	for n in {0..3}; do
@@ -94,7 +94,7 @@ function tabuada()
 			opts[$n]=$((num1*num2))
 		else
 			# Incorreto.
-			opts[$n]=$(((num1*num2)${var[RANDOM%2]}(RANDOM%10+n)))
+			opts[$n]=$(((num1*num2)${op[RANDOM%2]}(RANDOM%9+n)))
 		fi
 	done
 
