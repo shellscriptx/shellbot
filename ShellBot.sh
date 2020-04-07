@@ -128,9 +128,13 @@ declare _VAR_INIT_
 
 Json() { local obj=$(jq -Mc "$1" <<< "${*:2}"); obj=${obj#\"}; echo "${obj%\"}"; }
 
-GetAllValues(){ 
+SetDelmValues(){ 
 	local obj=$(jq "[..|select(type == \"string\" or type == \"number\" or type == \"boolean\")|tostring]|join(\"${_BOT_DELM_/\"/\\\"}\")" <<< $*)
 	obj=${obj#\"}; echo "${obj%\"}"
+}
+
+GetAllValues(){
+	jq '[..|select(type == "string" or type == "number" or type == "boolean")|tostring]|.[]' <<< $*
 }
 
 GetAllKeys(){
@@ -345,7 +349,7 @@ CreateLog()
 		fmt=${fmt//\{MESSAGE_TEXT\}/${mtext:--}}
 		fmt=${fmt//\{ENTITIES_TYPE\}/${etype:--}}
 		fmt=${fmt//\{METHOD\}/${FUNCNAME[2]/main/ShellBot.getUpdates}}
-		fmt=${fmt//\{RETURN\}/$(GetAllValues ${*:2})}
+		fmt=${fmt//\{RETURN\}/$(SetDelmValues ${*:2})}
 
 		exec 2<&5
 
@@ -365,17 +369,23 @@ MethodReturn()
 	# Retorno
 	case $_BOT_TYPE_RETURN_ in
 		json) echo "$*";;
-		value) GetAllValues $*;;
+		value) SetDelmValues $*;;
 		map)
-			local key val obj
+			local key val vars vals i obj
 			return=()
 
-			for obj in $(GetAllKeys $*); do
-				key=${obj//[0-9\[\]]/}
+			mapfile -t vars <<< $(GetAllKeys $*)
+			mapfile -t vals <<< $(GetAllValues $*)
+
+			for i in ${!vars[@]}; do
+
+				key=${vars[$i]//[0-9\[\]]/}
 				key=${key#result.}
 				key=${key//./_}
 
-				val=$(Json ".$obj" $*)
+				val=${vals[$i]}
+				val=${val#\"}
+				val=${val%\"}
 				
 				[[ ${return[$key]} ]] && return[$key]+=${_BOT_DELM_}${val} || return[$key]=$val
 				[[ $_BOT_MONITOR_ ]] && printf "[%s]: return[%s] = '%s'\n" "${FUNCNAME[1]}" "$key" "$val"
@@ -5708,18 +5718,18 @@ _EOF
     ShellBot.getUpdates()
     {
     	local total_keys offset limit timeout allowed_updates jq_obj
-		local vet val var obj oldv bar
+	local vet val var obj oldv bar vars vals i
 
-		# Define os parâmetros da função
-		local param=$(getopt 	--name "$FUNCNAME" \
-								--options 'o:l:t:a:' \
-								--longoptions 'offset:,
-												limit:,
-												timeout:,
-												allowed_updates:' \
-								-- "$@")
+	# Define os parâmetros da função
+	local param=$(getopt 	--name "$FUNCNAME" \
+				--options 'o:l:t:a:' \
+				--longoptions 'offset:,
+						limit:,
+						timeout:,
+						allowed_updates:' \
+				-- "$@")
     
-		eval set -- "$param"
+	eval set -- "$param"
 
     	while :
     	do
@@ -5779,20 +5789,26 @@ _EOF
 					"${_BOT_INFO_[3]}" 												\
 					"${_BOT_INFO_[1]}"
 		fi
+		
+		mapfile -t vars <<< $(GetAllKeys $jq_obj)
+		mapfile -t vals <<< $(GetAllValues $jq_obj)
 
-		for obj in $(GetAllKeys $jq_obj); do
+		for i in ${!vars[@]}; do
 	
-			[[ $obj =~ [0-9]+ ]]
+			[[ ${vars[$i]} =~ [0-9]+ ]]
 			vet=${BASH_REMATCH:-0}
 			
-			var=${obj//[0-9\[\]]/}
+			var=${vars[$i]//[0-9\[\]]/}
 			var=${var#result.}
 			var=${var//./_}
 	
 			declare -g $var
 			local -n byref=$var # ponteiro
 						
-			val=$(Json ".$obj" $jq_obj)
+			val=${vals[$i]}
+			val=${val#\"}
+			val=${val%\"}
+
 			byref[$vet]+=${byref[$vet]:+$_BOT_DELM_}${val}
 
 			if [[ $_BOT_MONITOR_ ]]; then
@@ -5922,6 +5938,7 @@ readonly -f MessageError 		\
 			CreateUnitService 	\
 			GetAllKeys 			\
 			GetAllValues 		\
+			SetDelmValues		\
 			MethodReturn 		\
 			CheckArgType 		\
 			CreateLog			\
