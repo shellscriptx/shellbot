@@ -5153,7 +5153,33 @@ _EOF
 
 	ShellBot.setMyCommands()
 	{
-		:
+		local jq_obj commands
+
+		local param=$(getopt 	--name "$FUNCNAME" \
+								--options 'c:' \
+								--longoptions 'commands:' \
+								-- "$@")
+
+		eval set -- "$param"
+
+		while :
+		do
+			case $1 in
+				-c|--commands) commands=$2;;
+				--) break;;	
+			esac
+			shift 2
+		done
+		
+		[[ $commands ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --commands]"
+
+		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} ${commands:+-d commands="$commands"})
+
+		# Retorno do método
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
+    
+    	# Status
+    	return $?
 	}
 
 	ShellBot.BotCommand()
@@ -6007,6 +6033,9 @@ _EOF
 				ShellBot.sendPoll							\
 				ShellBot.KeyboardButtonPollType				\
 				ShellBot.sendDice							\
+				ShellBot.getMyCommands						\
+				ShellBot.setMyCommands						\
+				ShellBot.BotCommand							\
 				ShellBot.setMessageRules 					\
 				ShellBot.manageRules 						\
 				ShellBot.getUpdates
