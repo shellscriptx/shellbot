@@ -5151,6 +5151,52 @@ _EOF
     	return $?
 	}
 
+	ShellBot.setMyCommands()
+	{
+		:
+	}
+
+	ShellBot.BotCommand()
+	{
+		local __command __description __list
+		
+		local __param=$(getopt 	--name "$FUNCNAME" \
+								--options 'l:c:d:' \
+								--longoptions 'list:,
+												command:,
+												description:' \
+								-- "$@")
+
+		eval set -- "$__param"
+
+		while :
+		do
+			case $1 in
+				-l|--list) 	CheckArgType var "$1" "$2"; __list=$2;;
+				-c|--command) __command=$2;;
+				-d|--description) __description=$2;;
+				--) break;;
+			esac
+			shift 2
+		done
+
+		[[ $__list ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-l, --list]"
+		[[ $__command ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --command]"
+		[[ $__description ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-d, --description]"
+
+		printf -v $__list "${!__list#[}"
+		printf -v $__list "${!__list%]}"
+		
+		printf -v $__list '%s{"command": "%s", "description": "%s"}' 	\
+							"${!__list:+${!__list},}"					\
+							"$__command"								\
+							"$__description"
+
+		printf -v $__list "[${!__list}]"
+
+		return $?
+	}
+
 	ShellBot.setMessageRules()
 	{
 		local action command user_id username chat_id 
