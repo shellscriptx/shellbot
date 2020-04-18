@@ -5102,6 +5102,47 @@ _EOF
 
 		return 0
 	}
+	
+	ShellBot.sendDice()
+	{
+		local chat_id disable_notification reply_to_message_id reply_markup jq_obj
+
+		local param=$(getopt 	--name "$FUNCNAME" \
+								--options 'c:n:r:k:' \
+								--longoptions 'chat_id:,
+												disable_notification:,
+												reply_to_message_id:,
+												reply_markup:' \
+								-- "$@")
+
+		eval set -- "$param"
+
+		while :
+		do
+			case $1 in
+				-c|--chat_id) chat_id=$2;;
+				-n|--disable_notification) disable_notification=$2;;
+				-r|--reply_to_message_id) reply_to_message_id=$2;;
+				-k|--reply_markup) reply_markup=$2;;
+				--) shift; break;;
+			esac
+			shift 2
+		done
+		
+		[[ $chat_id ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --chat_id]"
+
+		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
+									${chat_id:+-d chat_id="$chat_id"} \
+									${disable_notification:+-d disable_notification="$disable_notification"} \
+									${reply_to_message_id:+-d reply_to_message_id="$reply_to_message_id"} \
+									${reply_markup:+-d reply_markup="$reply_markup"})
+
+		# Retorno do método
+    	MethodReturn $jq_obj || MessageError TG $jq_obj
+    
+    	# Status
+    	return $?
+	}
 
 	ShellBot.setMessageRules()
 	{
@@ -5912,6 +5953,7 @@ _EOF
 				ShellBot.setChatAdministratorCustomTitle 	\
 				ShellBot.sendPoll							\
 				ShellBot.KeyboardButtonPollType				\
+				ShellBot.sendDice							\
 				ShellBot.setMessageRules 					\
 				ShellBot.manageRules 						\
 				ShellBot.getUpdates
