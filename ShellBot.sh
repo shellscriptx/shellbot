@@ -1507,8 +1507,8 @@ ShellBot.init()
     	
 		__button=$__button[$__line]
 
-		printf -v $__button "${!__button#[}"
-		printf -v $__button "${!__button%]}"
+		printf -v $__button '%s' "${!__button#[}"
+		printf -v $__button '%s' "${!__button%]}"
 		
 		printf -v $__button '%s {"text": "%s", "callback_data": "%s", "url": "%s", "switch_inline_query": "%s", "switch_inline_query_current_chat": "%s"}' 	\
 							"${!__button:+${!__button},}"																									\
@@ -1518,7 +1518,7 @@ ShellBot.init()
 							"${__switch_inline_query}"																										\
 							"${__switch_inline_query_current_chat}"
 
-		printf -v $__button "[${!__button}]"
+		printf -v $__button '%s' "[${!__button}]"
 
     	return $?
     }
@@ -1556,7 +1556,7 @@ ShellBot.init()
 		__button=$__button[@]
 
 		printf -v __keyboard '%s,' "${!__button}"
-		printf -v __keyboard "${__keyboard%,}"
+		printf -v __keyboard '%s' "${__keyboard%,}"
 
     	# Constroi a estrutura dos objetos + array keyboard, define os valores e salva as configurações.
     	# Por padrão todos os valores são 'false' até que seja definido.
@@ -1694,7 +1694,7 @@ ShellBot.init()
 		__button=$__button[@]
 
 		printf -v __keyboard '%s,' "${!__button}"
-		printf -v __keyboard "${__keyboard%,}"
+		printf -v __keyboard '%s' "${__keyboard%,}"
 
     	# Constroi a estrutura dos objetos + array keyboard, define os valores e salva as configurações.
     	# Por padrão todos os valores são 'false' até que seja definido.
@@ -1768,8 +1768,8 @@ ShellBot.init()
     
 		__button=$__button[$__line]
 
-		printf -v $__button "${!__button#[}"
-		printf -v $__button "${!__button%]}"
+		printf -v $__button '%s' "${!__button#[}"
+		printf -v $__button '%s' "${!__button%]}"
 		
 		printf -v $__button '%s {"text": "%s", "request_contact": %s, "request_location": %s, "request_poll": %s}' 	\
 							"${!__button:+${!__button},}"															\
@@ -1778,7 +1778,7 @@ ShellBot.init()
 							"${__location:-false}"																	\
 							"${__request_poll:-\"\"}"
 
-		printf -v $__button "[${!__button}]"
+		printf -v $__button '%s' "[${!__button}]"
 
     	return $?
 	}
@@ -5209,15 +5209,15 @@ _EOF
 		[[ $__command ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-c, --command]"
 		[[ $__description ]] || MessageError API "$_ERR_PARAM_REQUIRED_" "[-d, --description]"
 
-		printf -v $__list "${!__list#[}"
-		printf -v $__list "${!__list%]}"
+		printf -v $__list '%s' "${!__list#[}"
+		printf -v $__list '%s' "${!__list%]}"
 		
 		printf -v $__list '%s{"command": "%s", "description": "%s"}' 	\
 							"${!__list:+${!__list},}"					\
 							"$__command"								\
 							"$__description"
 
-		printf -v $__list "[${!__list}]"
+		printf -v $__list '%s' "[${!__list}]"
 
 		return $?
 	}
