@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #-----------------------------------------------------------------------------------------------------------
 #	DATA:				07 de Março de 2017
@@ -146,8 +146,12 @@ FlagConv()
 	local var str=$2
 
 	while [[ $str =~ \$\{([a-z_]+)\} ]]; do
-		[[ ${BASH_REMATCH[1]} == @(${_VAR_INIT_// /|}) ]] && var=${BASH_REMATCH[1]}[$1] || var=
-		str=${str//${BASH_REMATCH[0]}/${!var}}
+		if [[ ${BASH_REMATCH[1]} == @(${_VAR_INIT_// /|}) ]]; then
+			var=${BASH_REMATCH[1]}[$1]
+			str=${str//${BASH_REMATCH[0]}/${!var}}
+		else
+			str=${str//${BASH_REMATCH[0]}}
+		fi
 	done
 
 	echo "$str"
@@ -1738,7 +1742,7 @@ ShellBot.init()
 					shift 2
 					;;
 				-t|--text)
-					__text=$2
+					__text=$(echo -e "$2")
 					shift 2
 					;;
 				-c|--request_contact)
