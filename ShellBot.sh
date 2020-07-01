@@ -1610,7 +1610,7 @@ ShellBot.init()
     	
     	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
 									${callback_query_id:+-d callback_query_id="$callback_query_id"} \
-									${text:+-d text="$text"} \
+									${text:+--data-urlencode text="$text"} \
 									${show_alert:+-d show_alert="$show_alert"} \
 									${url:+-d url="$url"} \
 									${cache_time:+-d cache_time="$cache_time"})
@@ -1912,7 +1912,7 @@ ShellBot.init()
     	# Variáveis com valores nulos são ignoradas e consequentemente os respectivos parâmetros omitidos.
     	jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
 									${chat_id:+-d chat_id="$chat_id"} \
-									${text:+-d text="$text"} \
+									${text:+--data-urlencode text="$text"} \
 									${parse_mode:+-d parse_mode="$parse_mode"} \
 									${disable_web_page_preview:+-d disable_web_page_preview="$disable_web_page_preview"} \
 									${disable_notification:+-d disable_notification="$disable_notification"} \
@@ -3755,7 +3755,7 @@ _EOF
 									${chat_id:+-d chat_id="$chat_id"} \
     								${message_id:+-d message_id="$message_id"} \
     								${inline_message_id:+-d inline_message_id="$inline_message_id"} \
-    								${text:+-d text="$text"} \
+    								${text:+--data-urlencode text="$text"} \
     								${parse_mode:+-d parse_mode="$parse_mode"} \
     								${disable_web_page_preview:+-d disable_web_page_preview="$disable_web_page_preview"} \
     								${reply_markup:+-d reply_markup="$reply_markup"})
@@ -3827,7 +3827,7 @@ _EOF
 									${chat_id:+-d chat_id="$chat_id"} \
     								${message_id:+-d message_id="$message_id"} \
     								${inline_message_id:+-d inline_message_id="$inline_message_id"} \
-    								${caption:+-d caption="$caption"} \
+    								${caption:+--data-urlencode caption="$caption"} \
 									${parse_mode:+-d parse_mode="$parse_mode"} \
     								${reply_markup:+-d reply_markup="$reply_markup"})
     
