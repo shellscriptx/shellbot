@@ -5020,9 +5020,10 @@ _EOF
 		local chat_id question options is_anonymous reply_markup
 		local type allows_multiple_answers correct_option_id jq_obj
 		local is_closed disable_notification reply_to_message_id
+		local explanation explanation_parse_mode open_period close_date
 
 		local param=$(getopt	--name "$FUNCNAME" \
-								--options 'c:q:o:a:k:t:m:i:l:n:r:' \
+								--options 'c:q:o:a:k:t:m:i:x:z:p:d:l:n:r:' \
 								--longoptions 'chat_id:,
 												question:,
 												options:,
@@ -5031,6 +5032,10 @@ _EOF
 												type:,
 												allows_multiple_answers:,
 												correct_option_id:,
+												explanation:,
+												explanation_parse_mode:,
+												open_period:,
+												close_date:,
 												is_closed:,
 												disable_notification:,
 												reply_to_message_id:' \
@@ -5049,6 +5054,10 @@ _EOF
 				-t|--type) type=$2;;
 				-m|--allows_multiple_answers) allows_multiple_answers=$2;;
 				-i|--correct_option_id) correct_option_id=$2;;
+				-x|--explanation) explanation=$2;;
+				-z|--explanation_parse_mode) explanation_parse_mode=$2;;
+				-p|--open_period) open_period=$2;;
+				-d|--close_date) close_date=$2;;
 				-l|--is_closed) is_closed=$2;;
 				-n|--disable_notification) disable_notification=$2;;
 				-r|--reply_to_message_id) reply_to_message_id=$2;;
@@ -5070,6 +5079,10 @@ _EOF
 									${type:+-d type="$type"} \
 									${allows_multiple_answers:+-d allows_multiple_answers="$allows_multiple_answers"} \
 									${correct_option_id:+-d correct_option_id="$correct_option_id"} \
+									${explanation:+-d explanation="$explanation"} \
+									${explanation_parse_mode:+-d explanation_parse_mode="$explanation_parse_mode"} \
+									${open_period:+-d open_period="$open_period"} \
+									${close_date:+-d close_date="$close_date"} \
 									${is_closed:+-d is_closed="$is_closed"} \
 									${disable_notification:+-d disable_notification="$disable_notification"} \
 									${reply_to_message_id:+-d reply_to_message_id="$reply_to_message_id"})
@@ -5108,11 +5121,13 @@ _EOF
 	
 	ShellBot.sendDice()
 	{
-		local chat_id disable_notification reply_to_message_id reply_markup jq_obj
+		local chat_id disable_notification reply_to_message_id 
+		local reply_markup jq_obj emoji
 
 		local param=$(getopt 	--name "$FUNCNAME" \
-								--options 'c:n:r:k:' \
+								--options 'c:e:n:r:k:' \
 								--longoptions 'chat_id:,
+												emoji:,
 												disable_notification:,
 												reply_to_message_id:,
 												reply_markup:' \
@@ -5124,6 +5139,7 @@ _EOF
 		do
 			case $1 in
 				-c|--chat_id) chat_id=$2;;
+				-e|--emoji) emoji=$2;;
 				-n|--disable_notification) disable_notification=$2;;
 				-r|--reply_to_message_id) reply_to_message_id=$2;;
 				-k|--reply_markup) reply_markup=$2;;
@@ -5136,6 +5152,7 @@ _EOF
 
 		jq_obj=$(curl $_CURL_OPT_ POST $_API_TELEGRAM_/${FUNCNAME#*.} \
 									${chat_id:+-d chat_id="$chat_id"} \
+									${emoji:+-d emoji="$emoji"} \
 									${disable_notification:+-d disable_notification="$disable_notification"} \
 									${reply_to_message_id:+-d reply_to_message_id="$reply_to_message_id"} \
 									${reply_markup:+-d reply_markup="$reply_markup"})
