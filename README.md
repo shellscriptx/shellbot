@@ -68,7 +68,5 @@ O **ShellBot** é útil?
 
 Se _"Sim"_, nos ajude a mantê-lo "vivo" realizando uma doação simbólica. "Um programador não vive sem café!!"
 
-[![Doar](https://www.paypalobjects.com/pt_BR/BR/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=7PMTW487XF68Y&source=url)
-
 [![Apoia-se](https://1.bp.blogspot.com/-tTGuT8BaEPs/X3jQhIyqjKI/AAAAAAAAKDY/k6F8PaVGQMMZw5YAXo3TYlevXNXDptpDACK4BGAYYCw/s1600/logoRed.png)](https://apoia.se/shellscriptx)
 
