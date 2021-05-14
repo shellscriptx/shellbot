@@ -56,6 +56,22 @@ Exemplo:
 $ cp ShellBot.sh /projeto/meu_bot/
 ```
 
+## Docker
+
+Para testar diretamente usando um container docker. Tenha em mãos o token do seu bot.
+
+```
+$ git clone https://github.com/shellscriptx/ShellBot.git && cd ShellBot
+```
+
+```
+$ docker build -t shellbot --build-arg "token=<TOKEN>" .
+```
+
+```
+$ docker run -it shellbot
+```
+
 ## Documentação
 
 Para mais informações consulte a documentação do projeto na página [wiki](https://github.com/shellscriptx/ShellBot/wiki).

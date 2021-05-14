@@ -5,11 +5,14 @@
 # Para melhor compreensão foram utilizados parâmetros longos nas funções; Podendo
 # ser substituidos pelos parâmetros curtos respectivos.
 
+# Variável contem diretório onde o script reside
+BASEDIR=$(dirname $0)
+
 # Importando API
-source ShellBot.sh
+source ${BASEDIR}/../ShellBot.sh
 
 # Token do bot
-bot_token='<TOKEN_AQUI>'
+bot_token=$1
 
 # Inicializando o bot com log.
 ShellBot.init --token "$bot_token" --monitor --flush --log_file "/tmp/${0##*/}.log"
